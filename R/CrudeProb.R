@@ -92,7 +92,7 @@ calc.Crude <- function(fit, time, newdata = NULL, last.point = 100, type = "canc
     probfun <- prob_cancer
   }else if(type == "other"){
     probfun <- prob_other
-  }else if(type == "probother"){
+  }else if(type == "othertime"){
     probfun <- prob_other_time
   }
 
@@ -102,7 +102,7 @@ calc.Crude <- function(fit, time, newdata = NULL, last.point = 100, type = "canc
                     pars = c(fit$coefs, fit$coefs.spline), last.point = last.point)
     res <- data.frame(prob = prob)
     if(ci){
-      prob_gr <- jacobian(prob_cancer, x = c(fit$coefs, fit$coefs.spline), time = time,
+      prob_gr <- jacobian(probfun, x = c(fit$coefs, fit$coefs.spline), time = time,
                           rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                           expected_haz = expected_haz[[i]], expected =  expected[[i]],
                           last.point = last.point)
@@ -126,7 +126,7 @@ plot.CrudeProb <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1, yl
   if(is.null(ylab)){
     ylab <- switch(obj$type, cancer = "Cumulative incidence of cancer related death",
                    other = "Cumulative incidence of death from other causes than cancer",
-                   probother = "Probability of eventually dying from other causes than cancer")
+                   othertime = "Probability of eventually dying from other causes than cancer")
   }
   if(is.null(xlim)) xlim <- range(obj$time)
 
