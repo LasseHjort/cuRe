@@ -1,11 +1,11 @@
-quantile.calc.Crude <- function(fit, q = 0.95, newdata = NULL){
+quantile.calc.Crude <- function(fit, q = 0.95, newdata = NULL, max.time = 20){
   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))
   ests <- lapply(1:n.obs, function(i){
     f <- function(time, q) calc.Crude(fit, time = time, type = "othertime", ci = F,
                                       newdata = newdata[i,,drop = F])$prob[[1]]$prob - q
-    uni <- uniroot.all(f, lower = 0, upper = 20, q = q)
+    uni <- uniroot.all(f, lower = 0, upper = max.time, q = q)
     gr <- grad(f, x = uni, q = 0)
-    VAR <- calc.Crude(fit, time = uni, type = "othertime")$prob[[1]]$var
+    VAR <- calc.Crude(fit, time = uni, type = "othertime", link = "iden")$prob[[1]]$var
     VAR2 <- gr ^ (-2) * VAR
     upper <- uni + sqrt(VAR2) * qnorm(0.975)
     lower <- uni - sqrt(VAR2) * qnorm(0.975)

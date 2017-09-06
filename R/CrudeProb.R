@@ -1,54 +1,57 @@
 #Integration function using the trapez method
-int.trapez <- function(func, time, pars, n = 1000){
-  t_new <- unique(sort(c(seq(0, max(time), length.out = n), time)))
+int.trapez <- function(func, time, pars, n = 10000){
+  eps <- .Machine$double.eps
+  t_new <- sort(unique(c(seq(eps, max(time), length.out = n), time)))
+  t_new <- t_new[t_new != 0]
   df_time <- diff(t_new)
   surv_eval <- func(t_new, pars)
   surv_diff <- diff(surv_eval)
   inner <- abs(surv_diff) / 2 + pmin(surv_eval[-length(surv_eval)], surv_eval[-1])
   vals_pop <- cumsum(c(0, inner * df_time))
+  if(any(time == 0)) t_new[1] <- 0
   vals_pop[t_new %in% time]
 }
 
 #Integration function using the rectangular method
 int.square <- function(func, time, pars){
-  t_new <- unique(sort(c(seq(0, max(time), length.out = 5000), time)))
+  t_new <- unique(sort(c(seq(0, max(time), length.out = 100000), time)))
   df_time <- diff(t_new)
   mid_points <- t_new[-length(t_new)] + diff(t_new) / 2
   vals_pop <- c(0, cumsum(func(mid_points, pars) * df_time))
   vals_pop[t_new %in% time]
 }
 
-prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point){
+prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link){
   if(all(time == 0)){
     return(rep(0, length(time)))
   }else{
     dens <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-    get.inv.link(int.square(dens, time = time, pars = pars), type = "crudeprob")
+    get.inv.link(int.square(dens, time = time, pars = pars), type = link)
   }
 }
 
-prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point){
+prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link){
   if(all(time == 0)){
     return(rep(0, length(time)))
   }else{
     dens <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
-    get.inv.link(int.square(dens, time = time, pars = pars), type = "crudeprob")
+    get.inv.link(int.square(dens, time = time, pars = pars), type = link)
   }
 }
 
-prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point){
+prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link){
     dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
     int_1 <- int.square(dens1, time = time, pars = pars)
     btd <- int.square(dens1, time = last.point, pars = pars)
     dens2 <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
     int_2 <- int.square(dens2, time = time, pars = pars)
-    get.inv.link(1 - (btd - int_1) / (1 - int_1 - int_2), type = "crudeprob")
+    get.inv.link(1 - (btd - int_1) / (1 - int_1 - int_2), type = link)
 }
 
 
 
 calc.Crude <- function(fit, time, newdata = NULL, last.point = 100, type = "cancer",
-                       ci = T, ratetable = survexp.dk){
+                       ci = T, ratetable = survexp.dk, link = "crudeprob"){
   #Time points at which to evaluate integral
   if(is.null(time)){
     time <- seq(0, last.point, length.out = 100)
@@ -99,18 +102,18 @@ calc.Crude <- function(fit, time, newdata = NULL, last.point = 100, type = "canc
   probs <- lapply(1:length(expected), function(i){
     prob <- probfun(time = time, rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                     expected_haz = expected_haz[[i]], expected =  expected[[i]],
-                    pars = c(fit$coefs, fit$coefs.spline), last.point = last.point)
+                    pars = c(fit$coefs, fit$coefs.spline), last.point = last.point, link = link)
     res <- data.frame(prob = prob)
     if(ci){
       prob_gr <- jacobian(probfun, x = c(fit$coefs, fit$coefs.spline), time = time,
                           rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                           expected_haz = expected_haz[[i]], expected =  expected[[i]],
-                          last.point = last.point)
+                          last.point = last.point, link = link)
       res$var <- apply(prob_gr, 1, function(x) x %*% fit$covariance %*% x)
-      res$lower.ci <- get.link(res$prob - sqrt(res$var) * qnorm(0.975), type = "crudeprob")
-      res$upper.ci <- get.link(res$prob + sqrt(res$var) * qnorm(0.975), type = "crudeprob")
+      res$lower.ci <- get.link(res$prob - sqrt(res$var) * qnorm(0.975), type = link)
+      res$upper.ci <- get.link(res$prob + sqrt(res$var) * qnorm(0.975), type = link)
     }
-    res$prob <- get.link(res$prob, type = "crudeprob")
+    res$prob <- get.link(res$prob, type = link)
     if(type %in% c("cancer", "other")){
       res[time == 0,] <- 0
     }
@@ -150,3 +153,4 @@ plot.CrudeProb <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1, yl
     }
   }
 }
+

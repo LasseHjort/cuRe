@@ -3,7 +3,9 @@ get.link <- function(x, type){
     exp(x) / (exp(x) + 1)
   }else if (type == "probcure"){
     pnorm(x)
-  } else if(type == "ehaz"){
+  }else if(type == "ehaz"){
+    x
+  }else if(type == "iden"){
     x
   }
 }
@@ -14,6 +16,8 @@ get.inv.link <- function(x, type){
   }else if(type == "probcure"){
     qnorm(x)
   }else if(type == "ehaz"){
+    x
+  }else if(type == "iden"){
     x
   }
 }
