@@ -1,7 +1,5 @@
-#include <Rcpp.h>
-#include <RcppArmadillo.h>
-using namespace Rcpp;
-using namespace RcppArmadillo
+//#include <Rcpp.h>
+//using namespace Rcpp;
 // [[ Rcpp :: depends ( RcppArmadillo )]]
 
 
@@ -17,23 +15,9 @@ using namespace RcppArmadillo
 //
 
 // [[Rcpp::export]]
-NumericVector calc_area(NumericVector knots, NumericVector coefs, int n.x = 100, double lower = 0, double tau) {
-  NumericVector x(n.x);
-  x[0] = -1;
-  int step.size = 2 / n.x;
-  for(int i = 1; i < n.x; i++){
-    x[i] = x[i - 1] + step.size;
-  }
-  NumericMatrix b = basis(knots, log((tau - lower) / 2 * x + (tau + lower) / 2));
-  NumericVector lp = b coefs;
-  double res = (tau - lower) / 2 * sum(lp);
-  NumericMatrix b = basis(knots, log(x));
-  NumericVector RS = b %*%
- return x * 2;
-}
-
-NumericVector calc_int(f)
-
+// NumericVector predict_model(NumericVector coefs, NumericMatrix X){
+//   return exp(-exp(X * coefs));
+// }
 
 
 
@@ -52,27 +36,4 @@ NumericVector calc_int(f)
 //   }
 // }
 
-
-
-// [[Rcpp::export]]
-NumericMatrix basis(NumericVector knots, NumericVector x){
-  double nx = x.size();
-  int nk = knots.size();
-  NumericMatrix b(nx, nk);
-  if(nk > 0){
-    NumericVector unit(nx, 1);
-    b(_, 0) = unit;
-    b(_, 1) = x;
-  }
-  if(nk > 2){
-    NumericVector lam = (knots[nk - 1] - knots) / (knots[nk - 1] - knots[0]);
-    for(int i = 0; i < (nk - 2); i++){
-      NumericVector term1 = pow(pmax(x - knots[i + 1], 0), 3);
-      NumericVector term2 = lam[i + 1] * pow(pmax(x - knots[0], 0), 3);
-      NumericVector term3 = (1 - lam[i + 1]) * pow(pmax(x - knots[nk - 1], 0), 3);
-      b(_,i + 2) = term1 - term2 - term3;
-    }
-  }
-  return b;
-}
 

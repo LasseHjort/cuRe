@@ -1,3 +1,17 @@
+#' Extract general population hazard
+#'
+#' Yearly general population hazards matched on age, gender, and calendar year is extracted from a ratetable
+#'
+#' @param time Either a numeric vector of follow-up times or a character indicating which variable is the follow-up time in the data
+#' @param age Either a numeric vector of age or a character indicating which variable is the age in the data
+#' @param sex A numeric vector including the time points for which to make predictions.
+#' @param date A character denoting the type of prediction. Possible values are \code{relsurv} (default), \code{curerate}, and \code{probcure} (see details)
+#' @param data The data from which to extract variables from. If \code{time}, \code{age}, \code{sex}, and \code{date} are not characters, leave this empty.
+#' @param ratetable Object of class \code{ratetable} to extract background hazards from. Defaults to survexp.dk
+#' @param opposite Logical (default \code{FALSE}) to indicate the order in the the ratetable
+#' @return An object of class \code{numeric} of yearly hazards
+#' @export
+
 # Function for extracting expected hazard
 extract_general <- function(time, age, sex, date, data = NULL, ratetable = survexp.dk, opposite = F){
   haz <- rep(NA, nrow(data))
@@ -20,24 +34,21 @@ extract_general <- function(time, age, sex, date, data = NULL, ratetable = surve
       year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
       for(i in 1:nrow(data)){
         haz[i] <- ratetable[age_new[i], sex_new[i], year_eval[i]]
-      } 
+      }
     }else{
       ryear <- range(as.numeric(names(ratetable[1,,1])))
       year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
       year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
       for(i in 1:nrow(data)){
         haz[i] <- ratetable[age_new[i], year_eval[i], sex_new[i]]
-      } 
+      }
     }
   }
   haz <- haz * year
   haz
 }
 
-
-logistic <- function(x) exp(x) / (exp(x) + 1)
-
-# Functions for extracting functions
+# Functions for extracting link functions
 # Function for extracting the specified link function
 get_link <- function(link){
   if(link == "logistic"){
@@ -141,8 +152,8 @@ get_surv2 <- function(dist){
 }
 
 
-# Minus log likelihood functions
-# Mixture cure models
+######Likelihood functions
+# Parametric Mixture cure model
 mixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
                                          bhazard, surv_fun, dens_fun){
   gamma <- param[grepl("gamma", names(param))]
@@ -168,6 +179,7 @@ mixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
   -sum(first_term + second_term)
 }
 
+#Parametric mixture cure model 2
 mixture_minuslog_likelihood2 <- function(param, time, status, Xs, link_fun,
                                         bhazard, surv_fun, dens_fun){
   gamma <- param[grepl("gamma", names(param))]
@@ -195,8 +207,7 @@ mixture_minuslog_likelihood2 <- function(param, time, status, Xs, link_fun,
   -sum(terms)
 }
 
-
-# Non-mixture cure models
+# Parametric non-mixture cure model
 nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
                                          bhazard, surv_fun, dens_fun){
   gamma <- param[grepl("gamma", names(param))]
@@ -217,7 +228,7 @@ nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
   -sum(loglik)
 }
 
-#Likelihood function
+# Flexible mixture cure model
 flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,
                                                  link_fun_pi, link_fun_su, dlink_fun_su){
   gamma <- param[1:ncol(X)]
@@ -234,80 +245,79 @@ flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, 
   -sum(likterms)
 }
 
-
-flexible_nmixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard, link_fun){
+# Flexible non-mixture cure model
+flexible_nmixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,
+                                                  link_fun_pi, link_fun_su, dlink_fun_su){
   gamma <- param[1:ncol(X)]
   beta <- param[(ncol(X) + 1):length(param)]
   lp <- X %*% gamma
-  pi <- link_fun(lp)
-  eta <- exp(b %*% beta)
-  surv <- exp(-eta)
-  deta <- db %*% beta
-  #if(set_zero){
-  #  deta <- pmax(deta, .Machine$double.eps)
-  #}
-  dens <- deta * surv * eta / time
-  suppressWarnings(first_term <- status * log( bhazard - dens * log(pi)))
-  suppressWarnings(second_term <- log(pi) -  log(pi) * surv)
-  -sum(first_term + second_term)
+  pi <- link_fun_pi(lp)
+  eta <- b %*% beta
+  deta <- db %*% beta / time
+  surv <- link_fun_su(eta)
+  rsurv <- pi ^ (1 - surv)
+  dsurv <- dlink_fun_su(eta)
+  ehaz <- -log(pi) * dsurv * deta
+  suppressWarnings(likterms <- status * log( bhazard + ehaz) + log(rsurv))
+  -sum(likterms)
 }
 
-flexible_minuslog_likelihood <- function(param, time, status, b, db, bhazard){
-  eta <- b %*% param
-  deaths <- status == 1
-  deta <- db[deaths,] %*% param
-  exp_eta <- exp(eta)
-  inside_log <- bhazard[deaths] + deta * exp_eta[deaths] / time[deaths]
-  terms <- -exp_eta
-  suppressWarnings(terms[deaths] <- terms[deaths] + log(inside_log))
-  -sum(terms)
-}
+# flexible_minuslog_likelihood <- function(param, time, status, b, db, bhazard){
+#   eta <- b %*% param
+#   deaths <- status == 1
+#   deta <- db[deaths,] %*% param
+#   exp_eta <- exp(eta)
+#   inside_log <- bhazard[deaths] + deta * exp_eta[deaths] / time[deaths]
+#   terms <- -exp_eta
+#   suppressWarnings(terms[deaths] <- terms[deaths] + log(inside_log))
+#   -sum(terms)
+# }
 
-penalized_flexible_minuslog_likelihood <- function(param, time, status, b, db, bhazard, pena.fun, nr.spline){
-  eta <- b %*% param
-  deaths <- status == 1
-  deta <- db[deaths,] %*% param
-  exp_eta <- exp(eta)
-  inside_log <- bhazard[deaths] + deta * exp_eta[deaths] / time[deaths]
-  terms <- -exp_eta
-  suppressWarnings(terms[deaths] <- terms[deaths] + log(inside_log))
-  -sum(terms) + pena.fun(param[-(1:nr.spline)])
-}
+# penalized_flexible_minuslog_likelihood <- function(param, time, status, b, db, bhazard, pena.fun, nr.spline){
+#   eta <- b %*% param
+#   deaths <- status == 1
+#   deta <- db[deaths,] %*% param
+#   exp_eta <- exp(eta)
+#   inside_log <- bhazard[deaths] + deta * exp_eta[deaths] / time[deaths]
+#   terms <- -exp_eta
+#   suppressWarnings(terms[deaths] <- terms[deaths] + log(inside_log))
+#   -sum(terms) + pena.fun(param[-(1:nr.spline)])
+# }
 
 
 # Cure base functions
 
-basis_cure <- function(knots, x){
-  nk <- length(knots)
-  b <- matrix(nrow = length(x), ncol = nk - 1)
-  knots_rev <- rev(knots)
-  if (nk > 0) {
-    b[, 1] <- 1
-  }
-  if (nk > 2) {
-    for (j in 2:(nk - 1)) {
-      lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
-      b[, j] <- pmax(knots_rev[nk - j + 1] - x, 0)^3 - lam * pmax(knots_rev[nk] - x, 0)^3 -
-        (1 - lam) * pmax(knots_rev[1] - x, 0)^3
-    }
-  }
-  b
-}
-
-dbasis_cure <- function(knots, x){
-  nk <- length(knots)
-  b <- matrix(nrow = length(x), ncol = nk - 1)
-  knots_rev <- rev(knots)
-  if (nk > 0) {
-    b[, 1] <- 0
-  }
-  if (nk > 2) {
-    for (j in 2:(nk - 1)) {
-      lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
-      b[, j] <- - 3 * pmax(knots_rev[nk - j + 1] - x, 0)^2 + 3 * lam * pmax(knots_rev[nk] - x, 0)^2 +
-        3 * (1 - lam) * pmax(knots_rev[1] - x, 0)^2
-    }
-  }
-  b
-}
+# basis_cure <- function(knots, x){
+#   nk <- length(knots)
+#   b <- matrix(nrow = length(x), ncol = nk - 1)
+#   knots_rev <- rev(knots)
+#   if (nk > 0) {
+#     b[, 1] <- 1
+#   }
+#   if (nk > 2) {
+#     for (j in 2:(nk - 1)) {
+#       lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
+#       b[, j] <- pmax(knots_rev[nk - j + 1] - x, 0)^3 - lam * pmax(knots_rev[nk] - x, 0)^3 -
+#         (1 - lam) * pmax(knots_rev[1] - x, 0)^3
+#     }
+#   }
+#   b
+# }
+#
+# dbasis_cure <- function(knots, x){
+#   nk <- length(knots)
+#   b <- matrix(nrow = length(x), ncol = nk - 1)
+#   knots_rev <- rev(knots)
+#   if (nk > 0) {
+#     b[, 1] <- 0
+#   }
+#   if (nk > 2) {
+#     for (j in 2:(nk - 1)) {
+#       lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
+#       b[, j] <- - 3 * pmax(knots_rev[nk - j + 1] - x, 0)^2 + 3 * lam * pmax(knots_rev[nk] - x, 0)^2 +
+#         3 * (1 - lam) * pmax(knots_rev[1] - x, 0)^2
+#     }
+#   }
+#   b
+# }
 

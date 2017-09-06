@@ -10,9 +10,9 @@
 #' @param ci Logical indicating whether to include confidence intervals. Default is \code{TRUE}
 #' @return An object of class \code{matrix} including the predictions.
 #' @details For type \code{relsurv}, relative survival predictions are made, while for \code{curerate}, \eqn{\pi} and for \code{probcure}\cr
-#' the probability\cr
-#' \deqn{\p{\text{prob}| T > t} = \frac{\pi}{\pi + (1 - \pi) S_u(t)}}-
-
+#' the probability of cure is calculated.
+#' @export
+#'
 predict.CureModel <- function(fit, newdata, times, type = "relsurv", ci = T){
   link_fun <- get_link(fit$link)
   if(type == "relsurv"){

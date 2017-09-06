@@ -18,6 +18,8 @@
 #' @return An object of class \code{CureModel}.
 #' @details The arguments for modelling the parameters of the cure model have different meanings dependent on the chosen distribution. \cr
 #' For the exponential distribution, k1 denotes the rate, for the weibull model, k1 denotes the scale parameter and k2 denotes the shape parameter, sfor the log normal distribution k1 denotes the mu and sigma.
+#' @export
+
 
 MixtureCureModel <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 = NULL,
                              formula.k3 = NULL, type = "mixture",

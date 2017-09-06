@@ -1,4 +1,4 @@
-get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, hes, linkpi, linksu, formula, type,
+get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, linksu, formula, type,
                            fu, status, n.knots.time, knots, X, b, method = "mix"){
   vars <- c(all.vars(smooth.formula), all.vars(tvc.formula))
   if(method == "mix"){
@@ -79,10 +79,37 @@ get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, hes, link
   ini_values
 }
 
+#' Fit spline-based mixture cure model
+#'
+#' The following function fits a generalized mixture or non-mixture cure model using a link function for the cure rate and for the survival of the uncured
+#'
+#' @param formula Formula for the covariates in the modelling of the cure rate, \eqn{\pi}. Reponse has to be of the form \code{Surv(time, status)}.
+#' @param data Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}, and \code{tvc.formula}.
+#' @param bhazard Background hazard
+#' @param smooth.formula Formula to control the modelling of the disease-specific survival of the uncured.
+#' @param knots Knots used for the baseline hazard in the disease-specific survival function
+#' @param n.knots Number of knots for the disease-specific survival function. The knots are calculated as the equidistant quantiles of the uncensored event-times.
+#' If \code{knots} are supplied, this argument will be ignored.
+#' @param tvc.formula Formula for the time-varying effects.
+#' @param knots.time An object of class list containing the knots for each of the covariates in the time-varying covariate effects
+#' @param n.knots.time An object of class list, containing the number of knots for the time-varying covariate effect.
+#' If \code{knots.time} is supplied, this argument will be ignored.
+#' @param hes Logical for computing the inverse hessian matrix (default is \code{TRUE}).
+#' @param verbose Logical indicating whether to output messages from the function
+#' @param type Character indicating which type of model is fitting.
+#' Possible values are \code{mixture} (default) and \code{nmixture}.
+#' @param linkpi Character for the type of link function selected for the cure rate.
+#' Possible values are \code{logistic} (default), \code{identity}, \code{loglog}, and \code{probit}.
+#' @param linksu Character for the type of link function selected for the survival of the uncured.
+#' Possible values are \code{loglog}, \code{logistic}, and \code{probit}.
+#' @return An object of class \code{fmcm}.
+#' @export
+
+
 FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
                                  knots = NULL, n.knots = NULL,
                                  tvc.formula = NULL, knots.time = NULL, n.knots.time = NULL,
-                                 hes = T, message = T,
+                                 covariance = T, message = T,
                                  type = "mixture", linkpi = "logistic", linksu = "loglog"){
 
   #Extract relevant variables
@@ -153,7 +180,7 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
   types <- c("mix")
   ini_values <- lapply(types, function(x) get_ini_values(smooth.formula = smooth.formula,
                                                          tvc.formula =  tvc.formula, data = data,
-                                                         bhazard = bhazard, hes = hes,
+                                                         bhazard = bhazard,
                                                          linkpi = linkpi, linksu = linksu,
                                                          formula = formula, type = type,
                                                          fu = fu, status = status,
@@ -215,8 +242,8 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
   }
   if(message) cat("Completed!\n")
 
-  #Compute the hessian matrix
-  if(hes){
+  #Compute the covariance matrix matrix
+  if(covariance){
     cov <- solve(pracma::hessian(minusloglik, res$par,
                                  time = fu, status = status,
                                  X = X, b = b, db = db,
@@ -241,11 +268,11 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
             dlink_fun_su = dlink_fun_su,
             df = length(res$par) - 1, MLs = MLs)
 
-  class(L) <- "FlexCureModel"
+  class(L) <- "fmcm"
   L
 }
 
-print.FlexCureModel <- function(fit){
+print.fmcm <- function(fit){
   cat("Call pi:\n")
   print(fit$formula)
   cat("Call S_u(t):\n")
@@ -255,7 +282,7 @@ print.FlexCureModel <- function(fit){
              s_ut = fit$coefs.spline))
 }
 
-summary.FlexCureModel <- function(fit){
+summary.fmcm <- function(fit){
   se <- sqrt(diag(fit$cov))
   tval <- c(fit$coefs, fit$coefs.spline) / se
   coefs <- c(fit$coefs, fit$coefs.spline)
@@ -279,11 +306,11 @@ summary.FlexCureModel <- function(fit){
   results$formula <- fit$formula
   results$formula.fix <- fit$formula_main
   results$formula.tvc <- fit$tvc.formula
-  class(results) <- "summary.CureModel"
+  class(results) <- "summary.fmcm"
   results
 }
 
-print.summary.CureModel <- function(x)
+print.summary.fmcm <- function(x)
 {
   cat("Call - pi:\n")
   print(x$formula)
@@ -302,216 +329,3 @@ print.summary.CureModel <- function(x)
   cat("LogLik(model) =", x$ML, "\n")
 
 }
-
-get.link <- function(x, type){
-  if(type %in% c("curerate", "relsurv", "crudeprob")){
-    exp(x) / (exp(x) + 1)
-  }else if (type == "probcure"){
-    pnorm(x)
-  } else if(type == "ehaz"){
-    x
-  }
-}
-
-get.inv.link <- function(x, type){
-  if(type %in% c("curerate", "relsurv", "crudeprob")){
-    log(x / (1 - x))
-  }else if(type == "probcure"){
-    qnorm(x)
-  }else if(type == "ehaz"){
-    x
-  }
-}
-
-relsurv_fun <- function(pars, M2, M, dM2, time, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  pi <- c(link_fun_pi(pi_fun(pars, M)))
-  eta <- M2 %*% pars[-c(1:ncol(M))]
-  if(model == "mixture"){
-    get.inv.link(pi + (1 - pi) * link_fun_su(eta), type = "relsurv")
-  }
-  else if(model == "nmixture"){
-    get.inv.link(pi ^ link_fun_su(eta), type = "relsurv")
-  }
-}
-
-ehaz_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  pi <- c(link_fun_pi(pi_fun(pars, M)))
-  eta <- M2 %*% pars[-c(1:ncol(M))]
-  deta <- dM2 %*% pars[-c(1:ncol(M))]
-  ds_u <- dlink_fun_su(eta)
-  if(model == "mixture"){
-    s_u <- link_fun_su(eta)
-    get.inv.link(-(1 - pi) * ds_u * (deta / time) / (pi + (1 - pi) * s_u), type = "ehaz")
-  }else if(model == "nmixture"){
-    get.inv.link(-log(pi) * ds_u * deta / time, type = "ehaz")
-  }
-}
-
-probcure_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  if(model == "mixture"){
-    pi <- c(get.link(pi_fun(pars, M), type = "curerate"))
-    eta <- M2 %*% pars[-c(1:ncol(M))]
-    get.inv.link(pi / (pi + (1 - pi) * exp(-exp(eta))), type = "probcure")
-  }else if(model == "nmixture"){
-    eta <- M2 %*% pars
-    pi <- exp(-exp(eta[length(eta)]))
-    get.inv.link(pi / ifelse(time == 0, 1, exp(-exp(eta))), type = "probcure")
-  }
-}
-
-predict.FlexCureModel <- function(fit, newdata = NULL, time = NULL, type = "relsurv", ci = T, pars = NULL){
-  if(!is.null(pars)){
-    fit$coefs <- pars[1:length(fit$coefs)]
-    if(length(fit$coefs) < length(pars)){
-      fit$coefs.spline <- pars[(length(fit$coefs) + 1):length(pars)]
-    }else{
-      fit$coefs.spline <- NULL
-    }
-  }
-  is_null_newdata <- is.null(newdata)
-  if(is_null_newdata){
-    tt <- terms(fit$formula)
-    formula.2 <- formula(delete.response(tt))
-    vars <- c(all.vars(formula.2), all.vars(fit$formula_main), all.vars(fit$tvc.formula))
-    if(length(vars) != 0){
-      stop("'newdata' must be specified for model including covariates")
-    }
-    newdata <- data.frame(x = 1)
-    colnames(newdata) <- "(Intercept)"
-  }
-  link_fun_pi <- fit$link_fun_pi
-  link_fun_su <- fit$link_fun_su
-  dlink_fun_su <- fit$dlink_fun_su
-  all.coefs <- c(fit$coefs, fit$coefs.spline)
-  tt <- terms(fit$formula)
-  formula.2 <- formula(delete.response(tt))
-  M <- model.matrix(formula.2, newdata)
-  pi_fun <- function(pars, M) M %*% pars[1:ncol(M)]
-  pi <- pi_fun(all.coefs, M)
-
-  if(type == "curerate"){
-    pi <- data.frame(pi = get.link(pi, type = "curerate"))
-    if(ci){
-      grads <- jacobian(pi_fun, x = all.coefs, M = M)
-      pi$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$covariance %*% x)
-      pi$ci.lower <- get.link(pi$pi - qnorm(0.975) * sqrt(pi$var), type = type)
-      pi$ci.upper <- get.link(pi$pi + qnorm(0.975) * sqrt(pi$var), type = type)
-    }
-    return(pi)
-  }else{
-    b <- basis(knots = fit$knots, x = log(time))
-    db <- dbasis(knots = fit$knots, x = log(time))
-    if(!is.null(fit$knots.time)){
-      tvc.b <- lapply(fit$knots.time, basis, x = log(time))
-      tvc.db <- lapply(fit$knots.time, dbasis, x = log(time))
-    }
-    M2.list <- lapply(1:nrow(newdata), function(i){
-      model.matrix(fit$formula_main, newdata[i, ,drop = F])[rep(1, nrow(b)),-1, drop = F]
-    })
-
-    M_list <- vector("list", nrow(newdata))
-    for(i in 1:nrow(newdata)){
-      M2 <- cbind(b, M2.list[[i]])
-      dM2 <- cbind(db, M2.list[[i]])
-      if(!is.null(fit$tvc.formula)){
-        M_time <- model.matrix(fit$tvc.formula, newdata)[,-1, drop = F]
-        b_time <- do.call(cbind, lapply(1:ncol(M_time), function(j) tvc.b[[j]] * M_time[i, j]))
-        db_time <- do.call(cbind, lapply(1:ncol(M_time), function(j) tvc.db[[j]] * M_time[i, j]))
-        dM2 <- cbind(dM2, db_time)
-        M2 <- cbind(M2, b_time)
-      }
-      M_list[[i]] <- list(M2 = M2, dM2 = dM2)
-    }
-    if(type %in% c("relsurv", "ehaz", "probcure")){
-      if(type == "relsurv"){
-        fun <- relsurv_fun
-      }else if(type == "ehaz"){
-        fun <- ehaz_fun
-      }else if(type == "probcure"){
-        fun <- probcure_fun
-      }
-
-      rss <- vector("list", nrow(newdata))
-      for(i in 1:nrow(newdata)){
-        rss[[i]] <- data.frame(Est = c(fun(all.coefs, M_list[[i]]$M2, M[i,, drop = FALSE], M_list[[i]]$dM2,
-                                           time, pi_fun = pi_fun, model = "mixture",
-                                           link_fun_pi = link_fun_pi, link_fun_su = link_fun_su,
-                                           dlink_fun_su = dlink_fun_su)))
-        if(ci){
-          grads <- jacobian(fun, x = all.coefs, M2 = M_list[[i]]$M2, M = M[i, , drop = FALSE],
-                            dM2 = M_list[[i]]$dM2, time = time, pi_fun = pi_fun, model = "mixture",
-                            link_fun_pi = link_fun_pi, link_fun_su = link_fun_su, dlink_fun_su = dlink_fun_su)
-          rss[[i]]$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$cov %*% x)
-          rss[[i]]$ci.lower <- get.link(rss[[i]]$Est - qnorm(0.975) * sqrt(rss[[i]]$var), type = type)
-          rss[[i]]$ci.upper <- get.link(rss[[i]]$Est + qnorm(0.975) * sqrt(rss[[i]]$var), type = type)
-        }
-        rss[[i]]$Est <- get.link(rss[[i]]$Est, type = type)
-
-        if(type == "relsurv"){
-          if(ci){
-            rss[[i]][time == 0, ] <- c(1, 0, 1, 1)
-          }else{
-            rss[[i]][time == 0, ] <- 1
-          }
-        }
-      }
-    }
-    return(list(res = rss, time = time, type = type))
-  }
-}
-
-
-plot.FlexCureModel <- function(fit, newdata = NULL, time = NULL, ylim = c(0, 1), xlim = NULL,
-                               xlab = "Time", ylab = "Relative survival", non.parametric = F,
-                               type = "relsurv", col = 1, col.non.para = 2, ci = T,
-                               include.knots = F, add = F, ...){
-
-  ylab <- switch(type,
-                 relsurv = "Relative survival",
-                 ehaz = "Excess hazard",
-                 probcure = "Conditional probability of cure",
-                 crude_prob = "Probability of eventually dying from other causes than cancer",
-                 lol = "Loss of lifetime")
-
-  if(length(col) == 1 & !is.null(newdata)){
-    col <- rep(col, nrow(newdata))
-  }
-  if(is.null(time)){
-    if(is.null(xlim)){
-      xlim <- c(0, max(fit$data$FU_years))
-      time <- seq(xlim[1], xlim[2], length.out = 100)
-    }
-  }else{
-    xlim <- range(time)
-  }
-
-  predict_rs <- predict(fit, newdata, time, type = type, ci = ci)
-  nr.samples <- length(predict_rs$res)
-  if(type == "ehaz"){
-    ylim <- range(unlist(lapply(predict_rs$res, function(x) x[,-2])), na.rm = T)
-  }
-
-  for(i in 1:nr.samples){
-    if(i == 1 & !add){
-      plot(Est ~ time, data = predict_rs$res[[i]], type = "l", ylim = ylim, xlim = xlim,
-           xlab = xlab, ylab = ylab, col = col[i], ...)
-    }else{
-      lines(Est ~ time, data = predict_rs$res[[i]], type = "l", col = col[i], ...)
-    }
-    if(ci){
-      lines(ci.upper ~ time, data = predict_rs$res[[i]], type = "l", col = col[i], lty = 2, ...)
-      lines(ci.lower ~ time, data = predict_rs$res[[i]], type = "l", col = col[i], lty = 2, ...)
-    }
-  }
-  if(non.parametric){
-    rsfit <- rs.surv(Surv(FU, status) ~ 1 + ratetable(age = age, sex = sex, year = diag_date),
-                     data = fit$data, ratetable = survexp.dk, method = "ederer2")
-    rsfit$time <- rsfit$time / year
-    lines(rsfit$surv ~ rsfit$time, type = "s", col = col.non.para, ...)
-  }
-  if(include.knots){
-    abline(v = exp(fit$knots), lty = 2)
-  }
-}
-
-

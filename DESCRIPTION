@@ -1,15 +1,14 @@
 Package: cuRe
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Estimating parametric cure models, loss of lifetime, and mean residual lifetime
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Authors@R: person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "lahja@dcm.aau.dk")
+Author: Lasse Hjort Jakobsen
+Maintainer: Lasse Hjort Jakobsen <lahja@dcm.aau.dk>
+Description: The package contains functions for estimating parametric mixture and non-mixture cure models, loss of lifetime, and mean residual lifetime, crude event probabilities.
+URL: http://github.com/LasseHjort/cuRe
+BugReports: http://github.com/LasseHjort/cuRe/issues
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
-Suggests: knitr,
-    rmarkdown
-VignetteBuilder: knitr

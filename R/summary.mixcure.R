@@ -5,6 +5,8 @@
 #'
 #' @param formula An object of type \code{CureModel}
 #' @return An object of class \code{summary.CureModel}.
+#' @export
+
 summary.CureModel <- function(fit){
   se <- sqrt(diag(fit$cov))
   tval <- unlist(fit$coefs) / se
