@@ -6,7 +6,7 @@ get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
                              response = NULL)
     fit <- MixtureCureModel(formula, data = data, bhazard = bhazard, hes = F,
                             formula.k1 = formula.2, formula.k2 = ~ 1, type = type)
-    pi_hat <- get_link("logistic")(X %*% fit$coefs[[1]])
+    pi_hat <- get_link("logit")(X %*% fit$coefs[[1]])
     gpi_hat <- get_inv_link(linkpi)(pi_hat)
     pi_fit <- lm(gpi_hat ~ -1 + X)
     ini_pi <- pi_fit$coefficients
@@ -19,7 +19,7 @@ get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
                              response = formula[[2]])
     status2 <- 1 - status
     fit_glm <- glm(status2 ~ -1 + X, family = binomial(link = "logit"))
-    pi_hat <- get_link("logistic")(predict(fit_glm))
+    pi_hat <- get_link("logit")(predict(fit_glm))
     gpi_hat <- get_inv_link(linkpi)(pi_hat)
     pi_fit <- lm(gpi_hat ~ -1 + X)
     ini_pi <- pi_fit$coefficients
@@ -110,7 +110,7 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
                                  knots = NULL, n.knots = NULL,
                                  tvc.formula = NULL, knots.time = NULL, n.knots.time = NULL,
                                  covariance = T, message = T,
-                                 type = "mixture", linkpi = "logistic", linksu = "loglog"){
+                                 type = "mixture", linkpi = "logit", linksu = "loglog"){
 
   #Extract relevant variables
   fu <- eval(formula[[2]][[2]], envir = data)
@@ -119,10 +119,13 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
 
   #Caculate placement of knots and establish basis matrices
   if(is.null(knots)){
-    bd_knots <- range(death_times)
-    inner_knots <- quantile(death_times, 1 / (n.knots - 1)*1:(n.knots - 2))
-    knots <- c(bd_knots, inner_knots)
-    knots <- log(sort(knots))
+    bd_knots <- log(range(death_times))
+    inner_knots <- log(quantile(death_times, 1 / (n.knots - 1)*1:(n.knots - 2)))
+    knots <- sort(c(bd_knots, inner_knots))
+  }else{
+    knots <- sort(knots)
+    bd_knots <- range(knots)
+    inner_knots <- knots[-c(1, length(knots))]
   }
 
   b <- basis(knots = knots, log(fu))
@@ -268,7 +271,7 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
             dlink_fun_su = dlink_fun_su,
             df = length(res$par) - 1, MLs = MLs)
 
-  class(L) <- "fmcm"
+  class(L) <- c("fmcm", "cuRe")
   L
 }
 

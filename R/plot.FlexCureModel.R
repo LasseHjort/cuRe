@@ -15,7 +15,7 @@
 #' @return A list containing the predictions of each individual in \code{newdata}.
 #' @export
 
-plot.fmcm <- function(fit, newdata = NULL, type = "relsurv",
+plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
                                time = NULL, ylim = c(0, 1), xlim = NULL,
                                xlab = "Time", ylab = NULL, non.parametric = F,
                                col = 1, col.non.para = 2, ci = T,
@@ -45,7 +45,7 @@ plot.fmcm <- function(fit, newdata = NULL, type = "relsurv",
   predict_rs <- predict(fit, newdata, time, type = type, ci = ci)
   nr.samples <- length(predict_rs$res)
   if(type == "ehaz"){
-    ylim <- range(unlist(lapply(predict_rs$res, function(x) x[,-2])), na.rm = T)
+    ylim <- range(unlist(lapply(predict_rs$res, function(x) x[,-2])), na.rm = T, finite = T)
   }
 
   for(i in 1:nr.samples){

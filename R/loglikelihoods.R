@@ -51,7 +51,7 @@ extract_general <- function(time, age, sex, date, data = NULL, ratetable = surve
 # Functions for extracting link functions
 # Function for extracting the specified link function
 get_link <- function(link){
-  if(link == "logistic"){
+  if(link == "logit"){
     function(x) exp(x) / (exp(x) + 1)
   }else if(link == "identity"){
     function(x) x
@@ -64,12 +64,12 @@ get_link <- function(link){
   }else if(link == "nprobit"){
     function(x) pnorm(-x)
   }else{
-    stop("Link function should be either 'logistic', 'nlogit', 'nprobit', 'identity', 'probit', or 'loglog'")
+    stop("Link function should be either 'logit', 'nlogit', 'nprobit', 'identity', 'probit', or 'loglog'")
   }
 }
 
 get_dlink <- function(link){
-  if(link == "logistic"){
+  if(link == "logit"){
     function(x) exp(x) / ((exp(x) + 1) ^ 2)
   }else if(link == "identity"){
     function(x) 1
@@ -82,12 +82,12 @@ get_dlink <- function(link){
   }else if(link == "nprobit"){
     function(x) -dnorm(-x)
   }else{
-    stop("Link function should be either 'logistic', 'nlogit', 'nprobit', 'identity', 'probit', or 'loglog'")
+    stop("Link function should be either 'logit', 'nlogit', 'nprobit', 'identity', 'probit', or 'loglog'")
   }
 }
 
 get_inv_link <- function(link){
-  if(link == "logistic"){
+  if(link == "logit"){
     function(x) log(x / (1 - x))
   }else if(link == "identity"){
     function(x) x
@@ -100,18 +100,18 @@ get_inv_link <- function(link){
   }else if(link == "nprobit"){
     function(x) -qnorm(x)
   }else{
-    stop("Link function should be either 'logistic', 'nlogit', 'nprobit', 'identity', 'probit', or 'loglog'")
+    stop("Link function should be either 'logit', 'nlogit', 'nprobit', 'identity', 'probit', or 'loglog'")
   }
 }
 
 # Function for extracting the specified survival function
 get_surv <- function(dist){
   if(dist == "exponential"){
-    return(function(x, lp.k1, lp.k2, lp.k3) exp(-x * exp(lp.k1)))
+    return(function(x, lps) exp(-x * exp(lps[[2]])))
   }else if(dist == "weibull"){
-    return(function(x, lp.k1, lp.k2, lp.k3) exp(-x ^ exp(lp.k2) * exp(lp.k1)))
+    return(function(x, lps) exp(-x ^ exp(lps[[3]]) * exp(lps[[2]])))
   }else if(dist == "lognormal"){
-    return(function(x, lp.k1, lp.k2, lp.k3) 1 - pnorm((log(x) - lp.k1) / exp(lp.k2)))
+    return(function(x, lps) 1 - pnorm((log(x) - lps[[2]]) / exp(lps[[3]])))
   }else{
     stop("Distribution should be either 'exponential', 'weibull', or 'lognormal'")
   }
@@ -120,19 +120,19 @@ get_surv <- function(dist){
 # Function for extracting the specified density function
 get_dens <- function(dist){
   if(dist == "exponential"){
-    return(function(x, lp.k1, lp.k2, lp.k3){
-      scale <- exp(lp.k1)
+    return(function(x, lps){
+      scale <- exp(lps[[2]])
       scale * exp(-x * scale)
     })
   }else if(dist == "weibull"){
-    return(function(x, lp.k1, lp.k2, lp.k3){
-      scale <- exp(lp.k1)
-      shape <- exp(lp.k2)
+    return(function(x, lps){
+      scale <- exp(lps[[2]])
+      shape <- exp(lps[[3]])
       exp(-x ^ shape * scale) * shape * scale * x ^ (shape - 1)
     })
   }else if(dist == "lognormal"){
-    return(function(x, lp.k1, lp.k2, lp.k3){
-      dnorm((log(x) - lp.k1) / exp(lp.k2)) / (exp(lp.k2) * x)
+    return(function(x, lps){
+      dnorm((log(x) - lps[[2]]) / exp(lps[[3]])) / (exp(lps[[3]]) * x)
     })
   }else{
     stop("Distribution should be either 'exponential', 'weibull', or 'lognormal'")
@@ -151,82 +151,115 @@ get_surv2 <- function(dist){
   }
 }
 
+calc.lps <- function(Xs, param){
+  lps <- vector("list", length(Xs))
+  for(i in 1:length(Xs)){
+    if(ncol(Xs[[i]]) != 0){
+      lps[[i]] <- Xs[[i]] %*% param[1:ncol(Xs[[i]])]
+      param <- param[-c(1:ncol(Xs[[i]]))]
+    }
+  }
+  lps
+}
+
 
 ######Likelihood functions
 # Parametric Mixture cure model
 mixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
-                                         bhazard, surv_fun, dens_fun){
-  gamma <- param[grepl("gamma", names(param))]
-  coefs.k1 <- param[grepl("k1", names(param))]
-  coefs.k2 <- param[grepl("k2", names(param))]
-  coefs.k3 <- param[grepl("k3", names(param))]
-  lp.k1 <- Xs[[2]] %*% coefs.k1
-  if(length(coefs.k2) > 0){
-    lp.k2 <- Xs[[3]] %*% coefs.k2
-  }else{
-    lp.k2 <- NULL
-  }
-  if(length(coefs.k3) > 0){
-    lp.k3 <- Xs[[4]] %*% coefs.k3
-  }else{
-    lp.k3 <- NULL
-  }
-  pi <- link_fun(Xs[[1]] %*% gamma)
-  surv <- surv_fun(time, lp.k1, lp.k2, lp.k3)
-  dens <- dens_fun(time, lp.k1, lp.k2, lp.k3)
-  first_term <- status * log( bhazard + dens * ( 1 - pi ) / ( pi + (1 - pi) * surv ))
-  second_term <- log( pi + (1 - pi) * surv )
-  -sum(first_term + second_term)
+                                         surv_fun, dens_fun, bhazard){
+
+  #Calculate linear predictors
+  lps <- calc.lps(Xs, param)
+
+  #Compute pi and the survival of the uncured
+  pi <- link_fun(lps[[1]])
+  surv <- surv_fun(time, lps)
+  surv.term <- log(pi + (1 - pi) * surv)
+
+  #Calculate hazard term only for uncensored patients.
+  events <- which(status == 1)
+  dens <- dens_fun(time[events], lapply(lps, function(lp) lp[events,]))
+  pi.events <- pi[events]
+  surv.events <- surv[events]
+  haz.term <- log( bhazard[events] + dens * ( 1 - pi.events ) / ( pi.events + (1 - pi.events) * surv.events ))
+  surv.term[events] <- surv.term[events] + haz.term
+
+  #Output the negative log likelihood
+  -sum(surv.term)
 }
 
-#Parametric mixture cure model 2
-mixture_minuslog_likelihood2 <- function(param, time, status, Xs, link_fun,
-                                        bhazard, surv_fun, dens_fun){
-  gamma <- param[grepl("gamma", names(param))]
-  coefs.k1 <- param[grepl("k1", names(param))]
-  coefs.k2 <- param[grepl("k2", names(param))]
-  coefs.k3 <- param[grepl("k3", names(param))]
-  lp.k1 <- Xs[[2]] %*% coefs.k1
-  if(length(coefs.k2) > 0){
-    lp.k2 <- Xs[[3]] %*% coefs.k2
-  }else{
-    lp.k2 <- NULL
-  }
-  if(length(coefs.k3) > 0){
-    lp.k3 <- Xs[[4]] %*% coefs.k3
-  }else{
-    lp.k3 <- NULL
-  }
-  deaths <- status == 1
-  pi <- link_fun(Xs[[1]] %*% gamma)
-  pi_deaths <- pi[deaths]
-  surv <- surv_fun(time, lp.k1, lp.k2, lp.k3)
-  dens <- dens_fun(time[deaths], lp.k1[deaths,], lp.k2[deaths,], lp.k3[deaths,])
-  terms <- log( pi + (1 - pi) * surv )
-  terms[deaths] <- terms[deaths] + log(bhazard[deaths] + dens * ( 1 - pi_deaths ) / ( pi_deaths + (1 - pi_deaths) * surv[deaths]))
-  -sum(terms)
-}
-
-# Parametric non-mixture cure model
 nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
-                                         bhazard, surv_fun, dens_fun){
-  gamma <- param[grepl("gamma", names(param))]
-  coefs.k1 <- param[grepl("k1", names(param))]
-  coefs.k2 <- param[grepl("k2", names(param))]
-  coefs.k3 <- param[grepl("k3", names(param))]
-  lp.k1 <- Xs[[2]] %*% coefs.k1
-  if(length(coefs.k2) > 0){
-    lp.k2 <- Xs[[3]] %*% coefs.k2
-  }
-  if(length(coefs.k3) > 0){
-    lp.k3 <- Xs[[4]] %*% coefs.k3
-  }
-  pi <- link_fun(Xs[[1]] %*% gamma)
-  surv <- surv_fun(time, lp.k1, lp.k2, lp.k3)
-  dens <- dens_fun(time, lp.k1, lp.k2, lp.k3)
-  loglik <- status * log( bhazard - log(pi) * dens) + ( log(pi) - log(pi) * surv )
-  -sum(loglik)
+                                         surv_fun, dens_fun, bhazard){
+
+  #Calculate linear predictors
+  lps <- calc.lps(Xs, param)
+
+  #Compute pi and the survival of the uncured
+  pi <- link_fun(lps[[1]])
+  surv <- surv_fun(time, lps)
+  surv.term <- log(pi) - pi * surv
+
+  #Calculate hazard term only for uncensored patients.
+  events <- which(status == 1)
+  dens <- dens_fun(time[events], lapply(lps, function(lp) lp[events,]))
+  pi.events <- pi[events]
+  haz.term <- log( bhazard[events] - log(pi.events) * dens)
+  surv.term[events] <- surv.term[events] + haz.term
+
+  #Output the negative log likelihood
+  -sum(surv.term)
 }
+
+
+
+# #Parametric mixture cure model 2
+# mixture_minuslog_likelihood2 <- function(param, time, status, Xs, link_fun,
+#                                         bhazard, surv_fun, dens_fun){
+#   gamma <- param[grepl("gamma", names(param))]
+#   coefs.k1 <- param[grepl("k1", names(param))]
+#   coefs.k2 <- param[grepl("k2", names(param))]
+#   coefs.k3 <- param[grepl("k3", names(param))]
+#   lp.k1 <- Xs[[2]] %*% coefs.k1
+#   if(length(coefs.k2) > 0){
+#     lp.k2 <- Xs[[3]] %*% coefs.k2
+#   }else{
+#     lp.k2 <- NULL
+#   }
+#   if(length(coefs.k3) > 0){
+#     lp.k3 <- Xs[[4]] %*% coefs.k3
+#   }else{
+#     lp.k3 <- NULL
+#   }
+#   deaths <- status == 1
+#   pi <- link_fun(Xs[[1]] %*% gamma)
+#   pi_deaths <- pi[deaths]
+#   surv <- surv_fun(time, lp.k1, lp.k2, lp.k3)
+#   dens <- dens_fun(time[deaths], lp.k1[deaths,], lp.k2[deaths,], lp.k3[deaths,])
+#   terms <- log( pi + (1 - pi) * surv )
+#   terms[deaths] <- terms[deaths] + log(bhazard[deaths] + dens * ( 1 - pi_deaths ) / ( pi_deaths + (1 - pi_deaths) * surv[deaths]))
+#   -sum(terms)
+# }
+#
+# # Parametric non-mixture cure model
+# nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
+#                                          bhazard, surv_fun, dens_fun){
+#   gamma <- param[grepl("gamma", names(param))]
+#   coefs.k1 <- param[grepl("k1", names(param))]
+#   coefs.k2 <- param[grepl("k2", names(param))]
+#   coefs.k3 <- param[grepl("k3", names(param))]
+#   lp.k1 <- Xs[[2]] %*% coefs.k1
+#   if(length(coefs.k2) > 0){
+#     lp.k2 <- Xs[[3]] %*% coefs.k2
+#   }
+#   if(length(coefs.k3) > 0){
+#     lp.k3 <- Xs[[4]] %*% coefs.k3
+#   }
+#   pi <- link_fun(Xs[[1]] %*% gamma)
+#   surv <- surv_fun(time, lp.k1, lp.k2, lp.k3)
+#   dens <- dens_fun(time, lp.k1, lp.k2, lp.k3)
+#   loglik <- status * log( bhazard - log(pi) * dens) + ( log(pi) - log(pi) * surv )
+#   -sum(loglik)
+# }
 
 # Flexible mixture cure model
 flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,

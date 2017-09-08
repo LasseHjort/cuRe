@@ -1,6 +1,6 @@
-plot.CureModel <- function(fit, newdata = NULL, ylim = c(0, 1), xlim = NULL,
-                           xlab = "Time", ylab = "Relative survival", non_para = F,
-                           type = "relsurv", col = 1, col.non.para = 2, add = F){
+plot.cuRe <- function(fit, newdata = NULL, ylim = c(0, 1), xlim = NULL,
+                      xlab = "Time", ylab = "Relative survival", non_para = F,
+                      type = "relsurv", col = 1, col.non.para = 2, add = F){
   if(length(col) == 1){
     col <- rep(col, nrow(newdata))
   }

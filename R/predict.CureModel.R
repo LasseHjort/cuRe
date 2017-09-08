@@ -13,111 +13,132 @@
 #' the probability of cure is calculated.
 #' @export
 #'
-predict.CureModel <- function(fit, newdata, times, type = "relsurv", ci = T){
-  link_fun <- get_link(fit$link)
-  if(type == "relsurv"){
-    surv_fun <- get_surv2(fit$dist)
-    nr.coefs <- cumsum(unlist(lapply(fit$coefs, length)))
-    nr.coefs_indi <- unlist(lapply(fit$coefs, length))
-    rs_fun <- function(times, vars, lps = list(1, 1, 1, 1)){
-      pi_terms <- link_fun(lps[[1]] %*% vars[1:nr.coefs[1]]) + (1 - link_fun(lps[[1]] %*% vars[1:nr.coefs[1]]))
-      surv_term <- surv_fun(times,
-                            k1 = vars[(nr.coefs[1] + 1):nr.coefs[2]],
-                            k2 = vars[ifelse(nr.coefs_indi[3] != 0, (nr.coefs[2] + 1):nr.coefs[3], NA)],
-                            k3 = vars[ifelse(nr.coefs_indi[4] != 0, (nr.coefs[3] + 1):nr.coefs[4], NA)],
-                            lp1 = lps[[2]], lp2 = lps[[3]], lp3 = lps[[4]])
-      pi_terms * surv_term
+predict.curemodel <- function(fit, newdata = NULL, type = "relsurv",
+                              time = NULL, ci = T, pars = NULL){
+  if(!is.null(pars)){
+    groups <- factor(rep(1:4, fit$n.param.formula), 1:4, labels = c("gamma", "k1", "k2", "k3"))
+    fit$coefs <- split(pars, f = groups)
+  }
+  is_null_newdata <- is.null(newdata)
+
+  #Edit formulas
+  formulas <- fit$formulas
+  tt <- terms(formulas[[1]])
+  formulas[[1]] <- formula(delete.response(tt))
+
+  #Check if covariates are included in the model in cases where newdata is not provided
+  if(is_null_newdata){
+    vars <- lapply(formulas, function(formula){
+      if(!is.null(formula)){
+        all.vars(formula)
+      }else{
+        return(NULL)
+      }
+    })
+    vars <- unlist(vars)
+    if(length(vars) != 0){
+      stop("'newdata' must be specified for model including covariates")
     }
-    if(is.null(newdata)){
-      vars <- c(link_fun(fit$coefs[[1]]), unlist(fit$coefs[-1]))
-      rs <- rs_fun(times, vars = vars)
-      rss <- data.frame(times = times, RS = rs)
+    newdata <- data.frame(x = 1)
+    colnames(newdata) <- "(Intercept)"
+  }
+  link_fun_pi <- fit$link_fun_pi
+  link_fun_su <- fit$link_fun_su
+  dlink_fun_su <- fit$dlink_fun_su
+
+  Ms <- lapply(formulas, get_design, data = newdata)
+  pi_fun <- function(pars, M) M %*% pars[1:ncol(M)]
+  pi <- pi_fun(unlist(fit$coefs), Ms[[1]])
+
+  if(type == "curerate"){
+    pi <- data.frame(pi = pi)
+    if(ci){
+      grads <- jacobian(pi_fun, x = unlist(fit$coefs), M = Ms[[1]])
+      pi$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$cov %*% x)
+      pi$ci.lower <- get.link(pi$pi - qnorm(0.975) * sqrt(pi$var), type = "curerate")
+      pi$ci.upper <- get.link(pi$pi + qnorm(0.975) * sqrt(pi$var), type = "curerate")
+    }
+    pi$pi <- get.link(pi$pi, type = "curerate")
+    return(pi)
+  }else if(type %in% c("relsurv", "ehaz", "probcure")){
+    if(is.null(time)){
+      obs.times <- eval(fit$formulas[[1]][[2]], envir = fit$data)
+      time <- seq(min(obs.times), max(obs.times), length.out = 100)
+    }
+
+    out.fun <- switch(type,
+                      relsurv = relsurv_fun_simple,
+                      ehaz = ehaz_fun_simple,
+                      probcure = probcure_fun_simple)
+
+    rss <- vector("list", nrow(newdata))
+    for(i in 1:nrow(newdata)){
+      Ms_indi <- lapply(Ms, function(x) x[i,, drop = F])
+      rss[[i]] <- data.frame(Est = c(out.fun(Ms_indi = Ms_indi, pars = unlist(fit$coefs), time = time,
+                                             dist = fit$dist, model = fit$type, surv_fun = fit$surv_fun,
+                                             dens_fun = fit$dens_fun)))
       if(ci){
-        grads <- jacobian(rs_fun, x = vars, times = times)
-        VAR <- apply(grads, MARGIN = 1, function(x) x %*% fit$cov %*% x)
-        rss$VAR <- VAR
-        rss$ci.upper <- rss$RS + qnorm(0.975) * sqrt(rss$VAR)
-        rss$ci.lower <- rss$RS - qnorm(0.975) * sqrt(rss$VAR)
+        grads <- jacobian(out.fun, x = unlist(fit$coefs), Ms_indi = Ms_indi, time = time,
+                          dist = fit$dist, model = fit$type, surv_fun = fit$surv_fun,
+                          dens_fun = fit$dens_fun)
+
+        rss[[i]]$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$cov %*% x)
+        rss[[i]]$ci.lower <- get.link(rss[[i]]$Est - qnorm(0.975) * sqrt(rss[[i]]$var), type = type)
+        rss[[i]]$ci.upper <- get.link(rss[[i]]$Est + qnorm(0.975) * sqrt(rss[[i]]$var), type = type)
       }
-      rss
-    }else{
-      tt <- terms(fit$formulas$formula.gamma)
-      formula.2 <- formula(delete.response(tt))
-      fit$formulas$formula.gamma <- formula.2
-      design_matrices <- lapply(fit$formulas, function(x){
-        if(length(x) > 0){
-          return(model.matrix(x, data = newdata))
-        }
-      })
+      rss[[i]]$Est <- get.link(rss[[i]]$Est, type = type)
 
-
-      #lps <- vector("list", length(design_matrices))
-      #for(i in 1:length(lps)){
-      #  if(length(design_matrices[[i]]) > 0){
-      #    lps[[i]] <- design_matrices[[i]] %*% fit$coefs[[i]]
-      #  }
-      #}
-
-      #lps <- do.call(cbind, lps)
-      rss <- matrix(nrow = length(times), ncol = nrow(newdata))
-      vars <- unlist(fit$coefs)
-      for(i in 1:nrow(newdata)){
-        rss[, i] <- rs_fun(times = times, vars = vars, lps = lapply(design_matrices, function(x) x[i,]))
-      }
-      colnames(rss) <- paste0("RS", 1:ncol(rss))
-      rss <- cbind(times, rss)
-      rss
-    }
-  }else if(type == "curerate"){
-    if(is.null(newdata)){
-      pi <- link_fun(fit$coefs[[1]])
-      VAR <- diag(fit$cov)[1:length(pi)]
-      ci.upper <- link_fun(fit$coefs[[1]] + qnorm(0.975) * sqrt(VAR))
-      ci.lower <- link_fun(fit$coefs[[1]] - qnorm(0.975) * sqrt(VAR))
-      data.frame(pi, ci.upper, ci.lower)
-    }else{
-      link_fun <- get_link(fit$link)
-      tt <- terms(fit$formulas$formula.gamma)
-      formula.2 <- formula(delete.response(tt))
-      design_matrices <- model.matrix(formula.2, data = newdata)
-      lps <- design_matrices %*% fit$coefs[[1]]
-      pi <- link_fun(lps)
-      pi
-    }
-  }else if(type == "probcure"){
-    surv_fun <- get_surv(fit$dist)
-    if(is.null(newdata)){
-      pi <- link_fun(fit$coefs[[1]])
-      lps <- t(matrix(unlist(fit$coefs[-1])))
-      probtime <- pi / (pi + (1 - pi) * surv_fun(times, lp.k1 = lps[1], lp.k2 = lps[2], lp.k3= lps[3]))
-      probcure <- data.frame(times = times, RS = probtime)
-      probcure
-    }else{
-      tt <- terms(fit$formulas$formula.gamma)
-      formula.2 <- formula(delete.response(tt))
-      fit$formulas$formula.gamma <- formula.2
-      design_matrices <- lapply(fit$formulas, function(x){
-        if(length(x) > 0){
-          return(model.matrix(x, data = newdata))
-        }
-      })
-
-      lps <- vector("list", length(design_matrices))
-      for(i in 1:length(lps)){
-        if(length(design_matrices[[i]]) > 0){
-          lps[[i]] <- design_matrices[[i]] %*% fit$coefs[[i]]
+      if(type == "relsurv"){
+        if(ci){
+          rss[[i]][time == 0, ] <- c(1, 0, 1, 1)
+        }else{
+          rss[[i]][time == 0, ] <- 1
         }
       }
-
-      #lps <- do.call(cbind, lps)
-      probtime <- matrix(nrow = length(times), ncol = nrow(newdata))
-      for(i in 1:nrow(newdata)){
-        pi <- link_fun(lps[[1]][i,])
-        probtime[, i] <- pi / (pi + (1 - pi) * surv_fun(times, lp.k1 = lps[[2]][i,], lp.k2 = lps[[3]][i,], lp.k3 = lps[[4]][i,]))
-      }
-      colnames(probtime) <- paste0("CP", 1:ncol(probtime))
-      probcure <- cbind(times, probtime)
-      probcure
     }
+    return(list(res = rss, time = time, type = type))
   }
 }
+
+
+relsurv_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "relsurv", surv_fun, dens_fun){
+  surv_fun <- get_surv(dist)
+  lps <- calc.lps(Xs = Ms_indi, param = pars)
+  lps <- lapply(lps, c)
+  pi.eval <- get.link(lps[[1]], type = "curerate")
+  surv.eval <- surv_fun(time, lps = lps)
+  if(model == "mixture"){
+    get.inv.link(pi.eval + (1 - pi.eval) * surv.eval, type = type)
+  }else if(model == "nmixture"){
+    get.inv.link(pi.eval ^ (1 - surv.eval), type = type)
+  }
+}
+
+ehaz_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "ehaz", surv_fun, dens_fun){
+  surv_fun <- get_surv(dist)
+  lps <- calc.lps(Xs = Ms_indi, param = pars)
+  lps <- lapply(lps, c)
+  pi.eval <- get.link(lps[[1]], type = "curerate")
+  dens.eval <- dens_fun(time, lps = lps)
+  surv.eval <- surv_fun(time, lps = lps)
+  if(model == "mixture"){
+    get.inv.link((1 - pi.eval) * dens.eval / (pi.eval + (1 - pi.eval) * surv.eval), type = type)
+  }else if(model == "nmixture"){
+    get.inv.link(-log(pi.eval) * dens.eval, type = type)
+  }
+}
+
+probcure_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "probcure", surv_fun, dens_fun){
+  surv_fun <- get_surv(dist)
+  lps <- calc.lps(Xs = Ms_indi, param = pars)
+  lps <- lapply(lps, c)
+  pi.eval <- get.link(lps[[1]], type = "curerate")
+  surv.eval <- surv_fun(time, lps = lps)
+  if(model == "mixture"){
+    get.inv.link(pi.eval / (pi.eval + (1 - pi.eval) * surv.eval), type = type)
+  }else if(model == "nmixture"){
+    get.inv.link(pi.eval / (pi.eval ^ (1 - surv.eval)), type = type)
+  }
+}
+
+

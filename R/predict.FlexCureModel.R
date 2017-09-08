@@ -108,13 +108,14 @@ predict.fmcm <- function(fit, newdata = NULL, type = "relsurv",
   pi <- pi_fun(all.coefs, M)
 
   if(type == "curerate"){
-    pi <- data.frame(pi = get.link(pi, type = "curerate"))
+    pi <- data.frame(pi = pi)
     if(ci){
       grads <- jacobian(pi_fun, x = all.coefs, M = M)
       pi$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$covariance %*% x)
-      pi$ci.lower <- get.link(pi$pi - qnorm(0.975) * sqrt(pi$var), type = type)
-      pi$ci.upper <- get.link(pi$pi + qnorm(0.975) * sqrt(pi$var), type = type)
+      pi$ci.lower <- get.link(pi$pi - qnorm(0.975) * sqrt(pi$var), type = "curerate")
+      pi$ci.upper <- get.link(pi$pi + qnorm(0.975) * sqrt(pi$var), type = "curerate")
     }
+    pi$pi <- get.link(pi$pi, type = "curerate")
     return(pi)
   }else{
     b <- basis(knots = fit$knots, x = log(time))

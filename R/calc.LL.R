@@ -2,7 +2,7 @@
 #'
 #' Function for computing loss of lifetime estimates from an estimated relative survival model
 #'
-#' @param fit Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, \code{CureModel}, and \code{flexsurvreg}.
+#' @param fit Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
@@ -25,7 +25,13 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, tau = 100, ci = T, ratetab
 
   #Extract expected survival function
   if(is.null(newdata)){
-    expected <- list(survexp(~ 1, rmap = list(age = age, sex = sex, year = diag_date), data = fit$data,
+    if(class(fit) == "stpm2"){
+      data <- fit@data
+      newdata <- data.frame(arbritary_var = 0)
+    }else{
+      data <- fit$data
+    }
+    expected <- list(survexp(~ 1, rmap = list(age = age, sex = sex, year = diag_date), data = data,
                         ratetable = ratetable, scale = year,
                         times = times * year))
   }else{
@@ -37,19 +43,40 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, tau = 100, ci = T, ratetab
   }
 
   #Extract relative survival function
-  rel_surv <- lapply(1:length(expected), function(i) function(t, pars) predict(fit, newdata = newdata[i,, drop = F],
-                                                                   time = t, pars = pars, ci = F)$res[[1]]$Est)
+  if(class(fit) == "stpm2"){
+    fit_tmp <- fit
+    rel_surv <- lapply(1:length(expected), function(i){
+      function(t, pars){
+        res <- rep(NA, length(t))
+        fit_tmp@fullcoef <- pars
+        response_name <- as.character(fit@call.formula[[2]])[2]
+        wh <- which(t != 0)
+        suppressWarnings(newdata_tmp <- cbind(newdata[i,,drop = F], t[wh]))
+        names(newdata_tmp)[ncol(newdata_tmp)] <- response_name
+        res[wh] <- as.numeric(predict(fit_tmp, newdata = newdata_tmp))
+        res[-wh] <- 1
+        res
+      }
+      })
+    model.params <- fit@fullcoef
+    cov <- fit@vcov
+  }else{
+    rel_surv <- lapply(1:length(expected), function(i) function(t, pars) predict(fit, newdata = newdata[i,, drop = F],
+                                                                                 time = t, pars = pars, ci = F)$res[[1]]$Est)
+    model.params <- c(fit$coefs, fit$coefs.spline)
+    cov <- fit$covariance
+  }
 
   LOL <- lapply(1:length(expected), function(i){
     #Calculate loss of lifetime
-    LL <- .calcArea(rel_surv[[i]], exp_function, time = time, tau = tau, pars = c(fit$coefs, fit$coefs.spline),
+    LL <- .calcArea(rel_surv[[i]], exp_function, time = time, tau = tau, pars = model.params,
               expected[[i]])
     res <- data.frame(LL = LL)
     if(ci){
       #Calculate variances numerically by the delta method
-      J <- jacobian(.calcArea, x = c(fit$coefs, fit$coefs.spline), rel_surv = rel_surv[[i]],
+      J <- jacobian(.calcArea, x = model.params, rel_surv = rel_surv[[i]],
                     exp_function = exp_function, time = time, tau = tau, expected = expected[[i]])
-      res$Var <- apply(J, MARGIN = 1, function(x) x %*% fit$covariance %*% x)
+      res$Var <- apply(J, MARGIN = 1, function(x) x %*% cov %*% x)
       res$lower.ci <- res$LL - sqrt(res$Var) * qnorm(0.975)
       res$upper.ci <- res$LL + sqrt(res$Var) * qnorm(0.975)
     }

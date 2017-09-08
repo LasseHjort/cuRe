@@ -49,8 +49,32 @@ prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, 
 }
 
 
-
-calc.Crude <- function(fit, time, newdata = NULL, last.point = 100, type = "cancer",
+#' Crude event probabilities
+#'
+#' Function for computing crude event probabilties from relative survival models.
+#'
+#' @param fit Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.
+#' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
+#' the model was fitted on.
+#' @param type Character indicating which measure is desired. Possible values are \code{cancer} (default),
+#' \code{other}, and \code{othertime} (see details).
+#' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
+#' and \code{last.point} is selected.
+#' @param last.point Constant at which the bound to tie probability is calculated. Default is 100.
+#' @param ci Logical indicating whether confidence intervals should be computed.
+#' @param ratetable Object of class \code{ratetable} to compute the general population survival from. Default is survexp.dk.
+#' @param Link Character indicating the used link function for computing confidence intervals.
+#' @return An object of class \code{crude} containing the crude probability estimates
+#' of each individual in \code{newdata}.
+#' @details The types of crude probabilities is the typical measures in relative survival, namely
+#' a crude disease-specific probability (\code{cancer}), the probability of dying from other causes than the
+#' disease (\code{other}), and the conditional probability of eventually dying from other causes than the
+#' disease given survival until time t (\code{othertime}). The proportion of patients bound to die from the
+#' disease can be computed by using \code{cancer} and choosing a sufficiently large time point.
+#' @references Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
+#' for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
+#' @export
+calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100,
                        ci = T, ratetable = survexp.dk, link = "crudeprob"){
   #Time points at which to evaluate integral
   if(is.null(time)){
@@ -121,36 +145,8 @@ calc.Crude <- function(fit, time, newdata = NULL, last.point = 100, type = "canc
   })
 
   probs <- list(prob = probs, time = time, ci = ci, type = type)
-  class(probs) <- "CrudeProb"
+  class(probs) <- "crude"
   probs
 }
 
-plot.CrudeProb <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1, ylab = NULL, xlab = "Time"){
-  if(is.null(ylab)){
-    ylab <- switch(obj$type, cancer = "Cumulative incidence of cancer related death",
-                   other = "Cumulative incidence of death from other causes than cancer",
-                   othertime = "Probability of eventually dying from other causes than cancer")
-  }
-  if(is.null(xlim)) xlim <- range(obj$time)
-
-  if(length(col) == 1){
-    col <- rep(col, length(obj$prob))
-  }
-  if(ci & !obj$ci){
-    ci <- FALSE
-  }
-
-  for(i in 1:length(obj$prob)){
-    if(i == 1){
-      plot(prob ~ obj$time, data = obj$prob[[i]], ylim = ylim, xlim = xlim,
-           type = "l", col = col[i], ylab = ylab, xlab = xlab)
-    }else{
-      lines(prob ~ obj$time, data = obj$prob[[i]], col = col[i])
-    }
-    if(ci){
-      lines(lower.ci ~ obj$time, data = obj$prob[[i]], lty = 2, col = col[i])
-      lines(upper.ci ~ obj$time, data = obj$prob[[i]], lty = 2, col = col[i])
-    }
-  }
-}
 
