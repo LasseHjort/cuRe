@@ -1,15 +1,16 @@
+
+#Function for computing initial values
 get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, linksu, formula, type,
-                           fu, status, n.knots.time, knots, X, b, method = "mix"){
+                           fu, status, n.knots.time, knots, X, b, method = "cure"){
   vars <- c(all.vars(smooth.formula), all.vars(tvc.formula))
-  if(method == "mix"){
+  if(method == "cure"){
     formula.2 <- reformulate(termlabels = ifelse(length(vars) == 0, "1", vars),
                              response = NULL)
-    fit <- MixtureCureModel(formula, data = data, bhazard = bhazard, hes = F,
+    fit <- fit.cure.model(formula, data = data, bhazard = bhazard, covariance = F,
                             formula.k1 = formula.2, formula.k2 = ~ 1, type = type)
     pi_hat <- get_link("logit")(X %*% fit$coefs[[1]])
     gpi_hat <- get_inv_link(linkpi)(pi_hat)
-    pi_fit <- lm(gpi_hat ~ -1 + X)
-    ini_pi <- pi_fit$coefficients
+    ini_pi <- lm(gpi_hat ~ -1 + X)$coefficients
     lp <- exp(model.matrix(formula.2, data = data) %*% fit$coefs[[2]])
     shat <- exp(-lp * fu ^ exp(fit$coefs[[3]]))
     gshat <- get_inv_link(linksu)(shat)
@@ -28,16 +29,15 @@ get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     shat <- exp(-cum_base_haz$hazard) ^ exp(fit$linear.predictors)
     suppressWarnings(gshat <- get_inv_link(linksu)(shat))
     fit_lm <- lm(gshat ~ -1 + b[status == 1,])
-  }else{
+  }else if(method == "flexpara"){
     tt <- terms(formula)
     formula.2 <- formula(delete.response(tt))
     vars <- unique(c("-1", all.vars(formula.2), all.vars(smooth.formula), all.vars(tvc.formula)))
     formula.3 <- reformulate(termlabels = vars, response = formula[[2]])
     fu_time <- all.vars(formula.3)[1]
     smooth.formula.paste <- as.formula(paste0("~basis(knots = knots, x = log(", fu_time, "))"))
-    #fit <- stpm2(formula.3, data = data, smooth.formula = smooth.formula.paste, bhazard = data[, bhazard],
-    #             tvc = n.knots.time)
-    fit <- stpm2(formula.3, data = data, smooth.formula = smooth.formula.paste, bhazard = data[, bhazard])
+    fit <- stpm2(formula.3, data = data, smooth.formula = smooth.formula.paste, bhazard = data[, bhazard],
+                 cure = T)
     shat <- predict(fit, newdata = data, se.fit = F)
     gshat <- get_inv_link(linksu)(shat)
     data2 <- data
@@ -180,7 +180,7 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
   link_fun_su <- get_link(linksu)
   dlink_fun_su <- get_dlink(linksu)
 
-  types <- c("mix")
+  types <- c("cure", "flexpara")
   ini_values <- lapply(types, function(x) get_ini_values(smooth.formula = smooth.formula,
                                                          tvc.formula =  tvc.formula, data = data,
                                                          bhazard = bhazard,
@@ -198,30 +198,6 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
     minusloglik <- flexible_nmixture_minuslog_likelihood
   }
 
-  # lapply(ini_values, function(inival) minusloglik(inival,
-  #                                           time = fu, status = status, X = X,
-  #                                           b = b, db = db, bhazard = data[, bhazard],
-  #                                           link_fun_pi = link_fun_pi,
-  #                                           link_fun_su = link_fun_su,
-  #                                           dlink_fun_su = dlink_fun_su))
-  #
-  # rs_fit <- rs.surv(Surv(FU, status) ~ 1 + ratetable(age = age, sex = sex, year = diag_date),
-  #                   data = data, ratetable = survexp.dk, method = "ederer1")
-  # rs_fit$time <- rs_fit$time / year
-  # plot(rs_fit)
-  #
-  # pi <- exp(ini_values[[1]][1]) / (exp(ini_values[[1]][1]) + 1)
-  # f <- function(t) pi + (1 - pi) * exp(-exp(basis(knots, x = log(t)) %*% ini_values[[1]][-1]))
-  # curve(f, from = 0, to = 16, col = 2, add = T)
-  #
-  # pi <- exp(ini_values[[2]][1]) / (exp(ini_values[[2]][1]) + 1)
-  # f <- function(t) pi + (1 - pi) * exp(-exp(basis(knots, x = log(t)) %*% ini_values[[2]][-1]))
-  # curve(f, from = 0, to = 16, col = 3, add = T)
-  #
-  # pi <- exp(ini_values[[3]][1]) / (exp(ini_values[[3]][1]) + 1)
-  # f <- function(t) pi + (1 - pi) * exp(-exp(basis(knots, x = log(t)) %*% ini_values[[3]][-1]))
-  # curve(f, from = 0, to = 16, col = 4, add = T)
-
   #Fit the model
   res_list <- lapply(ini_values, function(inival) optim(par = inival,
                                                         fn = minusloglik,
@@ -234,10 +210,6 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
   MLs <- sapply(res_list, function(x) x$value)
   wh <- which.min(MLs)
   res <- res_list[[wh]]
-  # pi <- exp(res_list[[1]]$par[1]) / (exp(res_list[[1]]$par[1]) + 1)
-  # f <- function(t) pi + (1 - pi) * exp(-exp(basis(knots, x = log(t)) %*% res_list[[1]]$par[-1]))
-  # curve(f, from = 0, to = 16, col = 5, add = T)
-  # res_list[[1]]$value
 
   names(res$par) <- gsub("spline_", "", names(res$par))
   if(res$convergence != 0){
@@ -264,12 +236,12 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
             coefs = res$par[1:ncol(X)],
             coefs.spline = res$par[(ncol(X) + 1):length(res$par)],
             knots = knots, knots.time = knots.time,
-            ML = res$value, covariance = cov, tvc.formula = tvc.formula, formula = formula,
+            NegMaxLik = res$value, covariance = cov, tvc.formula = tvc.formula, formula = formula,
             formula_main = smooth.formula, type = type,
             link_fun_pi = link_fun_pi,
             link_fun_su = link_fun_su,
             dlink_fun_su = dlink_fun_su,
-            df = length(res$par) - 1, MLs = MLs)
+            df = length(res$par) - 1, NegMaxLiks = MLs)
 
   class(L) <- c("fmcm", "cuRe")
   L

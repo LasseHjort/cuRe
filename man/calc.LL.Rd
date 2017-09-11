@@ -8,7 +8,7 @@ calc.LL(fit, newdata = NULL, time = NULL, tau = 100, ci = T,
   ratetable = survexp.dk)
 }
 \arguments{
-\item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, \code{CureModel}, and \code{flexsurvreg}.}
+\item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}

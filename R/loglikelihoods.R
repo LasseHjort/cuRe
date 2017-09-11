@@ -197,7 +197,7 @@ nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
   #Compute pi and the survival of the uncured
   pi <- link_fun(lps[[1]])
   surv <- surv_fun(time, lps)
-  surv.term <- log(pi) - pi * surv
+  surv.term <- log(pi) - log(pi) * surv
 
   #Calculate hazard term only for uncensored patients.
   events <- which(status == 1)
@@ -278,20 +278,54 @@ flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, 
   -sum(likterms)
 }
 
-# Flexible non-mixture cure model
-flexible_nmixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,
-                                                  link_fun_pi, link_fun_su, dlink_fun_su){
+flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,
+                                                 link_fun_pi, link_fun_su, dlink_fun_su){
+  #Get parameters
   gamma <- param[1:ncol(X)]
   beta <- param[(ncol(X) + 1):length(param)]
+
+  #Calculate linear predictors
   lp <- X %*% gamma
   pi <- link_fun_pi(lp)
   eta <- b %*% beta
-  deta <- db %*% beta / time
+  surv <- link_fun_su(eta)
+  rsurv <- pi + (1 - pi) * surv
+  likterms <- log(rsurv)
+
+  #Add the hazard term only for events
+  events <- status == 1
+  deta <- db[events,] %*% beta / time[events]
+  dsurv <- dlink_fun_su(eta[events])
+  ehaz <- -(1 - pi[events]) * dsurv * deta / rsurv[events]
+  suppressWarnings(likterms[events] <- likterms[events] + log( bhazard[events] + ehaz))
+
+  #Output the negative log likelihood
+  -sum(likterms)
+}
+
+#Non-mixture cure
+flexible_nmixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,
+                                                 link_fun_pi, link_fun_su, dlink_fun_su){
+  #Get parameters
+  gamma <- param[1:ncol(X)]
+  beta <- param[(ncol(X) + 1):length(param)]
+
+  #Calculate linear predictors
+  lp <- X %*% gamma
+  pi <- link_fun_pi(lp)
+  eta <- b %*% beta
   surv <- link_fun_su(eta)
   rsurv <- pi ^ (1 - surv)
-  dsurv <- dlink_fun_su(eta)
-  ehaz <- -log(pi) * dsurv * deta
-  suppressWarnings(likterms <- status * log( bhazard + ehaz) + log(rsurv))
+  likterms <- log(rsurv)
+
+  #Add the hazard term only for events
+  events <- status == 1
+  deta <- db[events,] %*% beta / time[events]
+  ddist <- dlink_fun_su(eta[events])
+  ehaz <- log(pi[events]) * ddist * deta
+  suppressWarnings(likterms[events] <- likterms[events] + log( bhazard[events] + ehaz))
+
+  #Output the negative log likelihood
   -sum(likterms)
 }
 

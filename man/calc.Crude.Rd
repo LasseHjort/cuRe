@@ -8,7 +8,7 @@ calc.Crude(fit, newdata = NULL, type = "cancer", time = NULL,
   last.point = 100, ci = T, ratetable = survexp.dk, link = "crudeprob")
 }
 \arguments{
-\item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, \code{CureModel}, and \code{flexsurvreg}.}
+\item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
@@ -43,5 +43,5 @@ disease can be computed by using \code{cancer} and choosing a sufficiently large
 }
 \references{
 Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
-for improved risk communication in population-based cancer patient survival. \emph{Lancet}, 12:86.
+for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
 }

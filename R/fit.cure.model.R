@@ -1,10 +1,3 @@
-get_design <- function(formula, data){
-  if(!is.null(formula))
-    model.matrix(formula, data = data)
-  else
-    data.frame()
-}
-
 #' Parametric cure model
 #'
 #' This function is used to fit parametric cure models on the relative survival.
@@ -105,8 +98,8 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   L <- list(data = data, formulas = formulas,
             coefs = coefs, dist = dist, link = link,
             type = type,
-            ML = res$value, cov = cov,
-            df = nrow(data) - length(res$par),
+            ML = optim.out$value, cov = cov,
+            df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
             surv_fun = surv_fun, dens_fun = dens_fun)
   class(L) <- c("curemodel", "cuRe")
@@ -119,4 +112,12 @@ print.CureModel <- function(fit){
   print(fit$formula)
   cat("\nCoefficients:\n")
   print(fit$coefs)
+}
+
+
+get_design <- function(formula, data){
+  if(!is.null(formula))
+    model.matrix(formula, data = data)
+  else
+    data.frame()
 }

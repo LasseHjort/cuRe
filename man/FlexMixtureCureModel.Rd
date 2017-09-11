@@ -7,7 +7,7 @@
 FlexMixtureCureModel(formula, data, bhazard, smooth.formula = ~1,
   knots = NULL, n.knots = NULL, tvc.formula = NULL, knots.time = NULL,
   n.knots.time = NULL, covariance = T, message = T, type = "mixture",
-  linkpi = "logistic", linksu = "loglog")
+  linkpi = "logit", linksu = "loglog")
 }
 \arguments{
 \item{formula}{Formula for the covariates in the modelling of the cure rate, \eqn{\pi}. Reponse has to be of the form \code{Surv(time, status)}.}

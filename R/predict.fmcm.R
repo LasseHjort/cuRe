@@ -29,7 +29,7 @@ relsurv_fun <- function(pars, M2, M, dM2, time, pi_fun, model, link_fun_pi, link
     get.inv.link(pi + (1 - pi) * link_fun_su(eta), type = "relsurv")
   }
   else if(model == "nmixture"){
-    get.inv.link(pi ^ link_fun_su(eta), type = "relsurv")
+    get.inv.link(pi ^ (1 - link_fun_su(eta)), type = "relsurv")
   }
 }
 
@@ -42,20 +42,19 @@ ehaz_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, lin
     s_u <- link_fun_su(eta)
     get.inv.link(-(1 - pi) * ds_u * (deta / time) / (pi + (1 - pi) * s_u), type = "ehaz")
   }else if(model == "nmixture"){
-    get.inv.link(-log(pi) * ds_u * deta / time, type = "ehaz")
+    get.inv.link(log(pi) * ds_u * deta / time, type = "ehaz")
   }
 }
 
 probcure_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
+  pi <- c(get.link(pi_fun(pars, M), type = "curerate"))
+  eta <- M2 %*% pars[-c(1:ncol(M))]
   if(model == "mixture"){
-    pi <- c(get.link(pi_fun(pars, M), type = "curerate"))
-    eta <- M2 %*% pars[-c(1:ncol(M))]
-    get.inv.link(pi / (pi + (1 - pi) * exp(-exp(eta))), type = "probcure")
+    rsurv <- pi + (1 - pi) * link_fun_su(eta)
   }else if(model == "nmixture"){
-    eta <- M2 %*% pars
-    pi <- exp(-exp(eta[length(eta)]))
-    get.inv.link(pi / ifelse(time == 0, 1, exp(-exp(eta))), type = "probcure")
+    rsurv <- pi ^ (1 - link_fun_su(eta))
   }
+  get.inv.link(pi / rsurv, type = "probcure")
 }
 
 
@@ -153,7 +152,7 @@ predict.fmcm <- function(fit, newdata = NULL, type = "relsurv",
       rss <- vector("list", nrow(newdata))
       for(i in 1:nrow(newdata)){
         rss[[i]] <- data.frame(Est = c(fun(all.coefs, M_list[[i]]$M2, M[i,, drop = FALSE], M_list[[i]]$dM2,
-                                           time, pi_fun = pi_fun, model = "mixture",
+                                           time, pi_fun = pi_fun, model = fit$type,
                                            link_fun_pi = link_fun_pi, link_fun_su = link_fun_su,
                                            dlink_fun_su = dlink_fun_su)))
         if(ci){
