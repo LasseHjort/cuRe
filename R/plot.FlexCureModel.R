@@ -27,7 +27,8 @@ plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
                    ehaz = "Excess hazard",
                    probcure = "Conditional probability of cure",
                    crude_prob = "Probability of eventually dying from other causes than cancer",
-                   lol = "Loss of lifetime")
+                   lol = "Loss of lifetime",
+                   survuncured = "Disease specific survival of the uncured")
   }
 
   if(length(col) == 1 & !is.null(newdata)){

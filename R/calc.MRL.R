@@ -61,11 +61,3 @@ calc.MRL <- function(fit, time = NULL, ci = T, tau = 100, newdata = NULL, rateta
 }
 
 
-.calcArea_MRL <- function(rel_surv, exp_function, time, tau, pars, expected){
-  t_new <- sort(unique(c(time, seq(0, tau, length.out = 5000))), decreasing = T)
-  df_time <- -diff(t_new)
-  mid_points <- t_new[-length(t_new)] + diff(t_new) / 2
-  vals_pop <- c(0, cumsum(rel_surv(mid_points, pars) * exp_function(mid_points, expected) * df_time))
-  vals_pop <- rev(vals_pop[t_new %in% time])
-  vals_pop / (rel_surv(time, pars) * exp_function(time, expected))
-}

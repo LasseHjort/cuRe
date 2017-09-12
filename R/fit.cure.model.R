@@ -98,22 +98,13 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   L <- list(data = data, formulas = formulas,
             coefs = coefs, dist = dist, link = link,
             type = type,
-            ML = optim.out$value, cov = cov,
+            ML = optim.out$value, covariance = cov,
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
             surv_fun = surv_fun, dens_fun = dens_fun)
-  class(L) <- c("curemodel", "cuRe")
+  class(L) <- c("cm", "cuRe")
   L
 }
-
-
-print.CureModel <- function(fit){
-  cat("Call:\n")
-  print(fit$formula)
-  cat("\nCoefficients:\n")
-  print(fit$coefs)
-}
-
 
 get_design <- function(formula, data){
   if(!is.null(formula))
@@ -121,3 +112,54 @@ get_design <- function(formula, data){
   else
     data.frame()
 }
+
+
+print.cm <- function(fit){
+  type <- switch(fit$type,
+                 mixture = "mixture",
+                 nmixture = "non-mixture")
+  cat("Model:\n")
+  print(paste0("Parametric ", type, " cure model"))
+  cat("Family survival / curerate: \n")
+  print(paste0(fit$dist, " / ", fit$link))
+  is.not.null <- sapply(fit$formulas, function(f) !is.null(f))
+  coef.names <- unlist(lapply(fit$formulas[is.not.null], function(x) Reduce(paste, deparse(x))))
+  cat("\nCoefficients:\n")
+  coefs <- fit$coefs[sapply(fit$coefs, function(coef) length(coef) != 0)]
+  names(coefs) <- coef.names
+  print(coefs)
+}
+
+summary.cm <- function(fit){
+  se <- sqrt(diag(fit$cov))
+  coefs <- unlist(fit$coefs)
+  tval <- coefs / se
+  TAB1 <- cbind(Estimate = coefs,
+                StdErr = se,
+                t.value = tval,
+                p.value = ifelse(is.na(tval), rep(NA, length(coefs)),
+                                 2 * pt(-abs(tval), df = fit$df)))
+
+  results <- list(coefs = TAB1)
+  results$type <- fit$type
+  results$link <- fit$link
+  results$ML <- fit$ML
+  formulas <- fit$formulas
+  names(formulas) <- c("gamma", "k1", "k2", "k3")
+  results$formulas <- formulas[sapply(formulas, function(x) !is.null(x))]
+  class(results) <- "summary.cm"
+  results
+}
+
+print.summary.cm <- function(x)
+{
+  cat("Calls:\n")
+  print(x$formulas)
+  #    cat("\n")
+  printCoefmat(x$coefs, P.value = TRUE, has.Pvalue = T)
+  cat("\n")
+  cat("Type =", x$type, "\n")
+  cat("Link =", x$link, "\n")
+  cat("LogLik(model) =", x$ML, "\n")
+}
+

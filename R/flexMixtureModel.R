@@ -241,6 +241,7 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
             link_fun_pi = link_fun_pi,
             link_fun_su = link_fun_su,
             dlink_fun_su = dlink_fun_su,
+            linkpi = linkpi, linksu = linksu,
             df = length(res$par) - 1, NegMaxLiks = MLs)
 
   class(L) <- c("fmcm", "cuRe")
@@ -254,11 +255,11 @@ print.fmcm <- function(fit){
   print(fit$formula_main)
   cat("\nCoefficients:\n")
   print(list(pi = fit$coefs,
-             s_ut = fit$coefs.spline))
+             surv = fit$coefs.spline))
 }
 
 summary.fmcm <- function(fit){
-  se <- sqrt(diag(fit$cov))
+  se <- sqrt(diag(fit$covariance))
   tval <- c(fit$coefs, fit$coefs.spline) / se
   coefs <- c(fit$coefs, fit$coefs.spline)
   TAB1 <- cbind(Estimate = fit$coefs,
@@ -274,10 +275,11 @@ summary.fmcm <- function(fit){
                                 2*pt(-abs(tval[1:length(fit$coefs.spline)]), df = fit$df)))
 
 
-  results <- list(pi = TAB1, S_u = TAB2)
+  results <- list(pi = TAB1, surv = TAB2)
   results$type <- fit$type
-  results$link <- fit$link
-  results$ML <- fit$ML
+  results$linkpi <- fit$linkpi
+  results$linksu <- fit$linksu
+  results$ML <- fit$NegMaxLik
   results$formula <- fit$formula
   results$formula.fix <- fit$formula_main
   results$formula.tvc <- fit$tvc.formula
@@ -291,16 +293,17 @@ print.summary.fmcm <- function(x)
   print(x$formula)
   #    cat("\n")
   printCoefmat(x$pi, P.value = TRUE, has.Pvalue = T)
-  cat("\nCall - S_u - baseline: ")
+  cat("\nCall - surv - baseline: ")
   print(as.formula(deparse(x$formula.fix)))
   if(length(all.vars(x$formula.tvc))){
-    cat("Call - S_u - tvc: ")
+    cat("Call - surv - tvc: ")
     print(deparse(x$formula.tvc))
   }
-  printCoefmat(x$S_u, P.value = TRUE, has.Pvalue = T)
+  printCoefmat(x$surv, P.value = TRUE, has.Pvalue = T)
   cat("\n")
   cat("Type =", x$type, "\n")
-  cat("Link =", x$link, "\n")
+  cat("Link - pi =", x$linkpi, "\n")
+  cat("Link - surv = ", x$linksu, "\n")
   cat("LogLik(model) =", x$ML, "\n")
-
 }
+

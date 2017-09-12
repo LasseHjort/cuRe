@@ -4,8 +4,8 @@
 \alias{calc.LL}
 \title{Loss of lifetime estimation}
 \usage{
-calc.LL(fit, newdata = NULL, time = NULL, tau = 100, ci = T,
-  ratetable = survexp.dk)
+calc.LL(fit, newdata = NULL, time = NULL, type = "ll", tau = 100,
+  ci = T, ratetable = survexp.dk, rmap = rmap)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}
@@ -15,6 +15,10 @@ the model was fitted on.}
 
 \item{time}{Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
 and \code{tau} is selected.}
+
+\item{type}{Character indicating the type of life expectation estimate.
+Possible values are \code{ll} (default) which gives the loss of lifetime and \code{mrl},
+which gives the mean residual lifetime}
 
 \item{tau}{The upper limit of the integral. Default is 100.}
 

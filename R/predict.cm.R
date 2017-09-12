@@ -13,7 +13,7 @@
 #' the probability of cure is calculated.
 #' @export
 #'
-predict.curemodel <- function(fit, newdata = NULL, type = "relsurv",
+predict.cm <- function(fit, newdata = NULL, type = "relsurv",
                               time = NULL, ci = T, pars = NULL){
   if(!is.null(pars)){
     groups <- factor(rep(1:4, fit$n.param.formula), 1:4, labels = c("gamma", "k1", "k2", "k3"))
@@ -60,7 +60,7 @@ predict.curemodel <- function(fit, newdata = NULL, type = "relsurv",
     }
     pi$pi <- get.link(pi$pi, type = "curerate")
     return(pi)
-  }else if(type %in% c("relsurv", "ehaz", "probcure")){
+  }else if(type %in% c("relsurv", "ehaz", "probcure", "survuncured")){
     if(is.null(time)){
       obs.times <- eval(fit$formulas[[1]][[2]], envir = fit$data)
       time <- seq(min(obs.times), max(obs.times), length.out = 100)
@@ -69,7 +69,8 @@ predict.curemodel <- function(fit, newdata = NULL, type = "relsurv",
     out.fun <- switch(type,
                       relsurv = relsurv_fun_simple,
                       ehaz = ehaz_fun_simple,
-                      probcure = probcure_fun_simple)
+                      probcure = probcure_fun_simple,
+                      survuncured = survuncured_fun_simple)
 
     rss <- vector("list", nrow(newdata))
     for(i in 1:nrow(newdata)){
@@ -88,7 +89,7 @@ predict.curemodel <- function(fit, newdata = NULL, type = "relsurv",
       }
       rss[[i]]$Est <- get.link(rss[[i]]$Est, type = type)
 
-      if(type == "relsurv"){
+      if(type %in% c("relsurv", "survuncured")){
         if(ci){
           rss[[i]][time == 0, ] <- c(1, 0, 1, 1)
         }else{
@@ -138,6 +139,19 @@ probcure_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "
     get.inv.link(pi.eval / (pi.eval + (1 - pi.eval) * surv.eval), type = type)
   }else if(model == "nmixture"){
     get.inv.link(pi.eval / (pi.eval ^ (1 - surv.eval)), type = type)
+  }
+}
+
+survuncured_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "survuncured", surv_fun, dens_fun){
+  surv_fun <- get_surv(dist)
+  lps <- calc.lps(Xs = Ms_indi, param = pars)
+  lps <- lapply(lps, c)
+  surv.eval <- surv_fun(time, lps = lps)
+  if(model == "mixture"){
+    get.inv.link(surv.eval, type = type)
+  }else if(model == "nmixture"){
+    pi.eval <- get.link(lps[[1]], type = "curerate")
+    get.inv.link((pi.eval ^ (1 - surv.eval) - pi.eval) / (1 - pi.eval), type = type)
   }
 }
 

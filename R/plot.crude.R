@@ -5,7 +5,8 @@
 #' @param obj Object of class \code{crude} in which crude probabilities are calculated
 #' @export
 
-plot.crude <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1, ylab = NULL, xlab = "Time"){
+plot.crude <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T,
+                       col = 1, ylab = NULL, xlab = "Time", add = F){
   if(is.null(ylab)){
     ylab <- switch(obj$type, cancer = "Cumulative incidence of cancer related death",
                    other = "Cumulative incidence of death from other causes than cancer",
@@ -21,7 +22,7 @@ plot.crude <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1, ylab =
   }
 
   for(i in 1:length(obj$prob)){
-    if(i == 1){
+    if(i == 1 & !add){
       plot(prob ~ obj$time, data = obj$prob[[i]], ylim = ylim, xlim = xlim,
            type = "l", col = col[i], ylab = ylab, xlab = xlab)
     }else{
