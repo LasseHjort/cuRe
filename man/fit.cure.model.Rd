@@ -6,7 +6,7 @@
 \usage{
 fit.cure.model(formula, data, bhazard, formula.k1 = ~1, formula.k2 = NULL,
   formula.k3 = NULL, type = "mixture", dist = "weibull", link = "logit",
-  init = NULL, covariance = TRUE)
+  covariance = TRUE, optim.args = NULL)
 }
 \arguments{
 \item{formula}{An object of type formula for the cure rate.}
@@ -28,9 +28,11 @@ fit.cure.model(formula, data, bhazard, formula.k1 = ~1, formula.k2 = NULL,
 
 \item{link}{Specifies the link function of the cure rate. Possible values are \code{logistic} (default), \code{identity}, and \code{loglog}.}
 
-\item{init}{Initial values for the maximum likelihood optimization}
-
 \item{covariance}{Logical variable determining whether to compute the hessian or not. Default is \code{TRUE}}
+
+\item{optim.args}{List with additional arguments to pass to \code{optim}.}
+
+\item{init}{Initial values for the maximum likelihood optimization}
 }
 \value{
 An object of class \code{CureModel}.

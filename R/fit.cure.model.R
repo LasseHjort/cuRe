@@ -14,6 +14,7 @@
 #' @param link Specifies the link function of the cure rate. Possible values are \code{logistic} (default), \code{identity}, and \code{loglog}.
 #' @param init Initial values for the maximum likelihood optimization
 #' @param covariance Logical variable determining whether to compute the hessian or not. Default is \code{TRUE}
+#' @param optim.args List with additional arguments to pass to \code{optim}.
 #' @return An object of class \code{CureModel}.
 #' @details The arguments for modelling the parameters of the cure model have different meanings dependent on the chosen distribution. \cr
 #' For the exponential distribution, k1 denotes the rate, for the weibull model, k1 denotes the scale parameter and k2 denotes the shape parameter, sfor the log normal distribution k1 denotes the mu and sigma.
@@ -23,7 +24,8 @@
 fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 = NULL,
                            formula.k3 = NULL, type = "mixture",
                            dist = "weibull", link = "logit",
-                           init = NULL, covariance = TRUE){
+                           covariance = TRUE,
+                           optim.args = NULL){
 
   #Delete missing observations and extract response data
   formulas <- list(formula, formula.k1, formula.k2, formula.k3)
@@ -48,28 +50,39 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   surv_fun <- get_surv(dist)
   dens_fun <- get_dens(dist)
 
-  #Set initial values for the optimization
-  n.param.formula <- sapply(X.all, ncol)
-  n.param <- sum(n.param.formula)
-  init <- rep(0, n.param)
-  names(init) <- unlist(lapply(X.all, colnames))
-
   #Extract likelihood function
   minuslog_likelihood <- switch(type,
                                 mixture = mixture_minuslog_likelihood,
                                 nmixture = nmixture_minuslog_likelihood)
 
+  #Prepare optimization arguments
+  likelihood.pars <- list(fn = minuslog_likelihood,
+                           time = time,
+                           status = event,
+                           Xs = X.all,
+                           link = link_fun,
+                           surv_fun = surv_fun,
+                           dens_fun = dens_fun,
+                           bhazard = bhazard.eval)
+
+  if(is.null(optim.args$control$maxit)){
+    optim.args$control <- list(maxit = 10000)
+  }
+
+  #Get initial values
+  if(is.null(optim.args$par)){
+    types <- c("cure", "flexpara")
+    n.param.formula <- sapply(X.all, ncol)
+    n.param <- sum(n.param.formula)
+    optim.args$par <- rep(0, n.param)
+    names(optim.args$par) <- unlist(lapply(X.all, colnames))
+  }
+
+  optim.pars <- c(optim.args, likelihood.pars)
+
+
   #Run optimization
-  optim.out <- optim(init,
-                     fn = minuslog_likelihood,
-                     time = time,
-                     status = event,
-                     Xs = X.all,
-                     link = link_fun,
-                     surv_fun = surv_fun,
-                     dens_fun = dens_fun,
-                     bhazard = bhazard.eval,
-                     control = list(maxit = 10000), hessian = T)
+  optim.out <- do.call(optim, optim.pars)
 
   #Check for convergence
   if(optim.out$convergence != 0){
@@ -101,7 +114,7 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
             ML = optim.out$value, covariance = cov,
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
-            surv_fun = surv_fun, dens_fun = dens_fun)
+            surv_fun = surv_fun, dens_fun = dens_fun, optim.pars = optim.pars)
   class(L) <- c("cm", "cuRe")
   L
 }

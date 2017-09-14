@@ -5,7 +5,8 @@
 \title{Crude event probabilities}
 \usage{
 calc.Crude(fit, newdata = NULL, type = "cancer", time = NULL,
-  last.point = 100, ci = T, ratetable = survexp.dk, link = "crudeprob")
+  last.point = 100, ci = T, ratetable = survexp.dk, rmap,
+  link = "crudeprob")
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}
@@ -25,6 +26,9 @@ and \code{last.point} is selected.}
 
 \item{ratetable}{Object of class \code{ratetable} to compute the general population survival from. Default is survexp.dk.}
 
+\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
+Detailed documentation on this argument can be found by \code{?survexp}.}
+
 \item{Link}{Character indicating the used link function for computing confidence intervals.}
 }
 \value{
@@ -40,6 +44,28 @@ a crude disease-specific probability (\code{cancer}), the probability of dying f
 disease (\code{other}), and the conditional probability of eventually dying from other causes than the
 disease given survival until time t (\code{othertime}). The proportion of patients bound to die from the
 disease can be computed by using \code{cancer} and choosing a sufficiently large time point.
+}
+\examples{
+library(rstpm2)
+D <- rstpm2::colon
+D$sex <- factor(D$sex, levels = c("Female", "Male"), labels = c("female", "male"))
+D$status2 <- ifelse(D$status \%in\% c("Dead: cancer", "Dead: other"), 1, 0)
+D$FU <- as.numeric(D$exit - D$dx)
+D$FU_year <- D$FU / 365.24
+D$age_days <- D$age * 365.24
+D$bhaz <- extract_general(time = "FU", age = "age_days", sex = "sex",
+                          date = "dx", data = D, ratetable = survexp.dk)
+fit <- stpm2(Surv(FU_year, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz, cure = T)
+
+#Compute the probability of cancer related death
+res <- calc.Crude(fit, time = seq(0, 20, length.out = 100),
+                  rmap = list(age = age_days, sex = sex, year = dx))
+plot(res)
+
+#Compute the probability of eventually dying from other causes than cancer
+res <- calc.Crude(fit, time = seq(0, 20, length.out = 100), type = "othertime",
+                  rmap = list(age = age_days, sex = sex, year = dx))
+plot(res)
 }
 \references{
 Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool

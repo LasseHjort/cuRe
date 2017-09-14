@@ -25,6 +25,28 @@
 #' @references Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
 #' for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
 #' @export
+#' @examples
+#' library(rstpm2)
+#' D <- rstpm2::colon
+#' D$sex <- factor(D$sex, levels = c("Female", "Male"), labels = c("female", "male"))
+#' D$status2 <- ifelse(D$status %in% c("Dead: cancer", "Dead: other"), 1, 0)
+#' D$FU <- as.numeric(D$exit - D$dx)
+#' D$FU_year <- D$FU / 365.24
+#' D$age_days <- D$age * 365.24
+#' D$bhaz <- extract_general(time = "FU", age = "age_days", sex = "sex",
+#'                           date = "dx", data = D, ratetable = survexp.dk)
+#' fit <- stpm2(Surv(FU_year, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz, cure = T)
+#'
+#' #Compute the probability of cancer related death
+#' res <- calc.Crude(fit, time = seq(0, 20, length.out = 100),
+#'                   rmap = list(age = age_days, sex = sex, year = dx))
+#' plot(res)
+#'
+#' #Compute the probability of eventually dying from other causes than cancer
+#' res <- calc.Crude(fit, time = seq(0, 20, length.out = 100), type = "othertime",
+#'                   rmap = list(age = age_days, sex = sex, year = dx))
+#' plot(res)
+
 calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100,
                        ci = T, ratetable = survexp.dk, rmap, link = "crudeprob"){
   #The time points for the expected survival

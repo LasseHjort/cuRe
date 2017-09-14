@@ -18,6 +18,21 @@
 #' @return A object of class \code{lol} containing the loss of lifetime estiamtes
 #' of each individual in \code{newdata}.
 #' @export
+#' @examples
+#' library(rstpm2)
+#' D <- rstpm2::colon
+#' D$sex <- factor(D$sex, levels = c("Female", "Male"), labels = c("female", "male"))
+#' D$status2 <- ifelse(D$status %in% c("Dead: cancer", "Dead: other"), 1, 0)
+#' D$FU <- as.numeric(D$exit - D$dx)
+#' D$FU_year <- D$FU / 365.24
+#' D$age_days <- D$age * 365.24
+#' D$bhaz <- extract_general(time = "FU", age = "age_days", sex = "sex", date = "dx", data = D, ratetable = survexp.dk)
+#' fit <- stpm2(Surv(FU_year, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz)
+#' res <- calc.LL(fit, time = seq(0, 20, length.out = 100),
+#'                rmap = list(age = age_days, sex = sex, year = dx))
+#' plot(res)
+
+
 
 calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
                     tau = 100, ci = T, ratetable = survexp.dk,
@@ -96,7 +111,7 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
     names(res) <- type
     if(ci){
       #Calculate variances numerically by the delta method
-      J <- jacobian(.calcArea, x = model.params, rel_surv = rel_surv[[i]],
+      J <- pracma::jacobian(.calcArea, x = model.params, rel_surv = rel_surv[[i]],
                     exp_function = exp_function, time = time, tau = tau,
                     expected = expected[[i]])
       res$Var <- apply(J, MARGIN = 1, function(x) x %*% cov %*% x)

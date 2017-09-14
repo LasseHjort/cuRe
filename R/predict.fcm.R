@@ -88,7 +88,7 @@ survuncured_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_
 #' @return A list containing the predictions of each individual in \code{newdata}.
 #' @export
 
-predict.fmcm <- function(fit, newdata = NULL, type = "relsurv",
+predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
                          time = NULL, ci = T, pars = NULL){
   if(!is.null(pars)){
     fit$coefs <- pars[1:length(fit$coefs)]

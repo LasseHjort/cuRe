@@ -6,8 +6,8 @@
 \usage{
 FlexMixtureCureModel(formula, data, bhazard, smooth.formula = ~1,
   knots = NULL, n.knots = NULL, tvc.formula = NULL, knots.time = NULL,
-  n.knots.time = NULL, covariance = T, message = T, type = "mixture",
-  linkpi = "logit", linksu = "loglog")
+  n.knots.time = NULL, covariance = T, type = "mixture",
+  linkpi = "logit", linksu = "loglog", message = T, optim.args = NULL)
 }
 \arguments{
 \item{formula}{Formula for the covariates in the modelling of the cure rate, \eqn{\pi}. Reponse has to be of the form \code{Surv(time, status)}.}
@@ -38,6 +38,8 @@ Possible values are \code{logistic} (default), \code{identity}, \code{loglog}, a
 
 \item{linksu}{Character for the type of link function selected for the survival of the uncured.
 Possible values are \code{loglog}, \code{logistic}, and \code{probit}.}
+
+\item{optim.args}{List with additional arguments to pass to \code{optim}.}
 
 \item{hes}{Logical for computing the inverse hessian matrix (default is \code{TRUE}).}
 

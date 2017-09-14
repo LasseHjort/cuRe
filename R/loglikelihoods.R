@@ -14,6 +14,7 @@
 
 # Function for extracting expected hazard
 extract_general <- function(time, age, sex, date, data = NULL, ratetable = survexp.dk, opposite = F){
+  year <- 365.24
   haz <- rep(NA, nrow(data))
   if(is.null(data)){
     sex_new <- as.character(sex)

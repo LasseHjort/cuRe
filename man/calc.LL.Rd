@@ -25,6 +25,9 @@ which gives the mean residual lifetime}
 \item{ci}{Logical indicating whether confidence intervals should be computed}
 
 \item{ratetable}{Object of class \code{ratetable} to compute the general population survival from.}
+
+\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
+Detailed documentation on this argument can be found by \code{?survexp}.}
 }
 \value{
 A object of class \code{lol} containing the loss of lifetime estiamtes
@@ -32,4 +35,18 @@ of each individual in \code{newdata}.
 }
 \description{
 Function for computing loss of lifetime estimates from an estimated relative survival model
+}
+\examples{
+library(rstpm2)
+D <- rstpm2::colon
+D$sex <- factor(D$sex, levels = c("Female", "Male"), labels = c("female", "male"))
+D$status2 <- ifelse(D$status \%in\% c("Dead: cancer", "Dead: other"), 1, 0)
+D$FU <- as.numeric(D$exit - D$dx)
+D$FU_year <- D$FU / 365.24
+D$age_days <- D$age * 365.24
+D$bhaz <- extract_general(time = "FU", age = "age_days", sex = "sex", date = "dx", data = D, ratetable = survexp.dk)
+fit <- stpm2(Surv(FU_year, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz)
+res <- calc.LL(fit, time = seq(0, 20, length.out = 100),
+               rmap = list(age = age_days, sex = sex, year = dx))
+plot(res)
 }
