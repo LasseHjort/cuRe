@@ -130,11 +130,11 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
     pi$pi <- get.link(pi$pi, type = "curerate")
     return(pi)
   }else{
-    b <- basis(knots = fit$knots, x = log(time))
-    db <- dbasis(knots = fit$knots, x = log(time))
+    b <- flexsurv::basis(knots = fit$knots, x = log(time))
+    db <- flexsurv::dbasis(knots = fit$knots, x = log(time))
     if(!is.null(fit$knots.time)){
-      tvc.b <- lapply(fit$knots.time, basis, x = log(time))
-      tvc.db <- lapply(fit$knots.time, dbasis, x = log(time))
+      tvc.b <- lapply(fit$knots.time, flexsurv::basis, x = log(time))
+      tvc.db <- lapply(fit$knots.time, flexsurv::dbasis, x = log(time))
     }
     M2.list <- lapply(1:nrow(newdata), function(i){
       model.matrix(fit$formula_main, newdata[i, ,drop = F])[rep(1, nrow(b)),-1, drop = F]

@@ -12,6 +12,9 @@
 #' @param ci Logical indicating whether confidence intervals should be computed
 #' @param pars Numerical vector containing the parameters values of the model.
 #' In general, this argument can be ignored by the user
+#' @param non.parametric Logical indicating if a non-parametic estimate should be included in the plot (default is FALSE).
+#' @param non.param.arg List of arguments to be passed to function \code{rs.surv} of the \code{relsurv} package.
+#' @param include.knots Logical for including the baseline knots of the model.
 #' @return A list containing the predictions of each individual in \code{newdata}.
 #' @export
 
@@ -62,7 +65,7 @@ plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
     }
   }
   if(non.parametric){
-    rsfit <- rs.surv(Surv(FU, status) ~ 1 + ratetable(age = age, sex = sex, year = diag_date),
+    rsfit <- relsurv::rs.surv(Surv(FU, status) ~ 1 + ratetable(age = age, sex = sex, year = diag_date),
                      data = fit$data, ratetable = survexp.dk, method = "ederer2")
     rsfit$time <- rsfit$time / year
     lines(rsfit$surv ~ rsfit$time, type = "s", col = col.non.para, ...)

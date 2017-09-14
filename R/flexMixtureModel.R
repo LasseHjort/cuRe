@@ -24,6 +24,9 @@
 #' @param optim.args List with additional arguments to pass to \code{optim}.
 #' @return An object of class \code{fmcm}.
 #' @export
+#' @import survival
+#' @import rstpm2
+
 
 
 FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
@@ -48,8 +51,8 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
     inner_knots <- knots[-c(1, length(knots))]
   }
 
-  b <- basis(knots = knots, log(fu))
-  db <- dbasis(knots = knots, log(fu))
+  b <- flexsurv::basis(knots = knots, log(fu))
+  db <- flexsurv::dbasis(knots = knots, log(fu))
 
   if(!is.null(tvc.formula)){
     if(is.null(knots.time)){
@@ -64,8 +67,8 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
         }
       })
       #names(knots.time) <- names(n.knots.time)
-      b_list <- lapply(knots.time, basis, x = log(fu))
-      db_list <- lapply(knots.time, dbasis, x = log(fu))
+      b_list <- lapply(knots.time, flexsurv::basis, x = log(fu))
+      db_list <- lapply(knots.time, flexsurv::dbasis, x = log(fu))
     }
   }else{
     tvc.formula <- ~ 1
@@ -229,8 +232,8 @@ get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     formula.3 <- reformulate(termlabels = vars, response = formula[[2]])
     fu_time <- all.vars(formula.3)[1]
     smooth.formula.paste <- as.formula(paste0("~basis(knots = knots, x = log(", fu_time, "))"))
-    fit <- stpm2(formula.3, data = data, smooth.formula = smooth.formula.paste, bhazard = data[, bhazard],
-                 cure = T)
+    fit <- stpm2(formula.3, data = data, smooth.formula = smooth.formula.paste,
+                 bhazard = data[, bhazard], cure = T)
     shat <- predict(fit, newdata = data, se.fit = F)
     gshat <- get_inv_link(linksu)(shat)
     data2 <- data
