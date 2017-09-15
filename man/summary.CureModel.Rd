@@ -4,7 +4,7 @@
 \alias{summary.CureModel}
 \title{Summary of parametric cure models}
 \usage{
-summary.CureModel(fit)
+\method{summary}{CureModel}(fit)
 }
 \arguments{
 \item{formula}{An object of type \code{CureModel}}

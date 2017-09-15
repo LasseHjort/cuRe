@@ -4,8 +4,8 @@
 \alias{predict.cm}
 \title{Predict function for cure models}
 \usage{
-predict.cm(fit, newdata = NULL, type = "relsurv", time = NULL, ci = T,
-  pars = NULL)
+\method{predict}{cm}(fit, newdata = NULL, type = "relsurv", time = NULL,
+  ci = T, pars = NULL)
 }
 \arguments{
 \item{fit}{An object of type CureModel.}

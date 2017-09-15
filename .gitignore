@@ -3,6 +3,5 @@
 .RData
 .Ruserdata
 inst/doc
-NAMESPACE
 *.o
 *.dll

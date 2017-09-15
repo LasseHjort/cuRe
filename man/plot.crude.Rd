@@ -4,7 +4,7 @@
 \alias{plot.crude}
 \title{Plot crude event probabilities}
 \usage{
-plot.crude(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
+\method{plot}{crude}(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
   ylab = NULL, xlab = "Time", add = F)
 }
 \arguments{

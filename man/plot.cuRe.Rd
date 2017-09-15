@@ -4,7 +4,7 @@
 \alias{plot.cuRe}
 \title{Plot function for Flexible mixture cure model}
 \usage{
-plot.cuRe(fit, newdata = NULL, type = "relsurv", time = NULL,
+\method{plot}{cuRe}(fit, newdata = NULL, type = "relsurv", time = NULL,
   ylim = c(0, 1), xlim = NULL, xlab = "Time", ylab = NULL,
   non.parametric = F, col = 1, col.non.para = 2, ci = T,
   include.knots = F, add = F, ...)
