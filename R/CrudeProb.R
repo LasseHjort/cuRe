@@ -146,7 +146,7 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
                     pars = model.params, last.point = last.point, link = link)
     res <- data.frame(prob = prob)
     if(ci){
-      prob_gr <- jacobian(probfun, x = model.params, time = time,
+      prob_gr <- pracma::jacobian(probfun, x = model.params, time = time,
                           rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                           expected_haz = expected_haz[[i]], expected =  expected[[i]],
                           last.point = last.point, link = link)

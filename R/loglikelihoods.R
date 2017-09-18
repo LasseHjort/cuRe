@@ -8,46 +8,49 @@
 #' @param date A character denoting the type of prediction. Possible values are \code{relsurv} (default), \code{curerate}, and \code{probcure} (see details)
 #' @param data The data from which to extract variables from. If \code{time}, \code{age}, \code{sex}, and \code{date} are not characters, leave this empty.
 #' @param ratetable Object of class \code{ratetable} to extract background hazards from. Defaults to survexp.dk
-#' @param opposite Logical (default \code{FALSE}) to indicate the order in the the ratetable
 #' @return An object of class \code{numeric} of yearly hazards
 #' @export
 
 # Function for extracting expected hazard
-extract_general <- function(time, age, sex, date, data = NULL, ratetable = survexp.dk, opposite = F){
-  year <- 365.24
-  haz <- rep(NA, nrow(data))
-  if(is.null(data)){
-    sex_new <- as.character(sex)
-    age_new <- pmin(round((age + time) / year), 99)
-    year_eval <- format(date + time, "%Y")
-    year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
-    year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
-    for(i in 1:length(time)){
-      haz[i] <- survexp.dk[age_new[i], sex_new[i], year_eval[i]]
-    }
-  }else{
-    sex_new <- as.character(data[, sex])
-    age_new <- pmin(round((data[, age] + data[, time]) / year), 99)
-    year_eval <- format(data[, date] + data[, time], "%Y")
-    if(!opposite){
-      ryear <- range(as.numeric(names(ratetable[1,1,])))
-      year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
-      year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
-      for(i in 1:nrow(data)){
-        haz[i] <- ratetable[age_new[i], sex_new[i], year_eval[i]]
-      }
-    }else{
-      ryear <- range(as.numeric(names(ratetable[1,,1])))
-      year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
-      year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
-      for(i in 1:nrow(data)){
-        haz[i] <- ratetable[age_new[i], year_eval[i], sex_new[i]]
-      }
-    }
+merge.general <- function(time, age, sex, year, data = NULL, ratetable = survexp.dk){
+  if(is.character(time)){
+    time <- data[, time]
   }
-  haz <- haz * year
+  if(is.character(age)){
+    age <- data[, age]
+  }
+  if(is.character(sex)){
+    sex <- data[, sex]
+  }
+  if(is.character(year)){
+    year <- data[, year]
+  }
+
+  dimid <- attr(ratetable, "dimid")
+  od <- sapply(c("age", "sex", "year"), function(x) which(dimid == x))
+  n <- length(time)
+
+  haz <- rep(NA, n)
+  sex_new <- as.character(sex)
+  age_new <- pmin(round((age + time) / ayear), 99)
+  year_eval <- format(year + time, "%Y")
+  ryear <- range(as.numeric(dimnames(ratetable)[[od["year"]]]))
+  year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
+  year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
+
+
+  D <- data.frame(age = age_new, sex = sex_new, year = year_eval, stringsAsFactors = F)
+  D <- D[, od]
+
+  for(i in 1:n){
+    haz[i] <- ratetable[D[i, 1], D[i, 2], D[i, 3]]
+  }
+  haz <- haz * ayear
   haz
 }
+
+#Global variable indicating the duration of a year
+ayear <- 365.24
 
 # Functions for extracting link functions
 # Function for extracting the specified link function
