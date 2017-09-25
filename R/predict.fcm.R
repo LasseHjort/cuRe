@@ -1,36 +1,13 @@
-get.link <- function(x, type){
-  if(type %in% c("curerate", "relsurv", "crudeprob", "survuncured")){
-    exp(x) / (exp(x) + 1)
-  }else if (type == "probcure"){
-    pnorm(x)
-  }else if(type == "ehaz"){
-    x
-  }else if(type == "iden"){
-    x
-  }
-}
-
-get.inv.link <- function(x, type){
-  if(type %in% c("curerate", "relsurv", "crudeprob", "survuncured")){
-    log(x / (1 - x))
-  }else if(type == "probcure"){
-    qnorm(x)
-  }else if(type == "ehaz"){
-    x
-  }else if(type == "iden"){
-    x
-  }
-}
 
 
 relsurv_fun <- function(pars, M, M2, dM2, time, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
   pi <- c(link_fun_pi(pi_fun(pars[1:ncol(M)], M)))
   eta <- M2 %*% pars[-c(1:ncol(M))]
   if(model == "mixture"){
-    get.inv.link(pi + (1 - pi) * link_fun_su(eta), type = "relsurv")
+    get.inv.link("logit")(pi + (1 - pi) * link_fun_su(eta))
   }
   else if(model == "nmixture"){
-    get.inv.link(pi ^ (1 - link_fun_su(eta)), type = "relsurv")
+    get.inv.link("logit")(pi ^ (1 - link_fun_su(eta)))
   }
 }
 
@@ -41,31 +18,31 @@ ehaz_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, lin
   ds_u <- dlink_fun_su(eta)
   if(model == "mixture"){
     s_u <- link_fun_su(eta)
-    get.inv.link(-(1 - pi) * ds_u * (deta / time) / (pi + (1 - pi) * s_u), type = "ehaz")
+    get.inv.link("identity")(-(1 - pi) * ds_u * (deta / time) / (pi + (1 - pi) * s_u))
   }else if(model == "nmixture"){
-    get.inv.link(log(pi) * ds_u * deta / time, type = "ehaz")
+    get.inv.link("identity")(log(pi) * ds_u * deta / time)
   }
 }
 
 probcure_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  pi <- c(get.link(pi_fun(pars, M), type = "curerate"))
+  pi <- c(get.link("logit")(pi_fun(pars, M)))
   eta <- M2 %*% pars[-c(1:ncol(M))]
   if(model == "mixture"){
     rsurv <- pi + (1 - pi) * link_fun_su(eta)
   }else if(model == "nmixture"){
     rsurv <- pi ^ (1 - link_fun_su(eta))
   }
-  get.inv.link(pi / rsurv, type = "probcure")
+  get.inv.link("probit")(pi / rsurv)
 }
 
 survuncured_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
   eta <- M2 %*% pars[-c(1:ncol(M))]
   if(model == "mixture"){
-    get.inv.link(link_fun_su(eta), type = "survuncured")
+    get.inv.link("logit")(link_fun_su(eta))
   }else if(model == "nmixture"){
-    pi <- c(get.link(pi_fun(pars, M), type = "curerate"))
+    pi <- c(get.link("logit")(pi_fun(pars, M)))
     rsurv <- pi ^ (1 - link_fun_su(eta))
-    get.inv.link((rsurv - pi) / (1 - pi), type = "survuncured")
+    get.inv.link("logit")((rsurv - pi) / (1 - pi))
   }
 }
 

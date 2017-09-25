@@ -53,7 +53,7 @@ ayear <- 365.24
 
 # Functions for extracting link functions
 # Function for extracting the specified link function
-get_link <- function(link){
+get.link <- function(link){
   if(link == "logit"){
     function(x) exp(x) / (exp(x) + 1)
   }else if(link == "identity"){
@@ -71,7 +71,7 @@ get_link <- function(link){
   }
 }
 
-get_dlink <- function(link){
+get.dlink <- function(link){
   if(link == "logit"){
     function(x) exp(x) / ((exp(x) + 1) ^ 2)
   }else if(link == "identity"){
@@ -89,7 +89,7 @@ get_dlink <- function(link){
   }
 }
 
-get_inv_link <- function(link){
+get.inv.link <- function(link){
   if(link == "logit"){
     function(x) log(x / (1 - x))
   }else if(link == "identity"){
@@ -108,20 +108,29 @@ get_inv_link <- function(link){
 }
 
 # Function for extracting the specified survival function
-get_surv <- function(dist){
+get.surv <- function(dist){
+
   if(dist == "exponential"){
+
     return(function(x, lps) exp(-x * exp(lps[[2]])))
+
   }else if(dist == "weibull"){
+
     return(function(x, lps) exp(-x ^ exp(lps[[3]]) * exp(lps[[2]])))
+
   }else if(dist == "lognormal"){
+
     return(function(x, lps) 1 - pnorm((log(x) - lps[[2]]) / exp(lps[[3]])))
+
   }else{
+
     stop("Distribution should be either 'exponential', 'weibull', or 'lognormal'")
+
   }
 }
 
 # Function for extracting the specified density function
-get_dens <- function(dist){
+get.dens <- function(dist){
   if(dist == "exponential"){
     return(function(x, lps){
       scale <- exp(lps[[2]])
@@ -142,18 +151,7 @@ get_dens <- function(dist){
   }
 }
 
-get_surv2 <- function(dist){
-  if(dist == "exponential"){
-    return(function(x, k1, k2, k3, lp1, lp2, lp3) exp(-x * exp(lp1 %*% k1)))
-  }else if(dist == "weibull"){
-    return(function(x, k1, k2, k3, lp1, lp2, lp3) exp(-x ^ exp(lp2 %*% k2) * exp(lp1 %*% k1)))
-  }else if(dist == "lognormal"){
-    return(function(x, k1, k2, k3, lp1, lp2, lp3) 1 - pnorm((log(x) - lp1 %*% k1) / exp(lp2 %*% k2)))
-  }else{
-    stop("Distribution should be either 'exponential', 'weibull', or 'lognormal'")
-  }
-}
-
+#Function to calculate linear predictors for the simple parametric cure models
 calc.lps <- function(Xs, param){
   lps <- vector("list", length(Xs))
   for(i in 1:length(Xs)){

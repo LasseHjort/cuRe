@@ -22,6 +22,7 @@
 #' @param linksu Character for the type of link function selected for the survival of the uncured.
 #' Possible values are \code{loglog}, \code{logistic}, and \code{probit}.
 #' @param optim.args List with additional arguments to pass to \code{optim}.
+#' @param ini.types Character vector denoting which procedures for calculating initial values has to be executed.
 #' @return An object of class \code{fmcm}.
 #' @export
 #' @import survival
@@ -97,8 +98,8 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
   X <- model.matrix(formula, data = data)
 
   #Extract link function
-  link_fun_pi <- get_link(linkpi)
-  link_fun_su <- get_link(linksu)
+  link_fun_pi <- get.link(linkpi)
+  link_fun_su <- get.link(linksu)
   dlink_fun_su <- get_dlink(linksu)
 
   #Extract minus log likelihood function
@@ -208,26 +209,26 @@ get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
                              response = NULL)
     fit <- fit.cure.model(formula, data = data, bhazard = bhazard, covariance = F,
                           formula.k1 = formula.2, formula.k2 = ~ 1, type = type)
-    pi_hat <- get_link("logit")(X %*% fit$coefs[[1]])
-    gpi_hat <- get_inv_link(linkpi)(pi_hat)
+    pi_hat <- get.link("logit")(X %*% fit$coefs[[1]])
+    gpi_hat <- get.inv.link(linkpi)(pi_hat)
     ini_pi <- lm(gpi_hat ~ -1 + X)$coefficients
     lp <- exp(model.matrix(formula.2, data = data) %*% fit$coefs[[2]])
     shat <- exp(-lp * fu ^ exp(fit$coefs[[3]]))
-    gshat <- get_inv_link(linksu)(shat)
+    gshat <- get.inv.link(linksu)(shat)
     fit_lm <- lm(gshat ~ -1 + b)
   }else if(method == "deaths"){
     formula.2 <- reformulate(termlabels = ifelse(length(vars) == 0, "1", vars),
                              response = formula[[2]])
     status2 <- 1 - status
     fit_glm <- glm(status2 ~ -1 + X, family = binomial(link = "logit"))
-    pi_hat <- get_link("logit")(predict(fit_glm))
-    gpi_hat <- get_inv_link(linkpi)(pi_hat)
+    pi_hat <- get.link("logit")(predict(fit_glm))
+    gpi_hat <- get.inv.link(linkpi)(pi_hat)
     pi_fit <- lm(gpi_hat ~ -1 + X)
     ini_pi <- pi_fit$coefficients
     fit <- coxph(formula.2, data = data[status == 1,])
     cum_base_haz <- get_basehaz(fit)
     shat <- exp(-cum_base_haz$hazard) ^ exp(fit$linear.predictors)
-    suppressWarnings(gshat <- get_inv_link(linksu)(shat))
+    suppressWarnings(gshat <- get.inv.link(linksu)(shat))
     fit_lm <- lm(gshat ~ -1 + b[status == 1,])
   }else if(method == "flexpara"){
     tt <- terms(formula)
@@ -241,19 +242,19 @@ get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
 
     fit <- stpm2(Surv(FU_years, status) ~ 1, data = data, df = length(knots) - 1, bhazard = data[, bhazard])
     shat <- predict(fit, newdata = data, se.fit = F)
-    gshat <- get_inv_link(linksu)(shat)
+    gshat <- get.inv.link(linksu)(shat)
     data2 <- data
     data2[, fu_time] <- max(data2[, fu_time]) + 0.1
     pi_hat <- predict(fit, newdata = data2, se.fit = F)
     wh <- which(pi_hat >= shat)
     pi_hat[wh] <- shat[wh] - 0.01
-    gpi_hat <- get_link(linkpi)(pi_hat)
+    gpi_hat <- get.link(linkpi)(pi_hat)
     formula.logistic <- reformulate(termlabels = if(length(all.vars(formula.2)) == 0) "1" else all.vars(formula.2),
                                     response = "pred_pi")
     pi_fit <- lm(gpi_hat ~ -1 + X)
     ini_pi <- pi_fit$coefficients
     suhat <- (shat - pi_hat) / (1 - pi_hat)
-    gsuhat <- get_inv_link(linksu)(suhat)
+    gsuhat <- get.inv.link(linksu)(suhat)
     fit_lm <- lm(gsuhat ~ -1 + b, data = data)
   }
   #Make proper naming of the initial values

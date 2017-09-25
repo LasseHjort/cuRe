@@ -13,29 +13,26 @@
 #' @param tau The upper limit of the integral. Default is 100.
 #' @param ci Logical indicating whether confidence intervals should be computed
 #' @param ratetable Object of class \code{ratetable} to compute the general population survival from.
+#' @param expected Object of class \class{list} containing objects of class \code{survexp}
+#' denoting the expected survival of each row in newdata. If not specified, the function computes the expected
+#' survival.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @return A object of class \code{lol} containing the loss of lifetime estiamtes
 #' of each individual in \code{newdata}.
 #' @export
 #' @examples
-#' library(rstpm2)
-#' D <- rstpm2::colon
-#' D$sex <- factor(D$sex, levels = c("Female", "Male"), labels = c("female", "male"))
-#' D$status2 <- ifelse(D$status %in% c("Dead: cancer", "Dead: other"), 1, 0)
-#' D$FU <- as.numeric(D$exit - D$dx)
-#' D$FU_year <- D$FU / 365.24
-#' D$age_days <- D$age * 365.24
-#' D$bhaz <- extract_general(time = "FU", age = "age_days", sex = "sex", date = "dx", data = D, ratetable = survexp.dk)
-#' fit <- stpm2(Surv(FU_year, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz)
+#' D$bhaz <- extract_general(time = "FU", age = "agedays", sex = "sex",
+#'                           date = "dx", data = D, ratetable = survexp.dk)
+#' fit <- stpm2(Surv(FUyear, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz)
 #' res <- calc.LL(fit, time = seq(0, 20, length.out = 100),
-#'                rmap = list(age = age_days, sex = sex, year = dx))
+#'                rmap = list(age = agedays, sex = sex, year = dx))
 #' plot(res)
 
 
 
 calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
-                    tau = 100, ci = T, ratetable = survexp.dk, expected = NULL,
+                    tau = 100, ci = T, expected = NULL, ratetable = survexp.dk,
                     rmap = rmap){
 
   #Time points at which to evaluate integral

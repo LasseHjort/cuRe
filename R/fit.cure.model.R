@@ -46,9 +46,9 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   X.all <- lapply(formulas, get_design, data = data)
 
   #Extract link functions
-  link_fun <- get_link(link)
-  surv_fun <- get_surv(dist)
-  dens_fun <- get_dens(dist)
+  link_fun <- get.link(link)
+  surv_fun <- get.surv(dist)
+  dens_fun <- get.dens(dist)
 
   #Extract likelihood function
   minuslog_likelihood <- switch(type,

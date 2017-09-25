@@ -12,6 +12,9 @@
 #' @param last.point Constant at which the bound to tie probability is calculated. Default is 100.
 #' @param ci Logical indicating whether confidence intervals should be computed.
 #' @param ratetable Object of class \code{ratetable} to compute the general population survival from. Default is survexp.dk.
+#' @param expected Object of class \class{list} containing objects of class \code{survexp}
+#' denoting the expected survival of each row in newdata. If not specified, the function computes the expected
+#' survival.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param Link Character indicating the used link function for computing confidence intervals.
@@ -26,29 +29,22 @@
 #' for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
 #' @export
 #' @examples
-#' library(rstpm2)
-#' D <- rstpm2::colon
-#' D$sex <- factor(D$sex, levels = c("Female", "Male"), labels = c("female", "male"))
-#' D$status2 <- ifelse(D$status %in% c("Dead: cancer", "Dead: other"), 1, 0)
-#' D$FU <- as.numeric(D$exit - D$dx)
-#' D$FU_year <- D$FU / 365.24
-#' D$age_days <- D$age * 365.24
-#' D$bhaz <- extract_general(time = "FU", age = "age_days", sex = "sex",
+#' D$bhaz <- extract_general(time = "FU", age = "agedays", sex = "sex",
 #'                           date = "dx", data = D, ratetable = survexp.dk)
-#' fit <- stpm2(Surv(FU_year, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz, cure = T)
+#' fit <- stpm2(Surv(FUyear, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz, cure = T)
 #'
 #' #Compute the probability of cancer related death
 #' res <- calc.Crude(fit, time = seq(0, 20, length.out = 100),
-#'                   rmap = list(age = age_days, sex = sex, year = dx))
+#'                   rmap = list(age = agedays, sex = sex, year = dx))
 #' plot(res)
 #'
 #' #Compute the probability of eventually dying from other causes than cancer
 #' res <- calc.Crude(fit, time = seq(0, 20, length.out = 100), type = "othertime",
-#'                   rmap = list(age = age_days, sex = sex, year = dx))
+#'                   rmap = list(age = agedays, sex = sex, year = dx))
 #' plot(res)
 
 calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100,
-                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "crudeprob"){
+                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "logit"){
 
   #Time points at which to evaluate integral
   if(is.null(time)){
@@ -153,10 +149,10 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
                           expected_haz = expected_haz[[i]], expected =  expected[[i]],
                           last.point = last.point, link = link)
       res$var <- apply(prob_gr, 1, function(x) x %*% cov %*% x)
-      res$lower.ci <- get.link(res$prob - sqrt(res$var) * qnorm(0.975), type = link)
-      res$upper.ci <- get.link(res$prob + sqrt(res$var) * qnorm(0.975), type = link)
+      res$lower.ci <- get.link(link)(res$prob - sqrt(res$var) * qnorm(0.975))
+      res$upper.ci <- get.link(link)(res$prob + sqrt(res$var) * qnorm(0.975))
     }
-    res$prob <- get.link(res$prob, type = link)
+    res$prob <- get.link(link)(res$prob)
     if(type %in% c("cancer", "other")){
       res[time == 0,] <- 0
     }
@@ -197,7 +193,7 @@ prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars
     return(rep(0, length(time)))
   }else{
     dens <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-    get.inv.link(int.square(dens, time = time, pars = pars), type = link)
+    get.inv.link(link)(int.square(dens, time = time, pars = pars))
   }
 }
 
@@ -206,7 +202,7 @@ prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars,
     return(rep(0, length(time)))
   }else{
     dens <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
-    get.inv.link(int.square(dens, time = time, pars = pars), type = link)
+    get.inv.link(link)(int.square(dens, time = time, pars = pars))
   }
 }
 
@@ -216,5 +212,5 @@ prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, 
   btd <- int.square(dens1, time = last.point, pars = pars)
   dens2 <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
   int_2 <- int.square(dens2, time = time, pars = pars)
-  get.inv.link(1 - (btd - int_1) / (1 - int_1 - int_2), type = link)
+  get.inv.link(link)(1 - (btd - int_1) / (1 - int_1 - int_2))
 }
