@@ -8,11 +8,10 @@
 #' @param date A character denoting the type of prediction. Possible values are \code{relsurv} (default), \code{curerate}, and \code{probcure} (see details)
 #' @param data The data from which to extract variables from. If \code{time}, \code{age}, \code{sex}, and \code{date} are not characters, leave this empty.
 #' @param ratetable Object of class \code{ratetable} to extract background hazards from. Defaults to survexp.dk
-#' @return An object of class \code{numeric} of yearly hazards
+#' @return An object of class \code{numeric} of yearly hazards.
 #' @export
 
-# Function for extracting expected hazard
-merge.general <- function(time, age, sex, year, data = NULL, ratetable = survexp.dk){
+general.haz <- function(time, age, sex, year, data = NULL, ratetable = survexp.dk){
   if(is.character(time)){
     time <- data[, time]
   }

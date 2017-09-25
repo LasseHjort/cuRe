@@ -35,36 +35,40 @@
 
 
 calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
-                    tau = 100, ci = T, ratetable = survexp.dk,
+                    tau = 100, ci = T, ratetable = survexp.dk, expected = NULL,
                     rmap = rmap){
-  #The time points for the expected survival
-  times <- seq(0, tau + 1, by = 0.05)
 
   #Time points at which to evaluate integral
   if(is.null(time)){
     time <- seq(0, tau, length.out = 100)
   }
 
-  #Extract expected survival function
-  if(is.null(newdata)){
-    if(any(class(fit) %in% c("stpm2", "pstpm2"))){
-      data <- fit@data
-      #if(class(data) == "list") data <- do.call(cbind, data)
-      newdata <- data.frame(arbritary_var = 0)
+  if(is.null(expected)){
+    #The time points for the expected survival
+    times <- seq(0, tau + 1, by = 0.05)
+
+    #Extract expected survival function
+    if(is.null(newdata)){
+      if(any(class(fit) %in% c("stpm2", "pstpm2"))){
+        data <- fit@data
+        #if(class(data) == "list") data <- do.call(cbind, data)
+        newdata <- data.frame(arbritary_var = 0)
+      }else{
+        data <- fit$data
+      }
+      expected <- list(do.call("survexp",
+                               list(formula = ~ 1, rmap = substitute(rmap),
+                                    data = data, ratetable = ratetable,
+                                    scale = ayear, times = times * ayear)))
     }else{
-      data <- fit$data
+      expected <- vector("list", nrow(newdata))
+      for(i in 1:length(expected)){
+        expected[[i]] <- do.call("survexp",
+                                 list(formula = ~ 1, rmap = substitute(rmap),
+                                      data = newdata[i, ], ratetable = ratetable,
+                                      scale = ayear, times = times * ayear))
+      }
     }
-    expected <- list(do.call("survexp",
-                             list(formula = ~ 1, rmap = substitute(rmap),
-                                  data = data, ratetable = ratetable,
-                                  scale = year, times = times * year)))
-  }else{
-    expected <- lapply(1:nrow(newdata), function(x){
-      do.call("survexp",
-              list(formula = ~ 1, rmap = substitute(rmap),
-              data = newdata[x, ], ratetable = ratetable,
-              scale = year, times = times * year))
-      })
   }
 
   #Extract relative survival function
@@ -138,7 +142,7 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
 # }
 
 .calcArea.LL <- function(rel_surv, exp_function, time, tau, pars, expected){
-  t_new <- sort(unique(c(time, seq(0, tau, length.out = 1000))), decreasing = T)
+  t_new <- sort(unique(c(time, seq(0, tau, length.out = 5000))), decreasing = T)
   df_time <- -diff(t_new)
   exp_eval <- exp_function(t_new, expected)
   surv_eval <- rel_surv(t_new, pars) * exp_eval

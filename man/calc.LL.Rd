@@ -5,7 +5,7 @@
 \title{Loss of lifetime estimation}
 \usage{
 calc.LL(fit, newdata = NULL, time = NULL, type = "ll", tau = 100,
-  ci = T, ratetable = survexp.dk, rmap = rmap)
+  ci = T, ratetable = survexp.dk, expected = NULL, rmap = rmap)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}

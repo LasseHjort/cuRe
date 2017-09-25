@@ -33,7 +33,8 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
                                  knots = NULL, n.knots = NULL,
                                  tvc.formula = NULL, knots.time = NULL, n.knots.time = NULL,
                                  covariance = T, type = "mixture", linkpi = "logit",
-                                 linksu = "loglog", message = T, optim.args = NULL){
+                                 linksu = "loglog", message = T, optim.args = NULL,
+                                 ini.types = c("cure", "flexpara")){
 
   #Extract relevant variables
   fu <- eval(formula[[2]][[2]], envir = data)
@@ -120,8 +121,7 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
   #Generate initial values if these are not provided by the user
   if(is.null(optim.args$par)){
     if(message) cat("Finding initial values... ")
-    types <- c("cure", "flexpara")
-    inivalues <- lapply(types, function(x) get_ini_values(smooth.formula = smooth.formula,
+    inivalues <- lapply(ini.types, function(ini.type) get_ini_values(smooth.formula = smooth.formula,
                                                           tvc.formula =  tvc.formula,
                                                           data = data,
                                                           bhazard = bhazard,
@@ -134,7 +134,7 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
                                                           n.knots.time = n.knots.time,
                                                           knots = knots,
                                                           X = X, b = b,
-                                                          method = x))
+                                                          method = ini.type))
   }else{
     if(message) cat("Initial values provided by the user... ")
     inivalues <- optim.args$par
@@ -143,10 +143,14 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
 
   optim.pars <- c(optim.args, likelihood.pars)
 
+  #Test if initial values are within the feasible region
+  ini.eval <- sapply(inivalues, function(inival) do.call(minusloglik, c(likelihood.pars[-1], list(inival))))
+  run.these <- !is.na(ini.eval)
+
   if(message) cat("Completed!\nFitting the model... ")
 
   #Fit each model
-  res_list <- lapply(inivalues, function(inival){
+  res_list <- lapply(inivalues[run.these], function(inival){
     optim.pars$par <- inival
     do.call(optim, optim.pars)
   })
@@ -232,8 +236,10 @@ get_ini_values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     formula.3 <- reformulate(termlabels = vars, response = formula[[2]])
     fu_time <- all.vars(formula.3)[1]
     smooth.formula.paste <- as.formula(paste0("~basis(knots = knots, x = log(", fu_time, "))"))
-    fit <- stpm2(formula.3, data = data, smooth.formula = smooth.formula.paste,
-                 bhazard = data[, bhazard], cure = T)
+    #fit <- stpm2(formula.3, data = data, smooth.formula = smooth.formula.paste,
+    #             bhazard = data[, bhazard])
+
+    fit <- stpm2(Surv(FU_years, status) ~ 1, data = data, df = length(knots) - 1, bhazard = data[, bhazard])
     shat <- predict(fit, newdata = data, se.fit = F)
     gshat <- get_inv_link(linksu)(shat)
     data2 <- data

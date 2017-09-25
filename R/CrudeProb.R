@@ -48,35 +48,37 @@
 #' plot(res)
 
 calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100,
-                       ci = T, ratetable = survexp.dk, rmap, link = "crudeprob"){
-  #The time points for the expected survival
-  times <- seq(0, last.point + 1, by = 0.05)
+                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "crudeprob"){
 
   #Time points at which to evaluate integral
   if(is.null(time)){
     time <- seq(0, last.point, length.out = 100)
   }
+  if(is.null(expected)){
+    #The time points for the expected survival
+    times <- seq(0, last.point + 1, by = 0.05)
 
-  #Extract expected survival function
-  if(is.null(newdata)){
-    if(any(class(fit) %in% c("stpm2", "pstpm2"))){
-      data <- fit@data
-      #if(class(data) == "list") data <- do.call(cbind, data)
-      newdata <- data.frame(arbritary_var = 0)
+    #Extract expected survival function
+    if(is.null(newdata)){
+      if(any(class(fit) %in% c("stpm2", "pstpm2"))){
+        data <- fit@data
+        #if(class(data) == "list") data <- do.call(cbind, data)
+        newdata <- data.frame(arbritary_var = 0)
+      }else{
+        data <- fit$data
+      }
+      expected <- list(do.call("survexp",
+                               list(formula = ~ 1, rmap = substitute(rmap),
+                                    data = data, ratetable = ratetable,
+                                    scale = ayear, times = times * ayear)))
     }else{
-      data <- fit$data
+      expected <- lapply(1:nrow(newdata), function(x){
+        do.call("survexp",
+                list(formula = ~ 1, rmap = substitute(rmap),
+                     data = newdata[x, ], ratetable = ratetable,
+                     scale = ayear, times = times * ayear))
+      })
     }
-    expected <- list(do.call("survexp",
-                             list(formula = ~ 1, rmap = substitute(rmap),
-                                  data = data, ratetable = ratetable,
-                                  scale = year, times = times * year)))
-  }else{
-    expected <- lapply(1:nrow(newdata), function(x){
-      do.call("survexp",
-              list(formula = ~ 1, rmap = substitute(rmap),
-                   data = newdata[x, ], ratetable = ratetable,
-                   scale = year, times = times * year))
-    })
   }
 
   #Extract relative survival function
@@ -128,7 +130,7 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
   }
 
   expected_haz <- lapply(1:length(expected), function(i){
-    D <- data.frame(Cum_haz = c(0, -log(summary(expected[[i]])$surv)), Time = c(-0.1, times))
+    D <- data.frame(Cum_haz = c(0, -log(summary(expected[[i]])$surv)), Time = c(-0.1, expected[[i]]$time))
     sm_fit <- loess(Cum_haz ~ Time, data = D, span = 0.1)
     cum_haz_smooth <- function(t) predict(sm_fit, newdata = data.frame(Time = t))
     function(t) numDeriv::grad(func = cum_haz_smooth, t)
