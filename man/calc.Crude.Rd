@@ -6,7 +6,7 @@
 \usage{
 calc.Crude(fit, newdata = NULL, type = "cancer", time = NULL,
   last.point = 100, ci = T, expected = NULL, ratetable = survexp.dk,
-  rmap, link = "crudeprob")
+  rmap, link = "logit")
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}
@@ -23,6 +23,10 @@ and \code{last.point} is selected.}
 \item{last.point}{Constant at which the bound to tie probability is calculated. Default is 100.}
 
 \item{ci}{Logical indicating whether confidence intervals should be computed.}
+
+\item{expected}{Object of class \class{list} containing objects of class \code{survexp}
+denoting the expected survival of each row in newdata. If not specified, the function computes the expected
+survival.}
 
 \item{ratetable}{Object of class \code{ratetable} to compute the general population survival from. Default is survexp.dk.}
 
@@ -46,26 +50,43 @@ disease given survival until time t (\code{othertime}). The proportion of patien
 disease can be computed by using \code{cancer} and choosing a sufficiently large time point.
 }
 \examples{
-library(rstpm2)
-D <- rstpm2::colon
-D$sex <- factor(D$sex, levels = c("Female", "Male"), labels = c("female", "male"))
-D$status2 <- ifelse(D$status \%in\% c("Dead: cancer", "Dead: other"), 1, 0)
-D$FU <- as.numeric(D$exit - D$dx)
-D$FU_year <- D$FU / 365.24
-D$age_days <- D$age * 365.24
-D$bhaz <- extract_general(time = "FU", age = "age_days", sex = "sex",
-                          date = "dx", data = D, ratetable = survexp.dk)
-fit <- stpm2(Surv(FU_year, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz, cure = T)
+##Use data cleaned version of the colon cancer data from the rstpm2 package
+data("colonDC")
+
+##Extract general population hazards
+colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+                            data = colonDC, ratetable = survexp.dk)
+
+#Fit flexible parametric cure model
+fit <- stpm2(Surv(FUyear, status2) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
 
 #Compute the probability of cancer related death
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 100),
-                  rmap = list(age = age_days, sex = sex, year = dx))
+                  rmap = list(age = agedays, sex = sex, year = dx))
 plot(res)
 
 #Compute the probability of eventually dying from other causes than cancer
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 100), type = "othertime",
-                  rmap = list(age = age_days, sex = sex, year = dx))
+                  rmap = list(age = agedays, sex = sex, year = dx))
 plot(res)
+
+
+#Fit parametric cure model
+fit <- fit.cure.model(Surv(FUyear, status2) ~ 1, data = colonDC, bhazard = "bhaz",
+                      formula.k1 = ~ 1, formula.k2 = ~ 1,
+                      type = "mixture", dist = "weibull", link = "logit")
+
+#Compute the probability of cancer related death
+res <- calc.Crude(fit, time = seq(0, 20, length.out = 100),
+                  rmap = list(age = agedays, sex = sex, year = dx))
+plot(res)
+
+#Compute the probability of eventually dying from other causes than cancer
+res <- calc.Crude(fit, time = seq(0, 20, length.out = 100), type = "othertime",
+                  rmap = list(age = agedays, sex = sex, year = dx))
+plot(res)
+
+
 }
 \references{
 Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool

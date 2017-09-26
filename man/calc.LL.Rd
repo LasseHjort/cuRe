@@ -5,7 +5,7 @@
 \title{Loss of lifetime estimation}
 \usage{
 calc.LL(fit, newdata = NULL, time = NULL, type = "ll", tau = 100,
-  ci = T, ratetable = survexp.dk, expected = NULL, rmap = rmap)
+  ci = T, expected = NULL, ratetable = survexp.dk, rmap = rmap)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}
@@ -24,6 +24,10 @@ which gives the mean residual lifetime}
 
 \item{ci}{Logical indicating whether confidence intervals should be computed}
 
+\item{expected}{Object of class \class{list} containing objects of class \code{survexp}
+denoting the expected survival of each row in newdata. If not specified, the function computes the expected
+survival.}
+
 \item{ratetable}{Object of class \code{ratetable} to compute the general population survival from.}
 
 \item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
@@ -37,16 +41,39 @@ of each individual in \code{newdata}.
 Function for computing loss of lifetime estimates from an estimated relative survival model
 }
 \examples{
-library(rstpm2)
-D <- rstpm2::colon
-D$sex <- factor(D$sex, levels = c("Female", "Male"), labels = c("female", "male"))
-D$status2 <- ifelse(D$status \%in\% c("Dead: cancer", "Dead: other"), 1, 0)
-D$FU <- as.numeric(D$exit - D$dx)
-D$FU_year <- D$FU / 365.24
-D$age_days <- D$age * 365.24
-D$bhaz <- extract_general(time = "FU", age = "age_days", sex = "sex", date = "dx", data = D, ratetable = survexp.dk)
-fit <- stpm2(Surv(FU_year, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz)
+##Use data cleaned version of the colon cancer data from the rstpm2 package
+data("colonDC")
+
+##Extract general population hazards
+colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+                            data = colonDC, ratetable = survexp.dk)
+
+#Fit flexible parametric relative survival model
+fit <- stpm2(Surv(FUyear, status2) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz)
+
+#Compute loss of lifetime from 0 to 20 years
 res <- calc.LL(fit, time = seq(0, 20, length.out = 100),
-               rmap = list(age = age_days, sex = sex, year = dx))
+               rmap = list(age = agedays, sex = sex, year = dx))
+
+#Plot the loss of lifetime
 plot(res)
+
+#Fit flexible parametric cure model
+fit <- FlexMixtureCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 7, bhazard = "bhaz",
+                            ini.types = "cure")
+
+#Compute loss of lifetime from 0 to 20 years
+res.cure <- calc.LL(fit, time = seq(0, 20, length.out = 100),
+                    rmap = list(age = agedays, sex = sex, year = dx))
+
+#Plot the loss of lifetime
+plot(res, ci = F)
+plot(res.cure, add = T, col = 2, ci = F)
+
+
+#Compute mean residual lifetime
+res.cure <- calc.LL(fit, time = seq(0, 20, length.out = 100), type = "mrl",
+                    rmap = list(age = agedays, sex = sex, year = dx))
+plot(res.cure)
+
 }

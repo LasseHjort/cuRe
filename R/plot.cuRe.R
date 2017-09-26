@@ -39,7 +39,7 @@ plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
   }
   if(is.null(time)){
     if(is.null(xlim)){
-      xlim <- c(0, max(fit$data$FU_years))
+      xlim <- c(0, max(fit$times))
       time <- seq(xlim[1], xlim[2], length.out = 100)
     }
   }else{

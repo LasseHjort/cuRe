@@ -21,13 +21,7 @@
 #' @return A object of class \code{lol} containing the loss of lifetime estiamtes
 #' of each individual in \code{newdata}.
 #' @export
-#' @examples
-#' D$bhaz <- extract_general(time = "FU", age = "agedays", sex = "sex",
-#'                           date = "dx", data = D, ratetable = survexp.dk)
-#' fit <- stpm2(Surv(FUyear, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz)
-#' res <- calc.LL(fit, time = seq(0, 20, length.out = 100),
-#'                rmap = list(age = agedays, sex = sex, year = dx))
-#' plot(res)
+#' @example inst/calc.LL.ex.R
 
 
 

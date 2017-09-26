@@ -10,6 +10,7 @@
 #' @param ratetable Object of class \code{ratetable} to extract background hazards from. Defaults to survexp.dk
 #' @return An object of class \code{numeric} of yearly hazards.
 #' @export
+#' @example inst/general.haz.ex.R
 
 general.haz <- function(time, age, sex, year, data = NULL, ratetable = survexp.dk){
   if(is.character(time)){

@@ -25,3 +25,11 @@ An object of class \code{numeric} of yearly hazards.
 \description{
 Yearly general population hazards matched on age, gender, and calendar year is extracted from a ratetable
 }
+\examples{
+bhaz1 <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+                     data = colonDC, ratetable = survexp.dk)
+
+bhaz2 <- general.haz(time = colonDC$FU, age = colonDC$agedays, sex = colonDC$sex,
+                     year = colonDC$dx, ratetable = survexp.dk)
+all(bhaz2 == bhaz1)
+}

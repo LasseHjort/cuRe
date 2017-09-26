@@ -7,7 +7,8 @@
 FlexMixtureCureModel(formula, data, bhazard, smooth.formula = ~1,
   knots = NULL, n.knots = NULL, tvc.formula = NULL, knots.time = NULL,
   n.knots.time = NULL, covariance = T, type = "mixture",
-  linkpi = "logit", linksu = "loglog", message = T, optim.args = NULL)
+  linkpi = "logit", linksu = "loglog", message = T, optim.args = NULL,
+  ini.types = c("cure", "flexpara"))
 }
 \arguments{
 \item{formula}{Formula for the covariates in the modelling of the cure rate, \eqn{\pi}. Reponse has to be of the form \code{Surv(time, status)}.}
@@ -41,6 +42,8 @@ Possible values are \code{loglog}, \code{logistic}, and \code{probit}.}
 
 \item{optim.args}{List with additional arguments to pass to \code{optim}.}
 
+\item{ini.types}{Character vector denoting which procedures for calculating initial values has to be executed.}
+
 \item{hes}{Logical for computing the inverse hessian matrix (default is \code{TRUE}).}
 
 \item{verbose}{Logical indicating whether to output messages from the function}
@@ -50,4 +53,45 @@ An object of class \code{fmcm}.
 }
 \description{
 The following function fits a generalized mixture or non-mixture cure model using a link function for the cure rate and for the survival of the uncured
+}
+\examples{
+##Use data cleaned version of the colon cancer data from the rstpm2 package
+data("colonDC")
+
+##Extract general population hazards
+colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+                            data = colonDC, ratetable = survexp.dk)
+
+####Without covariates
+##Fit relative survival model
+fit <- FlexMixtureCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 6, bhazard = "bhaz",
+                            ini.types = "cure")
+
+##Plot model
+plot(fit)
+plot(fit, time = seq(0, 40, length.out = 100))
+plot(fit, type = "ehaz")
+plot(fit, type = "survuncured")
+plot(fit, type = "probcure")
+
+
+####With covariates
+##Fit relative survival model
+fit <- FlexMixtureCureModel(Surv(FUyear, status2) ~ sex, data = colonDC, n.knots = 6, bhazard = "bhaz",
+                            ini.types = "cure", smooth.formula = ~ sex)
+
+##Plot model
+plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
+     time = seq(0, 15, length.out = 100), ci = F)
+plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
+     time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T)
+
+
+plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
+     time = seq(0, 15, length.out = 100), ci = F, type = "survuncured")
+plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
+     time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T, type = "survuncured")
+
+#Predict cure rate for female patients
+predict(fit, type = "curerate", newdata = data.frame(sex = factor("female", levels = c("male", "female"))))
 }

@@ -4,11 +4,29 @@
 \alias{plot.crude}
 \title{Plot crude event probabilities}
 \usage{
-\method{plot}{crude}(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
-  ylab = NULL, xlab = "Time", add = F)
+plot.crude(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
+  ylab = NULL, xlab = "Time", add = F, ...)
 }
 \arguments{
-\item{obj}{Object of class \code{crude} in which crude probabilities are calculated}
+\item{obj}{Object of class \code{crude} in which crude probabilities are calculated.}
+
+\item{ylim}{Limits of y-axis.}
+
+\item{xlim}{Limits of x-axis.}
+
+\item{ci}{Logical denoting whether confidence intervals should be plotted (default is TRUE).}
+
+\item{col}{Colour of each curve.}
+
+\item{ylab}{Label of the y-axis. If type is \code{cancer}, the label is "Cumulative incidence of
+cancer related death", if \code{other}, the label is "Cumulative incidence of death from other causes than cancer",
+and if type is \code{othertime}, the label is "probability of eventually dying from other causes than cancer".}
+
+\item{xlab}{Label of the x-axis (default is "Time").}
+
+\item{add}{Logical indicating wether the cruves should be added to the current plot window (default is FALSE).}
+
+\item{...}{Further arguments passed to \code{plot} and \code{lines}.}
 }
 \description{
 Plot function for the computed crude event probabilties.

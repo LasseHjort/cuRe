@@ -25,7 +25,7 @@ ehaz_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, lin
 }
 
 probcure_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  pi <- c(get.link("logit")(pi_fun(pars, M)))
+  pi <- c(link_fun_pi(pi_fun(pars, M)))
   eta <- M2 %*% pars[-c(1:ncol(M))]
   if(model == "mixture"){
     rsurv <- pi + (1 - pi) * link_fun_su(eta)
@@ -40,7 +40,7 @@ survuncured_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_
   if(model == "mixture"){
     get.inv.link("logit")(link_fun_su(eta))
   }else if(model == "nmixture"){
-    pi <- c(get.link("logit")(pi_fun(pars, M)))
+    pi <- c(link_fun_pi(pi_fun(pars, M)))
     rsurv <- pi ^ (1 - link_fun_su(eta))
     get.inv.link("logit")((rsurv - pi) / (1 - pi))
   }
@@ -66,7 +66,7 @@ survuncured_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_
 #' @export
 
 predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
-                         time = NULL, ci = T, pars = NULL){
+                        time = NULL, ci = T, pars = NULL){
   if(!is.null(pars)){
     fit$coefs <- pars[1:length(fit$coefs)]
     if(length(fit$coefs) < length(pars)){
@@ -94,17 +94,17 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
   formula.2 <- formula(delete.response(tt))
   M <- model.matrix(formula.2, newdata)
   pi_fun <- function(pars, M) M %*% pars[1:ncol(M)]
-  pi <- pi_fun(all.coefs, M)
+  pi <- get.inv.link("logit")(link_fun_pi(pi_fun(all.coefs, M)))
 
   if(type == "curerate"){
     pi <- data.frame(pi = pi)
     if(ci){
       grads <- jacobian(pi_fun, x = all.coefs, M = M)
       pi$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$covariance %*% x)
-      pi$ci.lower <- get.link(pi$pi - qnorm(0.975) * sqrt(pi$var), type = "curerate")
-      pi$ci.upper <- get.link(pi$pi + qnorm(0.975) * sqrt(pi$var), type = "curerate")
+      pi$ci.lower <- get.link("logit")(pi$pi - qnorm(0.975) * sqrt(pi$var))
+      pi$ci.upper <- get.link("logit")(pi$pi + qnorm(0.975) * sqrt(pi$var))
     }
-    pi$pi <- get.link(pi$pi, type = "curerate")
+    pi$pi <- get.link("logit")(pi$pi)
     return(pi)
   }else{
     b <- flexsurv::basis(knots = fit$knots, x = log(time))
@@ -130,40 +130,42 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
       }
       M_list[[i]] <- list(M2 = M2, dM2 = dM2)
     }
-    if(type %in% c("relsurv", "ehaz", "probcure", "survuncured")){
-      if(type == "relsurv"){
-        fun <- relsurv_fun
-      }else if(type == "ehaz"){
-        fun <- ehaz_fun
-      }else if(type == "probcure"){
-        fun <- probcure_fun
-      }else if(type == "survuncured"){
-        fun <- survuncured_fun
+    if(type == "relsurv"){
+      fun <- relsurv_fun
+      link.type <- "logit"
+    }else if(type == "ehaz"){
+      fun <- ehaz_fun
+      link.type <- "identity"
+    }else if(type == "probcure"){
+      fun <- probcure_fun
+      link.type <- "probit"
+    }else if(type == "survuncured"){
+      fun <- survuncured_fun
+      link.type <- "logit"
+    }
+
+    rss <- vector("list", nrow(newdata))
+    for(i in 1:nrow(newdata)){
+      rss[[i]] <- data.frame(Est = c(fun(all.coefs, M2 = M_list[[i]]$M2, M = M[i,, drop = FALSE],
+                                         dM2 = M_list[[i]]$dM2,
+                                         time = time, pi_fun = pi_fun, model = fit$type,
+                                         link_fun_pi = link_fun_pi, link_fun_su = link_fun_su,
+                                         dlink_fun_su = dlink_fun_su)))
+      if(ci){
+        grads <- jacobian(fun, x = all.coefs, M2 = M_list[[i]]$M2, M = M[i, , drop = FALSE],
+                          dM2 = M_list[[i]]$dM2, time = time, pi_fun = pi_fun, model = fit$type,
+                          link_fun_pi = link_fun_pi, link_fun_su = link_fun_su, dlink_fun_su = dlink_fun_su)
+        rss[[i]]$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$covariance %*% x)
+        rss[[i]]$ci.lower <- get.link(link.type)(rss[[i]]$Est - qnorm(0.975) * sqrt(rss[[i]]$var))
+        rss[[i]]$ci.upper <- get.link(link.type)(rss[[i]]$Est + qnorm(0.975) * sqrt(rss[[i]]$var))
       }
+      rss[[i]]$Est <- get.link(link.type)(rss[[i]]$Est)
 
-      rss <- vector("list", nrow(newdata))
-      for(i in 1:nrow(newdata)){
-        rss[[i]] <- data.frame(Est = c(fun(all.coefs, M2 = M_list[[i]]$M2, M = M[i,, drop = FALSE],
-                                           dM2 = M_list[[i]]$dM2,
-                                           time = time, pi_fun = pi_fun, model = fit$type,
-                                           link_fun_pi = link_fun_pi, link_fun_su = link_fun_su,
-                                           dlink_fun_su = dlink_fun_su)))
+      if(type %in% c("relsurv", "survuncured")){
         if(ci){
-          grads <- jacobian(fun, x = all.coefs, M2 = M_list[[i]]$M2, M = M[i, , drop = FALSE],
-                            dM2 = M_list[[i]]$dM2, time = time, pi_fun = pi_fun, model = "mixture",
-                            link_fun_pi = link_fun_pi, link_fun_su = link_fun_su, dlink_fun_su = dlink_fun_su)
-          rss[[i]]$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$cov %*% x)
-          rss[[i]]$ci.lower <- get.link(rss[[i]]$Est - qnorm(0.975) * sqrt(rss[[i]]$var), type = type)
-          rss[[i]]$ci.upper <- get.link(rss[[i]]$Est + qnorm(0.975) * sqrt(rss[[i]]$var), type = type)
-        }
-        rss[[i]]$Est <- get.link(rss[[i]]$Est, type = type)
-
-        if(type %in% c("relsurv", "survuncured")){
-          if(ci){
-            rss[[i]][time == 0, ] <- c(1, 0, 1, 1)
-          }else{
-            rss[[i]][time == 0, ] <- 1
-          }
+          rss[[i]][time == 0, ] <- c(1, 0, 1, 1)
+        }else{
+          rss[[i]][time == 0, ] <- 1
         }
       }
     }

@@ -19,6 +19,7 @@
 #' @details The arguments for modelling the parameters of the cure model have different meanings dependent on the chosen distribution. \cr
 #' For the exponential distribution, k1 denotes the rate, for the weibull model, k1 denotes the scale parameter and k2 denotes the shape parameter, sfor the log normal distribution k1 denotes the mu and sigma.
 #' @export
+#' @example inst/fit.cure.model.ex.R
 
 
 fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 = NULL,
@@ -114,7 +115,8 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
             ML = optim.out$value, covariance = cov,
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
-            surv_fun = surv_fun, dens_fun = dens_fun, optim.pars = optim.pars)
+            surv_fun = surv_fun, dens_fun = dens_fun, optim.pars = optim.pars,
+            times = time)
   class(L) <- c("cm", "cuRe")
   L
 }

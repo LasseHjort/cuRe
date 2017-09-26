@@ -27,6 +27,7 @@
 #' @export
 #' @import survival
 #' @import rstpm2
+#' @example inst/FlexMixtureCureModel.ex.R
 
 
 
@@ -100,7 +101,7 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
   #Extract link function
   link_fun_pi <- get.link(linkpi)
   link_fun_su <- get.link(linksu)
-  dlink_fun_su <- get_dlink(linksu)
+  dlink_fun_su <- get.dlink(linksu)
 
   #Extract minus log likelihood function
   minusloglik <- switch(type,
@@ -192,7 +193,8 @@ FlexMixtureCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
             link_fun_su = link_fun_su,
             dlink_fun_su = dlink_fun_su,
             linkpi = linkpi, linksu = linksu,
-            df = length(res$par) - 1, NegMaxLiks = MLs, optim.pars = optim.pars)
+            df = length(res$par) - 1, NegMaxLiks = MLs, optim.pars = optim.pars,
+            times = fu)
 
   class(L) <- c("fcm", "cuRe")
   L

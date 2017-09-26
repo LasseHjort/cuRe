@@ -28,20 +28,7 @@
 #' @references Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
 #' for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
 #' @export
-#' @examples
-#' D$bhaz <- extract_general(time = "FU", age = "agedays", sex = "sex",
-#'                           date = "dx", data = D, ratetable = survexp.dk)
-#' fit <- stpm2(Surv(FUyear, status2) ~ 1, data = D, df = 2, bhazard = D$bhaz, cure = T)
-#'
-#' #Compute the probability of cancer related death
-#' res <- calc.Crude(fit, time = seq(0, 20, length.out = 100),
-#'                   rmap = list(age = agedays, sex = sex, year = dx))
-#' plot(res)
-#'
-#' #Compute the probability of eventually dying from other causes than cancer
-#' res <- calc.Crude(fit, time = seq(0, 20, length.out = 100), type = "othertime",
-#'                   rmap = list(age = agedays, sex = sex, year = dx))
-#' plot(res)
+#' @example inst/calc.Crude.ex.R
 
 calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100,
                        ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "logit"){
