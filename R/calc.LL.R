@@ -13,7 +13,7 @@
 #' @param tau The upper limit of the integral. Default is 100.
 #' @param ci Logical indicating whether confidence intervals should be computed
 #' @param ratetable Object of class \code{ratetable} to compute the general population survival from.
-#' @param expected Object of class \class{list} containing objects of class \code{survexp}
+#' @param expected Object of class \code{list} containing objects of class \code{survexp}
 #' denoting the expected survival of each row in newdata. If not specified, the function computes the expected
 #' survival.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package.

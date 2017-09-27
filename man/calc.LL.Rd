@@ -24,7 +24,7 @@ which gives the mean residual lifetime}
 
 \item{ci}{Logical indicating whether confidence intervals should be computed}
 
-\item{expected}{Object of class \class{list} containing objects of class \code{survexp}
+\item{expected}{Object of class \code{list} containing objects of class \code{survexp}
 denoting the expected survival of each row in newdata. If not specified, the function computes the expected
 survival.}
 
