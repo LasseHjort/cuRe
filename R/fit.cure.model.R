@@ -59,7 +59,7 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   #Prepare optimization arguments
   likelihood.pars <- list(fn = minuslog_likelihood,
                            time = time,
-                           status = event,
+                           event = event,
                            Xs = X.all,
                            link = link_fun,
                            surv_fun = surv_fun,
@@ -95,7 +95,7 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
     cov <- solve(pracma::hessian(minuslog_likelihood,
                                  optim.out$par,
                                  time = time,
-                                 status = event,
+                                 event = event,
                                  X = X.all,
                                  link = link_fun,
                                  surv_fun = surv_fun,

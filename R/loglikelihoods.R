@@ -167,7 +167,7 @@ calc.lps <- function(Xs, param){
 
 ######Likelihood functions
 # Parametric Mixture cure model
-mixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
+mixture_minuslog_likelihood <- function(param, time, event, Xs, link_fun,
                                          surv_fun, dens_fun, bhazard){
 
   #Calculate linear predictors
@@ -179,7 +179,7 @@ mixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
   surv.term <- log(pi + (1 - pi) * surv)
 
   #Calculate hazard term only for uncensored patients.
-  events <- which(status == 1)
+  events <- which(event == 1)
   dens <- dens_fun(time[events], lapply(lps, function(lp) lp[events,]))
   pi.events <- pi[events]
   surv.events <- surv[events]
@@ -190,7 +190,7 @@ mixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
   -sum(surv.term)
 }
 
-nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
+nmixture_minuslog_likelihood <- function(param, time, event, Xs, link_fun,
                                          surv_fun, dens_fun, bhazard){
 
   #Calculate linear predictors
@@ -202,7 +202,7 @@ nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
   surv.term <- log(pi) - log(pi) * surv
 
   #Calculate hazard term only for uncensored patients.
-  events <- which(status == 1)
+  events <- which(event == 1)
   dens <- dens_fun(time[events], lapply(lps, function(lp) lp[events,]))
   pi.events <- pi[events]
   haz.term <- log( bhazard[events] - log(pi.events) * dens)
@@ -215,7 +215,7 @@ nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
 
 
 # #Parametric mixture cure model 2
-# mixture_minuslog_likelihood2 <- function(param, time, status, Xs, link_fun,
+# mixture_minuslog_likelihood2 <- function(param, time, event, Xs, link_fun,
 #                                         bhazard, surv_fun, dens_fun){
 #   gamma <- param[grepl("gamma", names(param))]
 #   coefs.k1 <- param[grepl("k1", names(param))]
@@ -232,7 +232,7 @@ nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
 #   }else{
 #     lp.k3 <- NULL
 #   }
-#   deaths <- status == 1
+#   deaths <- event == 1
 #   pi <- link_fun(Xs[[1]] %*% gamma)
 #   pi_deaths <- pi[deaths]
 #   surv <- surv_fun(time, lp.k1, lp.k2, lp.k3)
@@ -243,7 +243,7 @@ nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
 # }
 #
 # # Parametric non-mixture cure model
-# nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
+# nmixture_minuslog_likelihood <- function(param, time, event, Xs, link_fun,
 #                                          bhazard, surv_fun, dens_fun){
 #   gamma <- param[grepl("gamma", names(param))]
 #   coefs.k1 <- param[grepl("k1", names(param))]
@@ -259,28 +259,28 @@ nmixture_minuslog_likelihood <- function(param, time, status, Xs, link_fun,
 #   pi <- link_fun(Xs[[1]] %*% gamma)
 #   surv <- surv_fun(time, lp.k1, lp.k2, lp.k3)
 #   dens <- dens_fun(time, lp.k1, lp.k2, lp.k3)
-#   loglik <- status * log( bhazard - log(pi) * dens) + ( log(pi) - log(pi) * surv )
+#   loglik <- event * log( bhazard - log(pi) * dens) + ( log(pi) - log(pi) * surv )
 #   -sum(loglik)
 # }
 
 # Flexible mixture cure model
-flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,
-                                                 link_fun_pi, link_fun_su, dlink_fun_su){
-  gamma <- param[1:ncol(X)]
-  beta <- param[(ncol(X) + 1):length(param)]
-  lp <- X %*% gamma
-  pi <- link_fun_pi(lp)
-  eta <- b %*% beta
-  deta <- db %*% beta / time
-  surv <- link_fun_su(eta)
-  rsurv <- pi + (1 - pi) * surv
-  dsurv <- dlink_fun_su(eta)
-  ehaz <- -(1 - pi) * dsurv * deta / rsurv
-  suppressWarnings(likterms <- status * log( bhazard + ehaz) + log(rsurv))
-  -sum(likterms)
-}
+# flexible_mixture_minuslog_likelihood <- function(param, time, event, X, b, db, bhazard,
+#                                                  link_fun_pi, link_fun_su, dlink_fun_su){
+#   gamma <- param[1:ncol(X)]
+#   beta <- param[(ncol(X) + 1):length(param)]
+#   lp <- X %*% gamma
+#   pi <- link_fun_pi(lp)
+#   eta <- b %*% beta
+#   deta <- db %*% beta / time
+#   surv <- link_fun_su(eta)
+#   rsurv <- pi + (1 - pi) * surv
+#   dsurv <- dlink_fun_su(eta)
+#   ehaz <- -(1 - pi) * dsurv * deta / rsurv
+#   suppressWarnings(likterms <- event * log( bhazard + ehaz) + log(rsurv))
+#   -sum(likterms)
+# }
 
-flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,
+flexible_mixture_minuslog_likelihood <- function(param, time, event, X, b, db, bhazard,
                                                  link_fun_pi, link_fun_su, dlink_fun_su){
   #Get parameters
   gamma <- param[1:ncol(X)]
@@ -295,7 +295,7 @@ flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, 
   likterms <- log(rsurv)
 
   #Add the hazard term only for events
-  events <- status == 1
+  events <- event == 1
   deta <- db[events,] %*% beta / time[events]
   dsurv <- dlink_fun_su(eta[events])
   ehaz <- -(1 - pi[events]) * dsurv * deta / rsurv[events]
@@ -306,7 +306,7 @@ flexible_mixture_minuslog_likelihood <- function(param, time, status, X, b, db, 
 }
 
 #Non-mixture cure
-flexible_nmixture_minuslog_likelihood <- function(param, time, status, X, b, db, bhazard,
+flexible_nmixture_minuslog_likelihood <- function(param, time, event, X, b, db, bhazard,
                                                  link_fun_pi, link_fun_su, dlink_fun_su){
   #Get parameters
   gamma <- param[1:ncol(X)]
@@ -321,7 +321,7 @@ flexible_nmixture_minuslog_likelihood <- function(param, time, status, X, b, db,
   likterms <- log(rsurv)
 
   #Add the hazard term only for events
-  events <- status == 1
+  events <- event == 1
   deta <- db[events,] %*% beta / time[events]
   ddist <- dlink_fun_su(eta[events])
   ehaz <- log(pi[events]) * ddist * deta
@@ -331,9 +331,9 @@ flexible_nmixture_minuslog_likelihood <- function(param, time, status, X, b, db,
   -sum(likterms)
 }
 
-# flexible_minuslog_likelihood <- function(param, time, status, b, db, bhazard){
+# flexible_minuslog_likelihood <- function(param, time, event, b, db, bhazard){
 #   eta <- b %*% param
-#   deaths <- status == 1
+#   deaths <- event == 1
 #   deta <- db[deaths,] %*% param
 #   exp_eta <- exp(eta)
 #   inside_log <- bhazard[deaths] + deta * exp_eta[deaths] / time[deaths]
@@ -342,9 +342,9 @@ flexible_nmixture_minuslog_likelihood <- function(param, time, status, X, b, db,
 #   -sum(terms)
 # }
 
-# penalized_flexible_minuslog_likelihood <- function(param, time, status, b, db, bhazard, pena.fun, nr.spline){
+# penalized_flexible_minuslog_likelihood <- function(param, time, event, b, db, bhazard, pena.fun, nr.spline){
 #   eta <- b %*% param
-#   deaths <- status == 1
+#   deaths <- event == 1
 #   deta <- db[deaths,] %*% param
 #   exp_eta <- exp(eta)
 #   inside_log <- bhazard[deaths] + deta * exp_eta[deaths] / time[deaths]

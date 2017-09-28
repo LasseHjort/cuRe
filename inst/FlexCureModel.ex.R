@@ -5,10 +5,9 @@ data("colonDC")
 colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
                             data = colonDC, ratetable = survexp.dk)
 
-####Without covariates
+###Without covariates
 ##Fit relative survival model
-fit <- FlexMixtureCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 6, bhazard = "bhaz",
-                            ini.types = "cure")
+fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 5, bhazard = "bhaz")
 
 ##Plot model
 plot(fit)
@@ -17,11 +16,23 @@ plot(fit, type = "ehaz")
 plot(fit, type = "survuncured")
 plot(fit, type = "probcure")
 
+##Predict cure rate
+predict(fit, type = "curerate")
 
-####With covariates
+
+##Fit non-mixture cure model
+fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 5, bhazard = "bhaz", type = "nmixture")
+
+##Plot relative survival
+plot(fit)
+
+##Predict cure rate
+predict(fit, type = "curerate")
+
+###With covariates
 ##Fit relative survival model
-fit <- FlexMixtureCureModel(Surv(FUyear, status2) ~ sex, data = colonDC, n.knots = 6, bhazard = "bhaz",
-                            ini.types = "cure", smooth.formula = ~ sex)
+fit <- FlexCureModel(Surv(FUyear, status2) ~ sex, data = colonDC, n.knots = 5, bhazard = "bhaz",
+                     smooth.formula = ~ sex)
 
 ##Plot model
 plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
@@ -35,5 +46,16 @@ plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female
 plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
      time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T, type = "survuncured")
 
-#Predict cure rate for female patients
-predict(fit, type = "curerate", newdata = data.frame(sex = factor("female", levels = c("male", "female"))))
+predict(fit, type = "curerate", data.frame(sex = factor("female", levels = c("male", "female"))))
+
+
+###Time-varying covariates
+fit <- FlexCureModel(Surv(FUyear, status2) ~ age, data = colonDC, n.knots = 5, bhazard = "bhaz",
+                     n.knots.time = list(age = 3))
+
+##Plot model
+plot(fit, newdata = data.frame(age = 70))
+plot(fit, newdata = data.frame(age = 60), add = T, col = 2)
+
+plot(fit, type = "ehaz", newdata = data.frame(age = 70), ci = F)
+plot(fit, type = "ehaz", newdata = data.frame(age = 60), add = T, col = 2, ci = F)
