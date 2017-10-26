@@ -62,8 +62,7 @@ predict.cm <- function(fit, newdata = NULL, type = "relsurv",
     return(pi)
   }else if(type %in% c("relsurv", "ehaz", "probcure", "survuncured")){
     if(is.null(time)){
-      obs.times <- eval(fit$formulas[[1]][[2]], envir = fit$data)
-      time <- seq(min(obs.times), max(obs.times), length.out = 100)
+      time <- seq(min(fit$times), max(fit$times), length.out = 100)
     }
 
     out.fun <- switch(type,

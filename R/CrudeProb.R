@@ -15,6 +15,7 @@
 #' @param expected Object of class \code{list} containing objects of class \code{survexp}
 #' denoting the expected survival of each row in newdata. If not specified, the function computes the expected
 #' survival.
+#' @param reverse Logical indicating wether probability or 1 - probability.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param Link Character indicating the used link function for computing confidence intervals.
@@ -30,7 +31,7 @@
 #' @export
 #' @example inst/calc.Crude.ex.R
 
-calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100,
+calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100, reverse = FALSE,
                        ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "logit"){
 
   #Time points at which to evaluate integral
@@ -127,21 +128,21 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
 
   probs <- lapply(1:length(expected), function(i){
     prob <- probfun(time = time, rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
-                    expected_haz = expected_haz[[i]], expected =  expected[[i]],
+                    expected_haz = expected_haz[[i]], expected =  expected[[i]], reverse = reverse,
                     pars = model.params, last.point = last.point, link = link)
     res <- data.frame(prob = prob)
     if(ci){
       prob_gr <- pracma::jacobian(probfun, x = model.params, time = time,
                           rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                           expected_haz = expected_haz[[i]], expected =  expected[[i]],
-                          last.point = last.point, link = link)
+                          last.point = last.point, link = link, reverse = reverse)
       res$var <- apply(prob_gr, 1, function(x) x %*% cov %*% x)
       res$lower.ci <- get.link(link)(res$prob - sqrt(res$var) * qnorm(0.975))
       res$upper.ci <- get.link(link)(res$prob + sqrt(res$var) * qnorm(0.975))
     }
     res$prob <- get.link(link)(res$prob)
     if(type %in% c("cancer", "other")){
-      res[time == 0,] <- 0
+      res[time == 0,] <- ifelse(reverse, 1, 0)
     }
     res
   })
@@ -175,29 +176,35 @@ int.square <- function(func, time, pars){
   vals_pop[t_new %in% time]
 }
 
-prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link){
+prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse){
   if(all(time == 0)){
     return(rep(0, length(time)))
   }else{
     dens <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-    get.inv.link(link)(int.square(dens, time = time, pars = pars))
+    prob <- int.square(dens, time = time, pars = pars)
+    if(reverse) prob <- 1 - prob
+    get.inv.link(link)(prob)
   }
 }
 
-prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link){
+prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse){
   if(all(time == 0)){
     return(rep(0, length(time)))
   }else{
     dens <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
-    get.inv.link(link)(int.square(dens, time = time, pars = pars))
+    prob <- int.square(dens, time = time, pars = pars)
+    if(reverse) prob <- 1 - prob
+    get.inv.link(link)(prob)
   }
 }
 
-prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link){
+prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse){
   dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
   int_1 <- int.square(dens1, time = time, pars = pars)
   btd <- int.square(dens1, time = last.point, pars = pars)
   dens2 <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
   int_2 <- int.square(dens2, time = time, pars = pars)
-  get.inv.link(link)(1 - (btd - int_1) / (1 - int_1 - int_2))
+  prob <- 1 - (btd - int_1) / (1 - int_1 - int_2)
+  if(reverse) prob <- 1 - prob
+  get.inv.link(link)(prob)
 }

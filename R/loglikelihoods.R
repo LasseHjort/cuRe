@@ -305,9 +305,36 @@ flexible_mixture_minuslog_likelihood <- function(param, time, event, X, b, db, b
   -sum(likterms)
 }
 
+
+# flexible_mixture_minuslog_likelihood2 <- function(param, time, event, X2, b, db, bhazard,
+#                                                  link_fun_pi, link_fun_su, dlink_fun_su){
+#   #Get parameters
+#   gamma <- param[1:ncol(X2)]
+#   beta <- param[(ncol(X2) + 1):length(param)]
+#
+#   #Calculate linear predictors
+#   lp <- X2 %*% gamma
+#   pi <- link_fun_pi(lp)
+#   eta <- b %*% beta
+#   surv <- link_fun_su(eta)
+#   rsurv <- pi + (1 - pi) * surv
+#   likterms <- log(rsurv)
+#
+#   #Add the hazard term only for events
+#   events <- event == 1
+#   deta <- db[events,] %*% beta / time[events]
+#   dsurv <- dlink_fun_su(eta[events])
+#   ehaz <- -(1 - pi[events]) * dsurv * deta / rsurv[events]
+#   suppressWarnings(likterms[events] <- likterms[events] + log( bhazard[events] + ehaz))
+#
+#   #Output the negative log likelihood
+#   -sum(likterms)
+# }
+
+
 #Non-mixture cure
 flexible_nmixture_minuslog_likelihood <- function(param, time, event, X, b, db, bhazard,
-                                                 link_fun_pi, link_fun_su, dlink_fun_su){
+                                                  link_fun_pi, link_fun_su, dlink_fun_su){
   #Get parameters
   gamma <- param[1:ncol(X)]
   beta <- param[(ncol(X) + 1):length(param)]
@@ -330,6 +357,97 @@ flexible_nmixture_minuslog_likelihood <- function(param, time, event, X, b, db, 
   #Output the negative log likelihood
   -sum(likterms)
 }
+
+
+# uncuredhazfun.mix <- function(pars, time, event, X, b, db, bhazard,
+#                               link_fun_pi, link_fun_su, dlink_fun_su){
+#   #Get parameters
+#   beta <- pars[(ncol(X) + 1):length(pars)]
+#
+#   #Calculate linear predictors
+#   eta <- b %*% beta
+#   surv <- link_fun_su(eta)
+#
+#   #Add the hazard term only for events
+#   deta <- db %*% beta / time
+#   dsurv <- dlink_fun_su(eta)
+#   ehaz <- - deta * dsurv / surv
+#
+#   c(ehaz)[1:10]
+# }
+#
+# get_ui <- function(time, X, b, db, bhazard,
+#                    link_fun_pi, link_fun_su, dlink_fun_su){
+#
+#   deta <- db %*% beta / time
+#   dsurv <- dlink_fun_su(eta)
+#   ehaz <- - deta * dsurv / surv
+#
+#   c(ehaz)[1:10]
+# }
+
+
+
+basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
+  nx <- length(x)
+  if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
+  nk <- ncol(knots)
+  b <- matrix(nrow=length(x), ncol=nk)
+  if (nk>0){
+    b[,1] <- 1
+    b[,2] <- x
+  }
+  if (nk>2) {
+    lam <- (knots[,nk] - knots)/(knots[,nk] - knots[,1])
+    for (j in 1:(nk-2)) {
+      b[,j+2] <- pmax(x - knots[,j+1], 0)^3 - lam[,j+1]*pmax(x - knots[,1], 0)^3 -
+        (1 - lam[,j+1])*pmax(x - knots[,nk], 0)^3
+    }
+  }
+
+  if(!intercept) b <- b[,-1]
+
+  if(ortho){
+    if(is.null(R.inv)){
+      qr_decom <- qr(b)
+      b <- qr.Q(qr_decom)
+      R.inv <- solve(qr.R(qr_decom))
+    } else{
+      b <- b %*% R.inv
+    }
+  }
+  list(b = b, R.inv = R.inv)
+}
+
+dbasis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
+  if(ortho & is.null(R.inv)) stop("Both 'ortho' and 'R.inv' has to be specified!")
+  nx <- length(x)
+  if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
+  nk <- ncol(knots)
+  b <- matrix(nrow=length(x), ncol=nk)
+  if (nk>0){
+    b[,1] <- 0
+    b[,2] <- 1
+  }
+  if (nk>2) {
+    lam <- (knots[,nk] - knots)/(knots[,nk] - knots[,1])
+    for (j in 3:nk) {
+      b[,j] <- 3*pmax(x - knots[,j-1], 0)^2 - 3*lam[,j-1]*pmax(x - knots[,1], 0)^2 -
+        3*(1 - lam[,j-1])*pmax(x - knots[,nk], 0)^2
+    }
+  }
+
+  if(!intercept) b <- b[, -1]
+  if(ortho){
+    b <- b %*% R.inv
+  }
+
+  b
+}
+
+
+
+
 
 # flexible_minuslog_likelihood <- function(param, time, event, b, db, bhazard){
 #   eta <- b %*% param

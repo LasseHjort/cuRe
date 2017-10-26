@@ -27,7 +27,17 @@
 
 calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
                     tau = 100, ci = T, expected = NULL, ratetable = survexp.dk,
-                    rmap = rmap){
+                    rmap = rmap, pars = NULL){
+
+  #Replace coefficients if new ones are provided
+  if(!is.null(pars)){
+    if(any(class(fit) %in% c("stpm2", "pstpm2"))){
+      fit@fullcoef <- pars
+    } else {
+      fit$coefs <- pars[1:length(fit$coefs)]
+      fit$coefs.spline <- pars[(length(fit$coefs) + 1):length(pars)]
+    }
+  }
 
   #Time points at which to evaluate integral
   if(is.null(time)){

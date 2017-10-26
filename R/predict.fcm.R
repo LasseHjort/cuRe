@@ -107,11 +107,18 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
     pi$pi <- get.link("logit")(pi$pi)
     return(pi)
   }else{
-    b <- flexsurv::basis(knots = fit$knots, x = log(time))
-    db <- flexsurv::dbasis(knots = fit$knots, x = log(time))
+    if(is.null(time)){
+      time <- seq(min(fit$times), max(fit$times), length.out = 100)
+    }
+    b <- basis(knots = fit$knots, x = log(time), ortho = fit$ortho, R.inv = fit$R.inv)$b
+    db <- dbasis(knots = fit$knots, x = log(time), ortho = fit$ortho, R.inv = fit$R.inv)
     if(!is.null(fit$knots.time)){
-      tvc.b <- lapply(fit$knots.time, flexsurv::basis, x = log(time))
-      tvc.db <- lapply(fit$knots.time, flexsurv::dbasis, x = log(time))
+      tvc.b <- lapply(1:length(fit$knots.time), function(i){
+        basis(knots = fit$knots.time[[i]], x = log(time), ortho = fit$ortho, R.inv = fit$R.inv_list[[i]])$b
+      })
+      tvc.db <- lapply(1:length(fit$knots.time), function(i){
+        dbasis(knots = fit$knots.time[[i]], x = log(time), ortho = fit$ortho, R.inv = fit$R.inv_list[[i]])
+      })
     }
     M2.list <- lapply(1:nrow(newdata), function(i){
       model.matrix(fit$formula_main, newdata[i, ,drop = F])[rep(1, nrow(b)),-1, drop = F]
@@ -121,7 +128,7 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
     for(i in 1:nrow(newdata)){
       M2 <- cbind(b, M2.list[[i]])
       dM2 <- cbind(db, M2.list[[i]])
-      if(!is.null(fit$tvc.formula)){
+      if(!is.null(fit$knots.time)){
         M_time <- model.matrix(fit$tvc.formula, newdata)[,-1, drop = F]
         b_time <- do.call(cbind, lapply(1:ncol(M_time), function(j) tvc.b[[j]] * M_time[i, j]))
         db_time <- do.call(cbind, lapply(1:ncol(M_time), function(j) tvc.db[[j]] * M_time[i, j]))
