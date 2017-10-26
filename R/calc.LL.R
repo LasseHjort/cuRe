@@ -1,24 +1,26 @@
 #' Loss of lifetime estimation
 #'
-#' Function for computing loss of lifetime estimates from an estimated relative survival model
+#' Function for computing loss of lifetime function from an estimated relative survival model
 #'
-#' @param fit Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.
+#' @param fit Fitted model to do predictions from. Possible classes are
+#' \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
-#' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
-#' and \code{tau} is selected.
-#' @param type Character indicating the type of life expectation estimate.
-#' Possible values are \code{ll} (default) which gives the loss of lifetime and \code{mrl},
-#' which gives the mean residual lifetime
+#' @param time Optional time points at which to compute predictions.
+#' If empty, a grid of 100 time points between 0 and \code{tau} is selected.
+#' @param type Type of life expectation estimate.
+#' Possible values are \code{ll} (default) which gives the loss of lifetime, and \code{mrl}
+#' which gives the mean residual lifetime.
 #' @param tau The upper limit of the integral. Default is 100.
-#' @param ci Logical indicating whether confidence intervals should be computed
-#' @param ratetable Object of class \code{ratetable} to compute the general population survival from.
-#' @param expected Object of class \code{list} containing objects of class \code{survexp}
-#' denoting the expected survival of each row in newdata. If not specified, the function computes the expected
+#' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
+#' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
+#' Default is \code{survexp.dk}
+#' @param expected Object of class \code{list} containing objects of class \code{survexp},
+#' with the expected survival of each row in newdata. If not specified, the function computes the expected
 #' survival.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
-#' @return A object of class \code{lol} containing the loss of lifetime estiamtes
+#' @return A object of class \code{le} containing the life expectancy estimates
 #' of each individual in \code{newdata}.
 #' @export
 #' @example inst/calc.LL.ex.R
@@ -27,7 +29,10 @@
 
 calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
                     tau = 100, ci = T, expected = NULL, ratetable = survexp.dk,
-                    rmap = rmap, pars = NULL){
+                    rmap = NULL, pars = NULL){
+
+  if(!type %in% c("ll", "mrl"))
+    stop("Argument 'type' is wrongly specified, must be either 'll' and 'mrl'")
 
   #Replace coefficients if new ones are provided
   if(!is.null(pars)){

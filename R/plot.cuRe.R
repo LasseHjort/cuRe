@@ -2,27 +2,36 @@
 #'
 #' Plot function associated with the class \code{fmcm}
 #'
-#' @param fit Object of class \code{fmcm} to do predictions from.
+#' @param fit Object of class \code{cuRe}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param type Type of prediction to do. Possible values are \code{relsurv} (default) for the relative survival,
 #' \code{curerate} for the cure rate, \code{ehaz} for the excess hazard, and \code{probcure} for the
 #' conditional probability of being cured.
-#' @param time Optional time points at which to compute predictions. This argument is not used if type is \code{curerate}.
-#' @param ci Logical indicating whether confidence intervals should be computed
-#' @param pars Numerical vector containing the parameters values of the model.
-#' In general, this argument can be ignored by the user
-#' @param non.parametric Logical indicating if a non-parametic estimate should be included in the plot (default is FALSE).
-#' @param non.param.arg List of arguments to be passed to function \code{rs.surv} of the \code{relsurv} package.
-#' @param include.knots Logical for including the baseline knots of the model.
-#' @return A list containing the predictions of each individual in \code{newdata}.
+#' @param time Optional time points at which to compute predictions.
+#' This argument is not used if type is \code{curerate}.
+#' @param xlim Limits of the x-axis
+#' @param ylim Limits of the y-axis.
+#' @param xlabel Label of the x-axis. Default is "Time".
+#' @param ylabel Label of the y-axis. Default is "Relative survival" if \code{type = relsurv},
+#' "Excess hazard" if \code{type = ehaz},
+#' "Conditional probability of cure" if \code{type = probcure},
+#' "Disease-specific survival of the uncured" if \code{type = survuncured}.
+#' @param col Colour of each line.
+#' @param ci Logical. If \code{TRUE} (default), confidence intervals are added.
+#' @param non.parametric Logical. If \code{TRUE}, a non-parametic
+#' estimate (Ederer II method) is added to the plot (default is FALSE).
+#' @param col.non.para Colour of the non-parametric estimate.
+#' @param include.knots Logical. If \code{TRUE} vertical lines are added at
+#' each knot of the baseline spline function (default is \code{FALSE}).
+#' @return A plot containing the predictions of each observation in \code{newdata}.
 #' @export
 
 plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
-                               time = NULL, ylim = c(0, 1), xlim = NULL,
-                               xlab = "Time", ylab = NULL, non.parametric = F,
-                               col = 1, col.non.para = 2, ci = T,
-                               include.knots = F, add = F, ...){
+                      time = NULL, xlim = NULL, ylim = c(0, 1),
+                      xlab = "Time", ylab = NULL, col = 1, ci = T,
+                      non.parametric = F, col.non.para = 2,
+                      include.knots = F, add = F, ...){
 
   if(is.null(ylab)){
     ylab <- switch(type,

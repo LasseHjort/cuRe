@@ -6,7 +6,7 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
                             data = colonDC, ratetable = survexp.dk)
 
 ###Without covariates
-##Fit relative survival model
+##Fit mixture cure model
 fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 5, bhazard = "bhaz")
 
 ##Plot model
@@ -30,7 +30,7 @@ plot(fit)
 predict(fit, type = "curerate")
 
 ###With covariates
-##Fit relative survival model
+##Fit mixture cure model
 fit <- FlexCureModel(Surv(FUyear, status2) ~ sex, data = colonDC, n.knots = 5, bhazard = "bhaz",
                      smooth.formula = ~ sex)
 
@@ -49,7 +49,7 @@ plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female")
 predict(fit, type = "curerate", data.frame(sex = factor("female", levels = c("male", "female"))))
 
 
-###Time-varying covariates
+##Fit mixture cure model with time-varying covariates
 fit <- FlexCureModel(Surv(FUyear, status2) ~ age, data = colonDC, n.knots = 5, bhazard = "bhaz",
                      n.knots.time = list(age = 3))
 

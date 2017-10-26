@@ -2,23 +2,26 @@
 #'
 #' Function for computing crude event probabilties from relative survival models.
 #'
-#' @param fit Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.
+#' @param fit Fitted model to do predictions from. Possible classes are
+#' \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
-#' @param type Character indicating which measure is desired. Possible values are \code{cancer} (default),
+#' @param type Measure to compute. Possible values are \code{cancer} (default),
 #' \code{other}, and \code{othertime} (see details).
 #' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
 #' and \code{last.point} is selected.
 #' @param last.point Constant at which the bound to tie probability is calculated. Default is 100.
-#' @param ci Logical indicating whether confidence intervals should be computed.
-#' @param ratetable Object of class \code{ratetable} to compute the general population survival from. Default is survexp.dk.
-#' @param expected Object of class \code{list} containing objects of class \code{survexp}
-#' denoting the expected survival of each row in newdata. If not specified, the function computes the expected
+#' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
+#' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
+#' Default is \code{survexp.dk}.
+#' @param expected Object of class \code{list} containing objects of class \code{survexp},
+#' with the expected survival of each row in newdata. If not specified, the function computes the expected
 #' survival.
-#' @param reverse Logical indicating wether probability or 1 - probability.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
-#' @param Link Character indicating the used link function for computing confidence intervals.
+#' @param reverse Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
+#' Only applicable for \code{type = othertime}.
+#' @param Link Link function for computing variance in order to bound confidence intervals. Default is \code{logit}.
 #' @return An object of class \code{crude} containing the crude probability estimates
 #' of each individual in \code{newdata}.
 #' @details The types of crude probabilities is the typical measures in relative survival, namely
@@ -32,7 +35,7 @@
 #' @example inst/calc.Crude.ex.R
 
 calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100, reverse = FALSE,
-                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "logit"){
+                       ci = T, expected = NULL, ratetable = survexp.dk, rmap = NULL, link = "logit"){
 
   #Time points at which to evaluate integral
   if(is.null(time)){

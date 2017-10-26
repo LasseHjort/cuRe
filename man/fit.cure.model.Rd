@@ -9,30 +9,34 @@ fit.cure.model(formula, data, bhazard, formula.k1 = ~1, formula.k2 = NULL,
   covariance = TRUE, optim.args = NULL)
 }
 \arguments{
-\item{formula}{An object of type formula for the cure rate.}
+\item{formula}{Formula for modelling the the cure fraction Reponse has to be of the form \code{Surv(time, status)}.}
 
-\item{data}{The provided data. Only objects of class \code{data.frame} is allowed.}
+\item{data}{Data frame in which to interpret the variables names in \code{formula},
+\code{formula.k1}, \code{formula.k2}, and \code{formula.k3}.}
 
-\item{bhazard}{The expected survival rate at the last follow-up of the individual.}
+\item{bhazard}{Background hazard.}
 
-\item{formula.k1}{Formula for the first parameter of the parametric distribution (see details).}
+\item{formula.k1}{Formula for the first linear predictor of the parametric distribution (see details).}
 
-\item{formula.k2}{Formula for the second parameter of the parametric distribution (see details).}
+\item{formula.k2}{Formula for the second linear predictor of the parametric distribution (see details).}
 
-\item{formula.k3}{Formula for the third parameter of the parametric distribution (see details).}
+\item{formula.k3}{Formula for the third linear predictor of the parametric distribution (see details).}
 
-\item{type}{Determines the type of cure model. Possible values are \code{mixture} (default) and \code{nmixture}.}
+\item{type}{A character indicating the type of cure model.
+Possible values are \code{mixture} (default) and \code{nmixture}.}
 
-\item{dist}{The parametric distribution of the disease-specific survival function. Possible values are\cr
+\item{dist}{The parametric distribution of the disease-specific survival function. Possible values are
 \code{weibull} (default), \code{exponential}, and \code{lognormal}.}
 
-\item{link}{Specifies the link function of the cure rate. Possible values are \code{logistic} (default), \code{identity}, and \code{loglog}.}
+\item{link}{Specifies the link function of the cure fraction.
+Possible values are \code{logit} (default), \code{identity}, and \code{loglog}.}
 
-\item{covariance}{Logical variable determining whether to compute the hessian or not. Default is \code{TRUE}}
+\item{covariance}{Logical. If \code{TRUE} (default), the covariance matrix is computed.}
 
-\item{optim.args}{List with additional arguments to pass to \code{optim}.}
+\item{optim.args}{List with additional arguments passed to \code{optim}.}
 
-\item{init}{Initial values for the maximum likelihood optimization}
+\item{init}{Initial values for the maximum likelihood optimization.
+If not provided, the optimization will start in 0.}
 }
 \value{
 An object of class \code{CureModel}.
@@ -53,8 +57,8 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
                             data = colonDC, ratetable = survexp.dk)
 
 
-####Without covariates
-##Fit weibull cure model
+###Without covariates
+##Fit weibull mixture cure model
 fit <- fit.cure.model(Surv(FUyear, status2) ~ 1, data = colonDC, bhazard = "bhaz",
                       formula.k1 = ~ 1, formula.k2 = ~ 1,
                       type = "mixture", dist = "weibull", link = "logit")
@@ -67,8 +71,8 @@ plot(fit, type = "survuncured")
 plot(fit, type = "probcure")
 
 
-####With covariates
-##Fit weibull cure model
+###With covariates
+##Fit weibull mixture cure model
 fit <- fit.cure.model(Surv(FUyear, status2) ~ age, data = colonDC, bhazard = "bhaz",
                       formula.k1 = ~ age, formula.k2 = ~ 1,
                       type = "mixture", dist = "weibull", link = "logit")

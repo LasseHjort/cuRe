@@ -8,23 +8,24 @@ predict.cm(fit, newdata = NULL, type = "relsurv", time = NULL, ci = T,
   pars = NULL)
 }
 \arguments{
-\item{fit}{An object of type CureModel.}
+\item{fit}{Object of class \code{cm} to do predictions from.}
 
-\item{newdata}{A dataframe with new data to predict from.}
+\item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the data which
+the model was fitted on.}
 
-\item{type}{A character denoting the type of prediction. Possible values are \code{relsurv} (default), \code{curerate}, and \code{probcure} (see details)}
+\item{type}{Type of prediction to do. Possible values are \code{relsurv} (default) for the relative survival,
+\code{curerate} for the cure rate, \code{ehaz} for the excess hazard, \code{probcure} for the
+conditional probability of being cured, and \code{survuncured} for the disease-specific survival of the uncured.}
 
-\item{ci}{Logical indicating whether to include confidence intervals. Default is \code{TRUE}}
+\item{time}{Optional time points at which to compute predictions.}
 
-\item{times}{A numeric vector including the time points for which to make predictions.}
+\item{ci}{Logical. If \code{TRUE}, confidence intervals are computed.}
+
+\item{pars}{Numerical vector containing the parameters values of the model.}
 }
 \value{
 An object of class \code{matrix} including the predictions.
 }
 \description{
 This function is used to make predictions of the cure models.
-}
-\details{
-For type \code{relsurv}, relative survival predictions are made, while for \code{curerate}, \eqn{\pi} and for \code{probcure}\cr
-the probability of cure is calculated.
 }

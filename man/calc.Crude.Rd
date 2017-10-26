@@ -5,16 +5,17 @@
 \title{Crude event probabilities}
 \usage{
 calc.Crude(fit, newdata = NULL, type = "cancer", time = NULL,
-  last.point = 100, ci = T, expected = NULL, ratetable = survexp.dk,
-  rmap, link = "logit")
+  last.point = 100, reverse = FALSE, ci = T, expected = NULL,
+  ratetable = survexp.dk, rmap = NULL, link = "logit")
 }
 \arguments{
-\item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}
+\item{fit}{Fitted model to do predictions from. Possible classes are
+\code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
 
-\item{type}{Character indicating which measure is desired. Possible values are \code{cancer} (default),
+\item{type}{Measure to compute. Possible values are \code{cancer} (default),
 \code{other}, and \code{othertime} (see details).}
 
 \item{time}{Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
@@ -22,18 +23,22 @@ and \code{last.point} is selected.}
 
 \item{last.point}{Constant at which the bound to tie probability is calculated. Default is 100.}
 
-\item{ci}{Logical indicating whether confidence intervals should be computed.}
+\item{reverse}{Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
+Only applicable for \code{type = othertime}.}
 
-\item{expected}{Object of class \code{list} containing objects of class \code{survexp}
-denoting the expected survival of each row in newdata. If not specified, the function computes the expected
+\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are computed.}
+
+\item{expected}{Object of class \code{list} containing objects of class \code{survexp},
+with the expected survival of each row in newdata. If not specified, the function computes the expected
 survival.}
 
-\item{ratetable}{Object of class \code{ratetable} to compute the general population survival from. Default is survexp.dk.}
+\item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
+Default is \code{survexp.dk}.}
 
 \item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
 Detailed documentation on this argument can be found by \code{?survexp}.}
 
-\item{Link}{Character indicating the used link function for computing confidence intervals.}
+\item{Link}{Link function for computing variance in order to bound confidence intervals. Default is \code{logit}.}
 }
 \value{
 An object of class \code{crude} containing the crude probability estimates

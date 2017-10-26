@@ -1,30 +1,37 @@
 #' Fit spline-based mixture cure model
 #'
-#' The following function fits a generalized mixture or non-mixture cure model using a link function for the cure rate and for the survival of the uncured
+#' The following function fits a generalized mixture or non-mixture cure model
+#' using a link function for the cure rate and for the survival of the uncured, i.e.,
+#' \deqn{R(t|z) = \pi(z) + (1 - \pi(z)) S_u(t|z)},
+#' where
+#' \deqn{g_1[S_u(t|z)] = \eta_1(z) and g_2(\pi(z)) = \eta_2(z)}.
 #'
-#' @param formula Formula for the covariates in the modelling of the cure rate, \eqn{\pi}. Reponse has to be of the form \code{Surv(time, status)}.
-#' @param data Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}, and \code{tvc.formula}.
-#' @param bhazard Background hazard
-#' @param smooth.formula Formula to control the modelling of the disease-specific survival of the uncured.
-#' @param knots Knots used for the baseline hazard in the disease-specific survival function
-#' @param n.knots Number of knots for the disease-specific survival function. The knots are calculated as the equidistant quantiles of the uncensored event-times.
-#' If \code{knots} are supplied, this argument will be ignored.
-#' @param knots.time A named list containing the knots for each of the covariates in the time-varying covariate effects
-#' @param n.knots.time A named list, containing the number of knots for the time-varying covariate effect.
+#' @param formula Formula for modelling the the cure rate. Reponse has to be of the form \code{Surv(time, status)}.
+#' @param data Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}.
+#' @param bhazard Background hazard.
+#' @param smooth.formula Formula for modelling the disease-specific survival of the uncured.
+#' @param knots Knots used for the baseline hazard in the disease-specific survival function.
+#' @param n.knots Number of knots for the disease-specific survival function.
+#' The knots are calculated as the equidistant quantiles of the uncensored event-times.
+#' If \code{knots} is supplied, this argument will be ignored.
+#' @param knots.time A named list containing the knots of each of time-varying covariate effect.
+#' @param n.knots.time A named list, containing the number of knots for the time-varying covariate effects.
+#' The knots are calculated as the equidistant quantiles of the uncensored event-times.
 #' If \code{knots.time} is supplied, this argument will be ignored.
-#' @param hes Logical for computing the inverse hessian matrix (default is \code{TRUE}).
-#' @param verbose Logical indicating whether to output messages from the function
-#' @param type Character indicating which type of model is fitting.
+#' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
+#' @param verbose Logical. If \code{TRUE} status messages of the function is outputted.
+#' @param type A character indicating the type of cure model.
 #' Possible values are \code{mixture} (default) and \code{nmixture}.
-#' @param linkpi Character for the type of link function selected for the cure rate.
+#' @param linkpi Character giving the link function selected for the cure rate.
 #' Possible values are \code{logit} (default), \code{identity}, \code{loglog}, and \code{probit}.
-#' @param linksu Character for the type of link function selected for the survival of the uncured.
-#' Possible values are \code{loglog}, \code{logit}, and \code{probit}.
-#' @param constr.optim Logical indicating whether to perform constrained optimization, yielding a non-negative hazard
-#' of the uncured (default is \code{FALSE}).
-#' @param ortho Logical indicating whether to ortogonalize all spline basis matrices.
-#' @param optim.args List with additional arguments to pass to \code{optim}.
-#' @param ini.types Character vector denoting which procedures for calculating initial values has to be executed.
+#' @param linksu Character giving the link function selected for the survival of the uncured.
+#' Possible values are \code{loglog} (default), \code{logit}, and \code{probit}.
+#' @param constr.optim Logical. If \code{TRUE} the model is fitted using constraints optimization yielding
+#' a non-negative hazard of the uncured (default is \code{FALSE}).
+#' This option is only implemented for \code{linksu = loglog}.
+#' @param ortho Logical. If \code{TRUE} (default), all splines are orthogonalized using a QR-decomposition.
+#' @param optim.args List with additional arguments passed to \code{optim}.
+#' @param ini.types Character vector denoting the executed schemes for computing initial values.
 #' @return An object of class \code{fcm}.
 #' @export
 #' @import survival
@@ -40,6 +47,9 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
                           linksu = "loglog", verbose = T, constr.optim = F,
                           optim.args = NULL, ortho = TRUE,
                           ini.types = c("cure", "flexpara")){
+
+  if(!type %in% c("mixture", "nmixture"))
+    stop("Wrong specication of argument type, must be either 'mixture' or 'nmixture'")
 
   #Extract relevant variables
   times <- eval(formula[[2]][[2]], envir = data)
@@ -369,6 +379,7 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
 }
 
 
+#' @export
 #Print function for class fcm
 print.fcm <- function(fit){
   cat("Call pi:\n")
@@ -380,6 +391,7 @@ print.fcm <- function(fit){
              surv = fit$coefs.spline))
 }
 
+#' @export
 #Summary function for class fcm
 summary.fcm <- function(fit){
   se <- sqrt(diag(fit$covariance))
@@ -406,10 +418,11 @@ summary.fcm <- function(fit){
   results$formula <- fit$formula
   results$formula.fix <- fit$formula_main
   results$formula.tvc <- fit$tvc.formula
-  class(results) <- "summary.fmcm"
+  class(results) <- "summary.fcm"
   results
 }
 
+#' @export
 #Print for class summary.fcm
 print.summary.fcm <- function(x)
 {

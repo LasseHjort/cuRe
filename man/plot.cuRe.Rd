@@ -5,12 +5,12 @@
 \title{Plot function for Flexible mixture cure model}
 \usage{
 plot.cuRe(fit, newdata = NULL, type = "relsurv", time = NULL,
-  ylim = c(0, 1), xlim = NULL, xlab = "Time", ylab = NULL,
-  non.parametric = F, col = 1, col.non.para = 2, ci = T,
-  include.knots = F, add = F, ...)
+  xlim = NULL, ylim = c(0, 1), xlab = "Time", ylab = NULL, col = 1,
+  ci = T, non.parametric = F, col.non.para = 2, include.knots = F,
+  add = F, ...)
 }
 \arguments{
-\item{fit}{Object of class \code{fmcm} to do predictions from.}
+\item{fit}{Object of class \code{cuRe}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
@@ -19,21 +19,34 @@ the model was fitted on.}
 \code{curerate} for the cure rate, \code{ehaz} for the excess hazard, and \code{probcure} for the
 conditional probability of being cured.}
 
-\item{time}{Optional time points at which to compute predictions. This argument is not used if type is \code{curerate}.}
+\item{time}{Optional time points at which to compute predictions.
+This argument is not used if type is \code{curerate}.}
 
-\item{non.parametric}{Logical indicating if a non-parametic estimate should be included in the plot (default is FALSE).}
+\item{xlim}{Limits of the x-axis}
 
-\item{ci}{Logical indicating whether confidence intervals should be computed}
+\item{ylim}{Limits of the y-axis.}
 
-\item{include.knots}{Logical for including the baseline knots of the model.}
+\item{col}{Colour of each line.}
 
-\item{pars}{Numerical vector containing the parameters values of the model.
-In general, this argument can be ignored by the user}
+\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are added.}
 
-\item{non.param.arg}{List of arguments to be passed to function \code{rs.surv} of the \code{relsurv} package.}
+\item{non.parametric}{Logical. If \code{TRUE}, a non-parametic
+estimate (Ederer II method) is added to the plot (default is FALSE).}
+
+\item{col.non.para}{Colour of the non-parametric estimate.}
+
+\item{include.knots}{Logical. If \code{TRUE} vertical lines are added at
+each knot of the baseline spline function (default is \code{FALSE}).}
+
+\item{xlabel}{Label of the x-axis. Default is "Time".}
+
+\item{ylabel}{Label of the y-axis. Default is "Relative survival" if \code{type = relsurv},
+"Excess hazard" if \code{type = ehaz},
+"Conditional probability of cure" if \code{type = probcure},
+"Disease-specific survival of the uncured" if \code{type = survuncured}.}
 }
 \value{
-A list containing the predictions of each individual in \code{newdata}.
+A plot containing the predictions of each observation in \code{newdata}.
 }
 \description{
 Plot function associated with the class \code{fmcm}

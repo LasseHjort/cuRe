@@ -8,21 +8,22 @@ predict.fcm(fit, newdata = NULL, type = "relsurv", time = NULL, ci = T,
   pars = NULL)
 }
 \arguments{
-\item{fit}{Object of class \code{fmcm} to do predictions from.}
+\item{fit}{Object of class \code{fcm} to do predictions from.}
 
-\item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
+\item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the data which
 the model was fitted on.}
 
 \item{type}{Type of prediction to do. Possible values are \code{relsurv} (default) for the relative survival,
 \code{curerate} for the cure rate, \code{ehaz} for the excess hazard, \code{probcure} for the
 conditional probability of being cured, and \code{survuncured} for the disease-specific survival of the uncured.}
 
-\item{time}{Optional time points at which to compute predictions. This argument is not used if type is \code{curerate}.}
+\item{time}{Optional time points at which to compute predictions.
+This argument is not used if type is \code{curerate}.}
 
-\item{ci}{Logical indicating whether confidence intervals should be computed}
+\item{ci}{Logical. If \code{TRUE}, confidence intervals are computed.}
 
 \item{pars}{Numerical vector containing the parameters values of the model.
-In general, this argument can be ignored by the user}
+In general, this argument can be ignored by the user.}
 }
 \value{
 A list containing the predictions of each individual in \code{newdata}.

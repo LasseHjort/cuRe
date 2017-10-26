@@ -1,67 +1,19 @@
 
-
-relsurv_fun <- function(pars, M, M2, dM2, time, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  pi <- c(link_fun_pi(pi_fun(pars[1:ncol(M)], M)))
-  eta <- M2 %*% pars[-c(1:ncol(M))]
-  if(model == "mixture"){
-    get.inv.link("logit")(pi + (1 - pi) * link_fun_su(eta))
-  }
-  else if(model == "nmixture"){
-    get.inv.link("logit")(pi ^ (1 - link_fun_su(eta)))
-  }
-}
-
-ehaz_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  pi <- c(link_fun_pi(pi_fun(pars, M)))
-  eta <- M2 %*% pars[-c(1:ncol(M))]
-  deta <- dM2 %*% pars[-c(1:ncol(M))]
-  ds_u <- dlink_fun_su(eta)
-  if(model == "mixture"){
-    s_u <- link_fun_su(eta)
-    get.inv.link("identity")(-(1 - pi) * ds_u * (deta / time) / (pi + (1 - pi) * s_u))
-  }else if(model == "nmixture"){
-    get.inv.link("identity")(log(pi) * ds_u * deta / time)
-  }
-}
-
-probcure_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  pi <- c(link_fun_pi(pi_fun(pars, M)))
-  eta <- M2 %*% pars[-c(1:ncol(M))]
-  if(model == "mixture"){
-    rsurv <- pi + (1 - pi) * link_fun_su(eta)
-  }else if(model == "nmixture"){
-    rsurv <- pi ^ (1 - link_fun_su(eta))
-  }
-  get.inv.link("probit")(pi / rsurv)
-}
-
-survuncured_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
-  eta <- M2 %*% pars[-c(1:ncol(M))]
-  if(model == "mixture"){
-    get.inv.link("logit")(link_fun_su(eta))
-  }else if(model == "nmixture"){
-    pi <- c(link_fun_pi(pi_fun(pars, M)))
-    rsurv <- pi ^ (1 - link_fun_su(eta))
-    get.inv.link("logit")((rsurv - pi) / (1 - pi))
-  }
-}
-
-
-
 #' Predict function for Flexible mixture cure model
 #'
 #' Function for doing predictions for class \code{fmcm}
 #'
-#' @param fit Object of class \code{fmcm} to do predictions from.
-#' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
+#' @param fit Object of class \code{fcm} to do predictions from.
+#' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
 #' the model was fitted on.
 #' @param type Type of prediction to do. Possible values are \code{relsurv} (default) for the relative survival,
 #' \code{curerate} for the cure rate, \code{ehaz} for the excess hazard, \code{probcure} for the
 #' conditional probability of being cured, and \code{survuncured} for the disease-specific survival of the uncured.
-#' @param time Optional time points at which to compute predictions. This argument is not used if type is \code{curerate}.
-#' @param ci Logical indicating whether confidence intervals should be computed
+#' @param time Optional time points at which to compute predictions.
+#' This argument is not used if type is \code{curerate}.
+#' @param ci Logical. If \code{TRUE}, confidence intervals are computed.
 #' @param pars Numerical vector containing the parameters values of the model.
-#' In general, this argument can be ignored by the user
+#' In general, this argument can be ignored by the user.
 #' @return A list containing the predictions of each individual in \code{newdata}.
 #' @export
 
@@ -177,5 +129,52 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
       }
     }
     return(list(res = rss, time = time, type = type))
+  }
+}
+
+
+relsurv_fun <- function(pars, M, M2, dM2, time, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
+  pi <- c(link_fun_pi(pi_fun(pars[1:ncol(M)], M)))
+  eta <- M2 %*% pars[-c(1:ncol(M))]
+  if(model == "mixture"){
+    get.inv.link("logit")(pi + (1 - pi) * link_fun_su(eta))
+  }
+  else if(model == "nmixture"){
+    get.inv.link("logit")(pi ^ (1 - link_fun_su(eta)))
+  }
+}
+
+ehaz_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
+  pi <- c(link_fun_pi(pi_fun(pars, M)))
+  eta <- M2 %*% pars[-c(1:ncol(M))]
+  deta <- dM2 %*% pars[-c(1:ncol(M))]
+  ds_u <- dlink_fun_su(eta)
+  if(model == "mixture"){
+    s_u <- link_fun_su(eta)
+    get.inv.link("identity")(-(1 - pi) * ds_u * (deta / time) / (pi + (1 - pi) * s_u))
+  }else if(model == "nmixture"){
+    get.inv.link("identity")(log(pi) * ds_u * deta / time)
+  }
+}
+
+probcure_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
+  pi <- c(link_fun_pi(pi_fun(pars, M)))
+  eta <- M2 %*% pars[-c(1:ncol(M))]
+  if(model == "mixture"){
+    rsurv <- pi + (1 - pi) * link_fun_su(eta)
+  }else if(model == "nmixture"){
+    rsurv <- pi ^ (1 - link_fun_su(eta))
+  }
+  get.inv.link("probit")(pi / rsurv)
+}
+
+survuncured_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
+  eta <- M2 %*% pars[-c(1:ncol(M))]
+  if(model == "mixture"){
+    get.inv.link("logit")(link_fun_su(eta))
+  }else if(model == "nmixture"){
+    pi <- c(link_fun_pi(pi_fun(pars, M)))
+    rsurv <- pi ^ (1 - link_fun_su(eta))
+    get.inv.link("logit")((rsurv - pi) / (1 - pi))
   }
 }

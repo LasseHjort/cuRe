@@ -2,19 +2,23 @@
 #'
 #' This function is used to fit parametric cure models on the relative survival.
 #'
-#' @param formula An object of type formula for the cure rate.
-#' @param data The provided data. Only objects of class \code{data.frame} is allowed.
-#' @param bhazard The expected survival rate at the last follow-up of the individual.
-#' @param formula.k1 Formula for the first parameter of the parametric distribution (see details).
-#' @param formula.k2 Formula for the second parameter of the parametric distribution (see details).
-#' @param formula.k3 Formula for the third parameter of the parametric distribution (see details).
-#' @param type Determines the type of cure model. Possible values are \code{mixture} (default) and \code{nmixture}.
-#' @param dist The parametric distribution of the disease-specific survival function. Possible values are\cr
+#' @param formula Formula for modelling the the cure fraction Reponse has to be of the form \code{Surv(time, status)}.
+#' @param data Data frame in which to interpret the variables names in \code{formula},
+#' \code{formula.k1}, \code{formula.k2}, and \code{formula.k3}.
+#' @param bhazard Background hazard.
+#' @param formula.k1 Formula for the first linear predictor of the parametric distribution (see details).
+#' @param formula.k2 Formula for the second linear predictor of the parametric distribution (see details).
+#' @param formula.k3 Formula for the third linear predictor of the parametric distribution (see details).
+#' @param type A character indicating the type of cure model.
+#' Possible values are \code{mixture} (default) and \code{nmixture}.
+#' @param dist The parametric distribution of the disease-specific survival function. Possible values are
 #' \code{weibull} (default), \code{exponential}, and \code{lognormal}.
-#' @param link Specifies the link function of the cure rate. Possible values are \code{logistic} (default), \code{identity}, and \code{loglog}.
-#' @param init Initial values for the maximum likelihood optimization
-#' @param covariance Logical variable determining whether to compute the hessian or not. Default is \code{TRUE}
-#' @param optim.args List with additional arguments to pass to \code{optim}.
+#' @param link Specifies the link function of the cure fraction.
+#' Possible values are \code{logit} (default), \code{identity}, and \code{loglog}.
+#' @param init Initial values for the maximum likelihood optimization.
+#' If not provided, the optimization will start in 0.
+#' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
+#' @param optim.args List with additional arguments passed to \code{optim}.
 #' @return An object of class \code{CureModel}.
 #' @details The arguments for modelling the parameters of the cure model have different meanings dependent on the chosen distribution. \cr
 #' For the exponential distribution, k1 denotes the rate, for the weibull model, k1 denotes the scale parameter and k2 denotes the shape parameter, sfor the log normal distribution k1 denotes the mu and sigma.
@@ -128,7 +132,7 @@ get_design <- function(formula, data){
     data.frame()
 }
 
-
+#' @export
 print.cm <- function(fit){
   type <- switch(fit$type,
                  mixture = "mixture",
@@ -145,6 +149,7 @@ print.cm <- function(fit){
   print(coefs)
 }
 
+#' @export
 summary.cm <- function(fit){
   se <- sqrt(diag(fit$cov))
   coefs <- unlist(fit$coefs)
@@ -166,6 +171,7 @@ summary.cm <- function(fit){
   results
 }
 
+#' @export
 print.summary.cm <- function(x)
 {
   cat("Calls:\n")

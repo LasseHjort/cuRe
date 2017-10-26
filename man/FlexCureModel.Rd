@@ -7,49 +7,62 @@
 FlexCureModel(formula, data, bhazard, smooth.formula = ~1, knots = NULL,
   n.knots = NULL, knots.time = NULL, n.knots.time = NULL,
   covariance = T, type = "mixture", linkpi = "logit", linksu = "loglog",
-  verbose = T, optim.args = NULL, ini.types = c("cure", "flexpara"))
+  verbose = T, constr.optim = F, optim.args = NULL, ortho = TRUE,
+  ini.types = c("cure", "flexpara"))
 }
 \arguments{
-\item{formula}{Formula for the covariates in the modelling of the cure rate, \eqn{\pi}. Reponse has to be of the form \code{Surv(time, status)}.}
+\item{formula}{Formula for modelling the the cure rate. Reponse has to be of the form \code{Surv(time, status)}.}
 
-\item{data}{Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}, and \code{tvc.formula}.}
+\item{data}{Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}.}
 
-\item{bhazard}{Background hazard}
+\item{bhazard}{Background hazard.}
 
-\item{smooth.formula}{Formula to control the modelling of the disease-specific survival of the uncured.}
+\item{smooth.formula}{Formula for modelling the disease-specific survival of the uncured.}
 
-\item{knots}{Knots used for the baseline hazard in the disease-specific survival function}
+\item{knots}{Knots used for the baseline hazard in the disease-specific survival function.}
 
-\item{n.knots}{Number of knots for the disease-specific survival function. The knots are calculated as the equidistant quantiles of the uncensored event-times.
-If \code{knots} are supplied, this argument will be ignored.}
+\item{n.knots}{Number of knots for the disease-specific survival function.
+The knots are calculated as the equidistant quantiles of the uncensored event-times.
+If \code{knots} is supplied, this argument will be ignored.}
 
-\item{knots.time}{A named list containing the knots for each of the covariates in the time-varying covariate effects}
+\item{knots.time}{A named list containing the knots of each of time-varying covariate effect.}
 
-\item{n.knots.time}{A named list, containing the number of knots for the time-varying covariate effect.
+\item{n.knots.time}{A named list, containing the number of knots for the time-varying covariate effects.
+The knots are calculated as the equidistant quantiles of the uncensored event-times.
 If \code{knots.time} is supplied, this argument will be ignored.}
 
-\item{type}{Character indicating which type of model is fitting.
+\item{covariance}{Logical. If \code{TRUE} (default), the covariance matrix is computed.}
+
+\item{type}{A character indicating the type of cure model.
 Possible values are \code{mixture} (default) and \code{nmixture}.}
 
-\item{linkpi}{Character for the type of link function selected for the cure rate.
-Possible values are \code{logistic} (default), \code{identity}, \code{loglog}, and \code{probit}.}
+\item{linkpi}{Character giving the link function selected for the cure rate.
+Possible values are \code{logit} (default), \code{identity}, \code{loglog}, and \code{probit}.}
 
-\item{linksu}{Character for the type of link function selected for the survival of the uncured.
-Possible values are \code{loglog}, \code{logistic}, and \code{probit}.}
+\item{linksu}{Character giving the link function selected for the survival of the uncured.
+Possible values are \code{loglog} (default), \code{logit}, and \code{probit}.}
 
-\item{verbose}{Logical indicating whether to output messages from the function}
+\item{verbose}{Logical. If \code{TRUE} status messages of the function is outputted.}
 
-\item{optim.args}{List with additional arguments to pass to \code{optim}.}
+\item{constr.optim}{Logical. If \code{TRUE} the model is fitted using constraints optimization yielding
+a non-negative hazard of the uncured (default is \code{FALSE}).
+This option is only implemented for \code{linksu = loglog}.}
 
-\item{ini.types}{Character vector denoting which procedures for calculating initial values has to be executed.}
+\item{optim.args}{List with additional arguments passed to \code{optim}.}
 
-\item{hes}{Logical for computing the inverse hessian matrix (default is \code{TRUE}).}
+\item{ortho}{Logical. If \code{TRUE} (default), all splines are orthogonalized using a QR-decomposition.}
+
+\item{ini.types}{Character vector denoting the executed schemes for computing initial values.}
 }
 \value{
-An object of class \code{fmcm}.
+An object of class \code{fcm}.
 }
 \description{
-The following function fits a generalized mixture or non-mixture cure model using a link function for the cure rate and for the survival of the uncured
+The following function fits a generalized mixture or non-mixture cure model
+using a link function for the cure rate and for the survival of the uncured, i.e.,
+\deqn{R(t|z) = \pi(z) + (1 - \pi(z)) S_u(t|z)},
+where
+\deqn{g_1[S_u(t|z)] = \eta_1(z) and g_2(\pi(z)) = \eta_2(z)}.
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
@@ -59,8 +72,8 @@ data("colonDC")
 colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
                             data = colonDC, ratetable = survexp.dk)
 
-####Without covariates
-##Fit relative survival model
+###Without covariates
+##Fit mixture cure model
 fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 5, bhazard = "bhaz")
 
 ##Plot model
@@ -83,8 +96,8 @@ plot(fit)
 ##Predict cure rate
 predict(fit, type = "curerate")
 
-####With covariates
-##Fit relative survival model
+###With covariates
+##Fit mixture cure model
 fit <- FlexCureModel(Surv(FUyear, status2) ~ sex, data = colonDC, n.knots = 5, bhazard = "bhaz",
                      smooth.formula = ~ sex)
 
@@ -103,7 +116,7 @@ plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female")
 predict(fit, type = "curerate", data.frame(sex = factor("female", levels = c("male", "female"))))
 
 
-###Time-varying covariates
+##Fit mixture cure model with time-varying covariates
 fit <- FlexCureModel(Surv(FUyear, status2) ~ age, data = colonDC, n.knots = 5, bhazard = "bhaz",
                      n.knots.time = list(age = 3))
 

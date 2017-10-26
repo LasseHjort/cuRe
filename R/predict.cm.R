@@ -3,14 +3,16 @@
 #'
 #' This function is used to make predictions of the cure models.
 #'
-#' @param fit An object of type CureModel.
-#' @param newdata A dataframe with new data to predict from.
-#' @param times A numeric vector including the time points for which to make predictions.
-#' @param type A character denoting the type of prediction. Possible values are \code{relsurv} (default), \code{curerate}, and \code{probcure} (see details)
-#' @param ci Logical indicating whether to include confidence intervals. Default is \code{TRUE}
+#' @param fit Object of class \code{cm} to do predictions from.
+#' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
+#' the model was fitted on.
+#' @param time Optional time points at which to compute predictions.
+#' @param type Type of prediction to do. Possible values are \code{relsurv} (default) for the relative survival,
+#' \code{curerate} for the cure rate, \code{ehaz} for the excess hazard, \code{probcure} for the
+#' conditional probability of being cured, and \code{survuncured} for the disease-specific survival of the uncured.
+#' @param ci Logical. If \code{TRUE}, confidence intervals are computed.
+#' @param pars Numerical vector containing the parameters values of the model.
 #' @return An object of class \code{matrix} including the predictions.
-#' @details For type \code{relsurv}, relative survival predictions are made, while for \code{curerate}, \eqn{\pi} and for \code{probcure}\cr
-#' the probability of cure is calculated.
 #' @export
 #'
 predict.cm <- function(fit, newdata = NULL, type = "relsurv",

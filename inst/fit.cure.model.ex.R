@@ -6,8 +6,8 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
                             data = colonDC, ratetable = survexp.dk)
 
 
-####Without covariates
-##Fit weibull cure model
+###Without covariates
+##Fit weibull mixture cure model
 fit <- fit.cure.model(Surv(FUyear, status2) ~ 1, data = colonDC, bhazard = "bhaz",
                       formula.k1 = ~ 1, formula.k2 = ~ 1,
                       type = "mixture", dist = "weibull", link = "logit")
@@ -20,8 +20,8 @@ plot(fit, type = "survuncured")
 plot(fit, type = "probcure")
 
 
-####With covariates
-##Fit weibull cure model
+###With covariates
+##Fit weibull mixture cure model
 fit <- fit.cure.model(Surv(FUyear, status2) ~ age, data = colonDC, bhazard = "bhaz",
                       formula.k1 = ~ age, formula.k2 = ~ 1,
                       type = "mixture", dist = "weibull", link = "logit")

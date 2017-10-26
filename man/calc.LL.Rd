@@ -5,50 +5,53 @@
 \title{Loss of lifetime estimation}
 \usage{
 calc.LL(fit, newdata = NULL, time = NULL, type = "ll", tau = 100,
-  ci = T, expected = NULL, ratetable = survexp.dk, rmap = rmap)
+  ci = T, expected = NULL, ratetable = survexp.dk, rmap = NULL,
+  pars = NULL)
 }
 \arguments{
-\item{fit}{Fitted model to do predictions from. Possible classes are \code{fmcm}, \code{stpm2}, \code{pstpm2}, and \code{CureModel}.}
+\item{fit}{Fitted model to do predictions from. Possible classes are
+\code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
 
-\item{time}{Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
-and \code{tau} is selected.}
+\item{time}{Optional time points at which to compute predictions.
+If empty, a grid of 100 time points between 0 and \code{tau} is selected.}
 
-\item{type}{Character indicating the type of life expectation estimate.
-Possible values are \code{ll} (default) which gives the loss of lifetime and \code{mrl},
-which gives the mean residual lifetime}
+\item{type}{Type of life expectation estimate.
+Possible values are \code{ll} (default) which gives the loss of lifetime, and \code{mrl}
+which gives the mean residual lifetime.}
 
 \item{tau}{The upper limit of the integral. Default is 100.}
 
-\item{ci}{Logical indicating whether confidence intervals should be computed}
+\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are computed.}
 
-\item{expected}{Object of class \code{list} containing objects of class \code{survexp}
-denoting the expected survival of each row in newdata. If not specified, the function computes the expected
+\item{expected}{Object of class \code{list} containing objects of class \code{survexp},
+with the expected survival of each row in newdata. If not specified, the function computes the expected
 survival.}
 
-\item{ratetable}{Object of class \code{ratetable} to compute the general population survival from.}
+\item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
+Default is \code{survexp.dk}}
 
 \item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
 Detailed documentation on this argument can be found by \code{?survexp}.}
 }
 \value{
-A object of class \code{lol} containing the loss of lifetime estiamtes
+A object of class \code{le} containing the life expectancy estimates
 of each individual in \code{newdata}.
 }
 \description{
-Function for computing loss of lifetime estimates from an estimated relative survival model
+Function for computing loss of lifetime function from an estimated relative survival model
 }
 \examples{
-##Use data cleaned version of the colon cancer data from the rstpm2 package
+###Use data cleaned version of the colon cancer data from the rstpm2 package
 data("colonDC")
 
 ##Extract general population hazards
 colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
                             data = colonDC, ratetable = survexp.dk)
 
-#Fit flexible parametric relative survival model
+##Fit flexible parametric relative survival model
 fit <- stpm2(Surv(FUyear, status2) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz)
 
 #Compute loss of lifetime from 0 to 20 years
@@ -58,16 +61,16 @@ res <- calc.LL(fit, time = seq(0, 20, length.out = 100),
 #Plot the loss of lifetime
 plot(res)
 
-#Fit flexible parametric cure model
-fit <- FlexMixtureCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 7, bhazard = "bhaz",
-                            ini.types = "cure")
+##Fit flexible parametric cure model
+fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 7, bhazard = "bhaz",
+                     ini.types = "cure")
 
 #Compute loss of lifetime from 0 to 20 years
 res.cure <- calc.LL(fit, time = seq(0, 20, length.out = 100),
                     rmap = list(age = agedays, sex = sex, year = dx))
 
 #Plot the loss of lifetime
-plot(res, ci = F)
+plot(res, ci = F, ylim = c(0, max(res$Ests[[1]]$ll)))
 plot(res.cure, add = T, col = 2, ci = F)
 
 
