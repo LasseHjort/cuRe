@@ -20,7 +20,7 @@
 #' @export
 
 
-quantile.calc.LL <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRUE,
+calc.LL.quantile <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRUE,
                              expected = NULL, rmap = NULL, ratetable = survexp.dk,
                              tau = 100, type = "ll"){
 

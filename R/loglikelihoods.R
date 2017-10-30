@@ -388,7 +388,7 @@ flexible_nmixture_minuslog_likelihood <- function(param, time, event, X, b, db, 
 
 
 
-basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
+basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE, b.out = TRUE) {
   nx <- length(x)
   if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
   nk <- ncol(knots)
@@ -416,7 +416,12 @@ basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
       b <- b %*% R.inv
     }
   }
-  list(b = b, R.inv = R.inv)
+
+  if(b.out){
+    return(b)
+  }else{
+    return(R.inv)
+  }
 }
 
 dbasis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
@@ -446,6 +451,9 @@ dbasis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
 }
 
 
+lhs <- function(formula){
+  if (length(formula) == 3) formula[[2]] else NULL
+}
 
 
 

@@ -67,10 +67,10 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
     inner_knots <- knots[-c(1, length(knots))]
   }
 
-  #Calculate basis matrix for the splines
-  b.eval <- basis(knots = knots, log(times), ortho = ortho)
-  db <- dbasis(knots = knots, log(times), ortho = ortho, R.inv = b.eval$R.inv)
-  b <- b.eval$b
+  #Evaluate baseline model matrices
+  b <- basis(knots = knots, x = log(times), ortho = ortho)
+  R.inv <- basis(knots = knots, log(times), ortho = ortho, b.out = FALSE)
+  db <- dbasis(knots = knots, log(times), ortho = ortho, R.inv = R.inv)
 
   #Calculate time-varying knots
   if( !is.null(n.knots.time) | !is.null(knots.time) ){
@@ -86,12 +86,11 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
         }
       })
     }
-    b.eval_list <- lapply(knots.time, basis, x = log(times), ortho = ortho)
+    b_list <- lapply(knots.time, basis, x = log(times), ortho = ortho)
+    R.inv_list <- lapply(knots.time, basis, x = log(times), ortho = ortho, b.out = FALSE)
     db_list <- lapply(1:length(knots.time), function(i){
-      dbasis(x = log(times), knots = knots.time[[i]], ortho = ortho, R.inv = b.eval_list[[i]]$R.inv)
+      dbasis(x = log(times), knots = knots.time[[i]], ortho = ortho, R.inv = R.inv_list[[i]])
     })
-    b_list <- lapply(b.eval_list, function(b.eval) b.eval$b)
-    R.inv_list <- lapply(b.eval_list, function(b.eval) b.eval$R.inv)
     vars2 <- c(vars)
     tvc.formula <- as.formula(paste0("~ ", paste0(vars2, collapse = " + ")))
   } else {
@@ -116,7 +115,7 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
 
   #Construct design matrix
   X <- model.matrix(smooth.formula, data = data)
-  b <- cbind(b, X[, -1], b_time)
+  b <- cbind(b, X[,-1, drop = FALSE], b_time)
   db <- cbind(db, matrix(0, ncol = ncol(X) - 1, nrow = nrow(X)), db_time)
   X <- model.matrix(formula, data = data)
 
@@ -236,7 +235,7 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
             link_fun_su = link_fun_su,
             dlink_fun_su = dlink_fun_su,
             linkpi = linkpi, linksu = linksu,
-            R.inv = b.eval$R.inv, R.inv_list = R.inv_list, ortho = ortho,
+            R.inv = R.inv, R.inv_list = R.inv_list, ortho = ortho,
             df = length(res$par) - 1, NegMaxLiks = MLs, optim.pars = optim.pars,
             times = times, constr.optim = constr.optim)
 
@@ -253,13 +252,15 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
 
     #Merge smooth.formula with variables in time-varying effects
     vars <- all.vars(tvc.formula)
+
     formula.2 <- as.formula(paste0(Reduce(paste, deparse(smooth.formula)),
                                    ifelse(length(vars), " + ", ""),
                                    vars,
                                    collapse = " + "))
 
+    formula.new <- as.formula(paste0(deparse(lhs(formula)), " ~ -1 + X"))
     #Fit mixture or non-mixture cure model
-    fit <- fit.cure.model(formula, data = data, bhazard = bhazard, covariance = F,
+    fit <- fit.cure.model(formula.new, data = data, bhazard = bhazard, covariance = F,
                           formula.k1 = formula.2, formula.k2 = ~ 1, type = type)
 
     #Scale by link function
@@ -267,12 +268,14 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     gpi_hat <- get.inv.link(linkpi)(pi_hat)
     #Fit linear model to obtain initial values
     ini_pi <- lm(gpi_hat ~ -1 + X)$coefficients
+    names(ini_pi) <- colnames(X)
 
     #Predict survival of the uncured
     lp <- exp(model.matrix(formula.2, data = data) %*% fit$coefs[[2]])
     shat <- exp(-lp * times ^ exp(fit$coefs[[3]]))
     gshat <- get.inv.link(linksu)(shat)
     fit_lm <- lm(gshat ~ -1 + b)
+
   }else if(method == "deaths"){
     formula.2 <- reformulate(termlabels = ifelse(length(vars) == 0, "1", vars),
                              response = formula[[2]])
@@ -289,34 +292,38 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     fit_lm <- lm(gshat ~ -1 + b[event == 1,])
   }else if(method == "flexpara"){
     #Get terms of formula
-    vars <- unique(c("1", attr(terms(formula), "term.labels"),
-                     attr(terms(smooth.formula), "term.labels"),
-                     attr(terms(tvc.formula), "term.labels")))
+    #vars <- unique(c("1", attr(terms(formula), "term.labels"),
+    #                 attr(terms(smooth.formula), "term.labels"),
+    #                 attr(terms(tvc.formula), "term.labels")))
 
-    #Create formulas
-    vars <- ifelse(length(vars) != 0, paste0(vars, collapse = " + "))
-    response <- paste0(Reduce(paste, deparse(formula[[2]])), " ~ ")
-    formula.2 <- as.formula(paste0(response, vars))
+    vars1 <- attr(terms(formula), "term.labels")
+    vars2 <- c(attr(terms(smooth.formula), "term.labels"),
+               attr(terms(tvc.formula), "term.labels"))
 
-    #Get model matrix
-    M <- model.matrix(formula.2, data = data)[, -1, drop = F]
-    if(ncol(M)){
-      colnames(M) <- paste0("bs", 1:ncol(M))
+    wh.vars <- vars1[which(vars1 %in% vars2)]
+
+    #Formula for survival of the uncred
+    #b2 <- b[,!colnames(b) %in% colnames(X)]
+    b2 <- b
+    colnames(b2) <- paste0("b", 1:ncol(b2))
+    formula.smooth <- as.formula(paste0("~ ", paste0(colnames(b2), collapse = " + ")))
+
+    #Formula for the cure fraction parameters
+    X2 <- X[, !colnames(X) %in% c("(Intercept)", wh.vars), drop = FALSE]
+    if(ncol(X2)){
+      colnames(X2) <- paste0("x", 1:ncol(X2))
+      response <- paste0(Reduce(paste, deparse(formula[[2]])), " ~ -1 + ")
+      formula.2 <- as.formula(paste0(response, paste0(colnames(X2), collapse = " + ")))
+    }else{
+      response <- paste0(Reduce(paste, deparse(formula[[2]])), " ~ -1")
+      formula.2 <- as.formula(response)
     }
-    M <- M[,!grepl("bs1", colnames(M))]
-    data2 <- cbind(data, M)
 
-    #Reformulate without intercept
-    #reformulate(termlabels = c("(age)1"), response = formula[[2]], intercept = F)
-
-    formula.3 <- reformulate(termlabels = if(is.null(colnames(M))) "" else colnames(M),
-                             response = formula[[2]], intercept = F)
-    #Get formula for spline basis matrix
-    fu_time <- all.vars(formula)[1]
-    smooth.formula.paste <- as.formula(paste0("~flexsurv::basis(knots = knots, x = log(", fu_time, "))"))
+    #Merge data into a single data frame
+    data2 <- cbind(data, b2, X2)
 
     #Fit relative survival model
-    suppressWarnings(fit <- stpm2(formula.3, data = data2, smooth.formula = smooth.formula.paste,
+    suppressWarnings(fit <- stpm2(formula.2, data = data2, smooth.formula = formula.smooth,
                                   bhazard = data2[, bhazard]))
 
     #Predict survival function
@@ -328,6 +335,7 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     gshat <- get.inv.link(linksu)(shat)
 
     #Change follow-up times and predict cure rate
+    fu_time <- all.vars(formula)[1]
     data2[, fu_time] <- max(data2[, fu_time]) + 0.1
     pi_hat <- predict(fit, newdata = data2, se.fit = F)
 
@@ -339,9 +347,9 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     data$gpi_hat <- get.inv.link(linkpi)(pi_hat)
 
     #Run linear model for pi to obtain initial values
-    formula.pi <- update.formula(formula, gpi_hat ~ .)
-    pi_fit <- lm(formula.pi, data = data)
+    pi_fit <- lm(gpi_hat ~ -1 + X, data = data)
     ini_pi <- pi_fit$coefficients
+    names(ini_pi) <- colnames(X)
 
     #Run linear model for S_u(t) to obtain initial values for either mixture or non-mixture models
     if(type == "mixture"){
@@ -355,26 +363,27 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
 
   #Make proper naming of the initial values
   suppressWarnings(coefs <- summary(fit_lm)$coefficients[, "Estimate"])
-  names(coefs)[1:length(knots)] <- paste0("gamma", 1:length(knots))
-  fix_var <- all.vars(smooth.formula)
-  if(length(fix_var) != 0){
-    if(length(coefs) > length(knots)){
-      names(coefs)[(length(knots) + 1):(length(knots) + length(fix_var))] <- paste0("spline_", fix_var)
-    }
-    if(length(coefs) > (length(knots) + length(fix_var))){
-      names(coefs)[(length(knots) + length(fix_var) + 1):length(coefs)] <- paste0("gamma", 1:n.knots.time[[1]], ":",
-                                                                                  all.vars(tvc.formula))
-    }
-  }else{
-    if(length(coefs) > length(knots)){
-      names(coefs)[(length(knots) + 1):length(coefs)] <- unlist(lapply(all.vars(tvc.formula),
-                                                                       function(x) paste0("gamma",
-                                                                                          1:n.knots.time[[x]],
-                                                                                          ":", x)))
-    }
-  }
+  names(coefs) <- colnames(b)
+  # names(coefs)[1:length(knots)] <- paste0("gamma", 1:length(knots))
+  # fix_var <- all.vars(smooth.formula)
+  # if(length(fix_var) != 0){
+  #   if(length(coefs) > length(knots)){
+  #     names(coefs)[(length(knots) + 1):(length(knots) + length(fix_var))] <- paste0("spline_", fix_var)
+  #   }
+  #   if(length(coefs) > (length(knots) + length(fix_var))){
+  #     names(coefs)[(length(knots) + length(fix_var) + 1):length(coefs)] <- paste0("gamma", 1:n.knots.time[[1]], ":",
+  #                                                                                 all.vars(tvc.formula))
+  #   }
+  # }else{
+  #   if(length(coefs) > length(knots)){
+  #     names(coefs)[(length(knots) + 1):length(coefs)] <- unlist(lapply(all.vars(tvc.formula),
+  #                                                                      function(x) paste0("gamma",
+  #                                                                                         1:n.knots.time[[x]],
+  #                                                                                         ":", x)))
+  #   }
+  # }
   ini_values <- c(ini_pi, coefs)
-  names(ini_values)[1:ncol(X)] <- colnames(X)
+  #names(ini_values)[1:ncol(X)] <- colnames(X)
   ini_values
 }
 

@@ -35,8 +35,8 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   #Delete missing observations and extract response data
   formulas <- list(formula, formula.k1, formula.k2, formula.k3)
   all.vars <- unique(unlist(lapply(formulas, all.vars)))
-  ccs <- complete.cases(data[, all.vars])
-  data <- data[ccs,]
+  #ccs <- complete.cases(data[, all.vars])
+  #data <- data[ccs,]
   Surv_object <- eval(formula[[2]], envir = data)
   time <- Surv_object[,1]
   event <- Surv_object[, 2]

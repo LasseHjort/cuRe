@@ -22,7 +22,7 @@
 #' @return The estimated cure points.
 #' @export
 
-quantile.calc.Crude <- function(fit, q = 0.95, newdata = NULL, max.time = 20, expected = NULL, ci = TRUE,
+calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, expected = NULL, ci = TRUE,
                                 rmap, ratetable = survexp.dk, last.point = 100, reverse = FALSE){
 
   if(is.null(expected)){
