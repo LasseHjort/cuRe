@@ -5,8 +5,7 @@
 \title{Loss of lifetime estimation}
 \usage{
 calc.LL(fit, newdata = NULL, time = NULL, type = "ll", tau = 100,
-  ci = T, expected = NULL, ratetable = survexp.dk, rmap = NULL,
-  pars = NULL)
+  ci = T, expected = NULL, ratetable = survexp.dk, rmap, pars = NULL)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are

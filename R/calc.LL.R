@@ -29,7 +29,7 @@
 
 calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
                     tau = 100, ci = T, expected = NULL, ratetable = survexp.dk,
-                    rmap = NULL, pars = NULL){
+                    rmap, pars = NULL){
 
   if(!type %in% c("ll", "mrl"))
     stop("Argument 'type' is wrongly specified, must be either 'll' and 'mrl'")

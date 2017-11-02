@@ -69,7 +69,8 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
 
   #Evaluate baseline model matrices
   b <- basis(knots = knots, x = log(times), ortho = ortho)
-  R.inv <- basis(knots = knots, log(times), ortho = ortho, b.out = FALSE)
+  colnames(b) <- paste0("basis(knots = knots, x = log(times), ortho = ortho)", 1:ncol(b))
+  R.inv <- attr(b, "R.inv")
   db <- dbasis(knots = knots, log(times), ortho = ortho, R.inv = R.inv)
 
   #Calculate time-varying knots
@@ -87,7 +88,7 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
       })
     }
     b_list <- lapply(knots.time, basis, x = log(times), ortho = ortho)
-    R.inv_list <- lapply(knots.time, basis, x = log(times), ortho = ortho, b.out = FALSE)
+    R.inv_list <- lapply(b_list, attr, "R.inv")
     db_list <- lapply(1:length(knots.time), function(i){
       dbasis(x = log(times), knots = knots.time[[i]], ortho = ortho, R.inv = R.inv_list[[i]])
     })
@@ -102,6 +103,9 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
   X_time <- model.matrix(tvc.formula, data = data)[,-1, drop = FALSE]
   if(ncol(X_time) > 0){
     for(i in 1:ncol(X_time)){
+      colnames(b_list[[i]]) <- paste0("basis(knots = knots, x = log(times), ortho = ortho)",
+                                      1:ncol(b_list[[i]]), ":",
+                                      colnames(X_time)[i])
       b_list[[i]] <- b_list[[i]] * X_time[,i]
       db_list[[i]] <- db_list[[i]] * X_time[,i]
     }
@@ -158,7 +162,7 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
                                                           times = times,
                                                           event = event,
                                                           n.knots.time = n.knots.time,
-                                                          knots = knots,
+                                                          knots.parse = knots,
                                                           X = X, b = b,
                                                           method = ini.type))
   }else{
@@ -244,10 +248,9 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
 }
 
 
-
 #Function for computing initial values
 get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, linksu, formula, type,
-                           times, event, n.knots.time, knots, X, b, method = "cure"){
+                           times, event, n.knots.time, knots.parse, X, b, method = "cure"){
   if(method == "cure"){
 
     #Merge smooth.formula with variables in time-varying effects
@@ -274,7 +277,11 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     lp <- exp(model.matrix(formula.2, data = data) %*% fit$coefs[[2]])
     shat <- exp(-lp * times ^ exp(fit$coefs[[3]]))
     gshat <- get.inv.link(linksu)(shat)
-    fit_lm <- lm(gshat ~ -1 + b)
+
+    finites <- is.finite(gshat)
+    gshat <- gshat[finites]
+    b <- b[finites,]
+    fit_lm <- lm(gshat ~ -1 + b, na.action = na.exclude)
 
   }else if(method == "deaths"){
     formula.2 <- reformulate(termlabels = ifelse(length(vars) == 0, "1", vars),
@@ -291,10 +298,6 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     suppressWarnings(gshat <- get.inv.link(linksu)(shat))
     fit_lm <- lm(gshat ~ -1 + b[event == 1,])
   }else if(method == "flexpara"){
-    #Get terms of formula
-    #vars <- unique(c("1", attr(terms(formula), "term.labels"),
-    #                 attr(terms(smooth.formula), "term.labels"),
-    #                 attr(terms(tvc.formula), "term.labels")))
 
     vars1 <- attr(terms(formula), "term.labels")
     vars2 <- c(attr(terms(smooth.formula), "term.labels"),
@@ -302,29 +305,41 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
 
     wh.vars <- vars1[which(vars1 %in% vars2)]
 
-    #Formula for survival of the uncred
-    #b2 <- b[,!colnames(b) %in% colnames(X)]
-    b2 <- b
-    colnames(b2) <- paste0("b", 1:ncol(b2))
-    formula.smooth <- as.formula(paste0("~ ", paste0(colnames(b2), collapse = " + ")))
-
-    #Formula for the cure fraction parameters
-    X2 <- X[, !colnames(X) %in% c("(Intercept)", wh.vars), drop = FALSE]
-    if(ncol(X2)){
-      colnames(X2) <- paste0("x", 1:ncol(X2))
-      response <- paste0(Reduce(paste, deparse(formula[[2]])), " ~ -1 + ")
-      formula.2 <- as.formula(paste0(response, paste0(colnames(X2), collapse = " + ")))
+    if(length(wh.vars)){
+      rm.formula <- paste0(".~. -", paste0(wh.vars, collapse = " + "))
+      formula.2 <- update(formula, rm.formula)
     }else{
-      response <- paste0(Reduce(paste, deparse(formula[[2]])), " ~ -1")
-      formula.2 <- as.formula(response)
+      formula.2 <- formula
     }
 
+    X_new <- lapply(list(formula.2, smooth.formula, tvc.formula), function(form){
+      M <- model.matrix(form, data = data)[, -1, drop = FALSE]
+      if(ncol(M)){
+        wh <- grepl("basis\\(", colnames(M))
+        if(any(wh)) colnames(M)[wh] <- paste0("b", 1:sum(wh))
+      }
+      M
+    })
+
+    X_new <- do.call(cbind, X_new)
+
     #Merge data into a single data frame
-    data2 <- cbind(data, b2, X2)
+    data2 <- cbind(data, X_new)
+
+    #Formula for survival of the uncred
+    fuvar <- as.character(formula.2[[2]][[2]])
+    base_formula <- as.formula(paste0("~cuRe::basis(knots = knots.parse, x = log(",
+                                      fuvar, "), ortho = F, intercept = F)"))
+
+    rhs(formula.2) <- rhs(as.formula(paste0("~ ", paste0(c(1, colnames(X_new)), collapse = " + "))))
+    environment(formula.2) <- environment()
 
     #Fit relative survival model
-    suppressWarnings(fit <- stpm2(formula.2, data = data2, smooth.formula = formula.smooth,
-                                  bhazard = data2[, bhazard]))
+    suppressWarnings(fit <- rstpm2::stpm2(formula.2, data = data2,
+                                          smooth.formula = base_formula,
+                                          bhazard = data2[, bhazard]))
+
+    #plot(fit, newdata = data.frame(age_years = 50, sex = c("male")), ylim = c(0,1))
 
     #Predict survival function
     shat <- predict(fit, newdata = data2, se.fit = F)
@@ -364,24 +379,6 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
   #Make proper naming of the initial values
   suppressWarnings(coefs <- summary(fit_lm)$coefficients[, "Estimate"])
   names(coefs) <- colnames(b)
-  # names(coefs)[1:length(knots)] <- paste0("gamma", 1:length(knots))
-  # fix_var <- all.vars(smooth.formula)
-  # if(length(fix_var) != 0){
-  #   if(length(coefs) > length(knots)){
-  #     names(coefs)[(length(knots) + 1):(length(knots) + length(fix_var))] <- paste0("spline_", fix_var)
-  #   }
-  #   if(length(coefs) > (length(knots) + length(fix_var))){
-  #     names(coefs)[(length(knots) + length(fix_var) + 1):length(coefs)] <- paste0("gamma", 1:n.knots.time[[1]], ":",
-  #                                                                                 all.vars(tvc.formula))
-  #   }
-  # }else{
-  #   if(length(coefs) > length(knots)){
-  #     names(coefs)[(length(knots) + 1):length(coefs)] <- unlist(lapply(all.vars(tvc.formula),
-  #                                                                      function(x) paste0("gamma",
-  #                                                                                         1:n.knots.time[[x]],
-  #                                                                                         ":", x)))
-  #   }
-  # }
   ini_values <- c(ini_pi, coefs)
   #names(ini_values)[1:ncol(X)] <- colnames(X)
   ini_values

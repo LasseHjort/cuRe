@@ -387,8 +387,8 @@ flexible_nmixture_minuslog_likelihood <- function(param, time, event, X, b, db, 
 # }
 
 
-
-basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE, b.out = TRUE) {
+#Basis function
+basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
   nx <- length(x)
   if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
   nk <- ncol(knots)
@@ -416,14 +416,11 @@ basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE, b.out 
       b <- b %*% R.inv
     }
   }
-
-  if(b.out){
-    return(b)
-  }else{
-    return(R.inv)
-  }
+  attr(b, "R.inv") <- R.inv
+  b
 }
 
+#Derivate of basis function
 dbasis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
   if(ortho & is.null(R.inv)) stop("Both 'ortho' and 'R.inv' has to be specified!")
   nx <- length(x)
@@ -456,6 +453,15 @@ lhs <- function(formula){
 }
 
 
+rhs <- function (formula)
+  if (length(formula) == 3) formula[[3]] else formula[[2]]
+
+"rhs<-" <- function (formula, value)
+{
+  newformula <- formula
+  newformula[[length(formula)]] <- value
+  newformula
+}
 
 # flexible_minuslog_likelihood <- function(param, time, event, b, db, bhazard){
 #   eta <- b %*% param
