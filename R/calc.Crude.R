@@ -135,10 +135,10 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
                     pars = model.params, last.point = last.point, link = link)
     res <- data.frame(prob = prob)
     if(ci){
-      prob_gr <- pracma::jacobian(probfun, x = model.params, time = time,
-                          rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
-                          expected_haz = expected_haz[[i]], expected =  expected[[i]],
-                          last.point = last.point, link = link, reverse = reverse)
+      prob_gr <- numDeriv::jacobian(probfun, x = model.params, time = time,
+                                    rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
+                                    expected_haz = expected_haz[[i]], expected =  expected[[i]],
+                                    last.point = last.point, link = link, reverse = reverse)
       res$var <- apply(prob_gr, 1, function(x) x %*% cov %*% x)
       res$lower.ci <- get.link(link)(res$prob - sqrt(res$var) * qnorm(0.975))
       res$upper.ci <- get.link(link)(res$prob + sqrt(res$var) * qnorm(0.975))

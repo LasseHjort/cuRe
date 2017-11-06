@@ -96,7 +96,7 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
 
   #Compute covariance
   if(covariance){
-    cov <- solve(pracma::hessian(minuslog_likelihood,
+    cov <- solve(numDeriv::hessian(minuslog_likelihood,
                                  optim.out$par,
                                  time = time,
                                  event = event,

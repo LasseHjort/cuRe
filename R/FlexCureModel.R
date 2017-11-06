@@ -36,6 +36,7 @@
 #' @export
 #' @import survival
 #' @import rstpm2
+#' @import numDeriv
 #' @example inst/FlexCureModel.ex.R
 
 

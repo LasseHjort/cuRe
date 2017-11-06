@@ -126,9 +126,9 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
     names(res) <- type
     if(ci){
       #Calculate variances numerically by the delta method
-      J <- pracma::jacobian(.calcArea, x = model.params, rel_surv = rel_surv[[i]],
-                    exp_function = exp_function, time = time, tau = tau,
-                    expected = expected[[i]])
+      J <- numDeriv::jacobian(.calcArea, x = model.params, rel_surv = rel_surv[[i]],
+                              exp_function = exp_function, time = time, tau = tau,
+                              expected = expected[[i]])
       res$Var <- apply(J, MARGIN = 1, function(x) x %*% cov %*% x)
       res$lower.ci <- res[, type] - sqrt(res$Var) * qnorm(0.975)
       res$upper.ci <- res[, type] + sqrt(res$Var) * qnorm(0.975)
