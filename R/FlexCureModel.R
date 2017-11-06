@@ -281,7 +281,7 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     finites <- is.finite(gshat)
     gshat <- gshat[finites]
     b <- b[finites,]
-    fit_lm <- lm(gshat ~ -1 + b, na.action = na.exclude)
+    fit_lm <- lm(gshat ~ -1 + b)
 
   }else if(method == "deaths"){
     formula.2 <- reformulate(termlabels = ifelse(length(vars) == 0, "1", vars),
@@ -328,7 +328,7 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
 
     #Formula for survival of the uncred
     fuvar <- as.character(formula.2[[2]][[2]])
-    base_formula <- as.formula(paste0("~cuRe::basis(knots = knots.parse, x = log(",
+    base_formula <- as.formula(paste0("~basis(knots = knots.parse, x = log(",
                                       fuvar, "), ortho = F, intercept = F)"))
 
     rhs(formula.2) <- rhs(as.formula(paste0("~ ", paste0(c(1, colnames(X_new)), collapse = " + "))))
@@ -373,7 +373,10 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
       suhat <- 1 - log(shat) / log(pi_hat)
     }
     gsuhat <- get.inv.link(linksu)(suhat)
-    fit_lm <- lm(gsuhat ~ -1 + b, data = data)
+    finites <- is.finite(gsuhat)
+    gsuhat <- gsuhat[finites]
+    b <- b[finites,]
+    fit_lm <- lm(gsuhat ~ -1 + b)
   }
 
   #Make proper naming of the initial values

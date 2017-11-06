@@ -22,6 +22,11 @@
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @return A object of class \code{le} containing the life expectancy estimates
 #' of each individual in \code{newdata}.
+#' @details The function computes
+#' \deqn{L(t) = \frac{\int_0^\infty S^*(u)}{S^*(t)} - \frac{\int_0^\infty S(u)}{S(t)}}
+#' for a given t, where \eqn{S^*(t)} and \eqn{S(t)} is the survival function in the general
+#' population and the patient population, respectively. The integral is computed by the trapezoidal rule,
+#' and the point wise variance is estimated using the delta method and numerical differentiation.
 #' @export
 #' @example inst/calc.LL.ex.R
 

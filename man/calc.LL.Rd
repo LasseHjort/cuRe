@@ -42,6 +42,13 @@ of each individual in \code{newdata}.
 \description{
 Function for computing loss of lifetime function from an estimated relative survival model
 }
+\details{
+The function computes
+\deqn{L(t) = \frac{\int_0^\infty S^*(u)}{S^*(t)} - \frac{\int_0^\infty S(u)}{S(t)}}
+for a given t, where \eqn{S^*(t)} and \eqn{S(t)} is the survival function in the general
+population and the patient population, respectively. The integral is computed by the trapezoidal rule,
+and the point wise variance is estimated using the delta method and numerical differentiation.
+}
 \examples{
 ###Use data cleaned version of the colon cancer data from the rstpm2 package
 data("colonDC")

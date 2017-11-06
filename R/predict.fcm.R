@@ -91,7 +91,7 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
     }
     if(type == "relsurv"){
       fun <- relsurv_fun
-      link.type <- "logit"
+      link.type <- "loglog"
     }else if(type == "ehaz"){
       fun <- ehaz_fun
       link.type <- "identity"
@@ -100,7 +100,7 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
       link.type <- "probit"
     }else if(type == "survuncured"){
       fun <- survuncured_fun
-      link.type <- "logit"
+      link.type <- "loglog"
     }
 
     rss <- vector("list", nrow(newdata))
@@ -125,6 +125,7 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
           rss[[i]][time == 0, ] <- c(1, 0, 1, 1)
         }else{
           rss[[i]][time == 0, ] <- 1
+          rss[[i]]$Est[is.na(rss[[i]]$Est)] <- 1
         }
       }
     }
@@ -137,10 +138,10 @@ relsurv_fun <- function(pars, M, M2, dM2, time, pi_fun, model, link_fun_pi, link
   pi <- c(link_fun_pi(pi_fun(pars[1:ncol(M)], M)))
   eta <- M2 %*% pars[-c(1:ncol(M))]
   if(model == "mixture"){
-    get.inv.link("logit")(pi + (1 - pi) * link_fun_su(eta))
+    get.inv.link("loglog")(pi + (1 - pi) * link_fun_su(eta))
   }
   else if(model == "nmixture"){
-    get.inv.link("logit")(pi ^ (1 - link_fun_su(eta)))
+    get.inv.link("loglog")(pi ^ (1 - link_fun_su(eta)))
   }
 }
 
@@ -171,10 +172,10 @@ probcure_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi,
 survuncured_fun <- function(pars, M2, M, dM2, time, pi, pi_fun, model, link_fun_pi, link_fun_su, dlink_fun_su){
   eta <- M2 %*% pars[-c(1:ncol(M))]
   if(model == "mixture"){
-    get.inv.link("logit")(link_fun_su(eta))
+    get.inv.link("loglog")(link_fun_su(eta))
   }else if(model == "nmixture"){
     pi <- c(link_fun_pi(pi_fun(pars, M)))
     rsurv <- pi ^ (1 - link_fun_su(eta))
-    get.inv.link("logit")((rsurv - pi) / (1 - pi))
+    get.inv.link("loglog")((rsurv - pi) / (1 - pi))
   }
 }
