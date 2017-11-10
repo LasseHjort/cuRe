@@ -4,8 +4,8 @@
 \alias{predict.lts}
 \title{Long term survival predictions}
 \usage{
-\method{predict}{lts}(fit, newdata = NULL, time = NULL, ci = T,
-  expected = NULL, ratetable = survexp.dk, rmap = rmap)
+predict.lts(fit, newdata = NULL, time = NULL, ci = T, expected = NULL,
+  ratetable = survexp.dk, rmap = rmap)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{fcm}, \code{stpm2},

@@ -4,8 +4,8 @@
 \alias{plot.lts}
 \title{Plot the long term survival}
 \usage{
-\method{plot}{lts}(obj, ylim = NULL, xlim = NULL, ci = T, col = 1,
-  ylab = NULL, xlab = "Time", add = F, ...)
+plot.lts(obj, ylim = NULL, xlim = NULL, ci = T, col = 1, ylab = NULL,
+  xlab = "Time", add = F, ...)
 }
 \arguments{
 \item{obj}{Object of class \code{lts}.}

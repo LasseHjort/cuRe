@@ -4,8 +4,8 @@
 \alias{predict.fcm}
 \title{Predict function for Flexible mixture cure model}
 \usage{
-\method{predict}{fcm}(fit, newdata = NULL, type = "relsurv", time = NULL,
-  ci = T, pars = NULL)
+predict.fcm(fit, newdata = NULL, type = "relsurv", time = NULL, ci = T,
+  pars = NULL)
 }
 \arguments{
 \item{fit}{Object of class \code{fcm} to do predictions from.}

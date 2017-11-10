@@ -4,8 +4,8 @@
 \alias{plot.le}
 \title{Plot the loss of lifetime function}
 \usage{
-\method{plot}{le}(obj, ylim = NULL, xlim = NULL, ci = T, col = 1,
-  ylab = NULL, xlab = "Time", add = F, ...)
+plot.le(obj, ylim = NULL, xlim = NULL, ci = T, col = 1, ylab = NULL,
+  xlab = "Time", add = F, ...)
 }
 \arguments{
 \item{obj}{Object of class \code{le}.}

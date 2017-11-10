@@ -10,6 +10,7 @@ URL: http://github.com/LasseHjort/cuRe
 BugReports: http://github.com/LasseHjort/cuRe/issues
 License: What license is it under?
 Encoding: UTF-8
-Imports: pracma, flexsurv, survival, relsurv
+Depends: R (>= 3.0.2), survival, rstpm2
+Imports: numDeriv, relsurv
 LazyData: true
 RoxygenNote: 6.0.1
