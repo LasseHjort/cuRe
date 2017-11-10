@@ -26,6 +26,7 @@
 #' each knot of the baseline spline function (default is \code{FALSE}).
 #' @return A plot containing the predictions of each observation in \code{newdata}.
 #' @export
+#' @import relsurv
 
 plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
                       time = NULL, xlim = NULL, ylim = c(0, 1),

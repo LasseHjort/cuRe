@@ -115,8 +115,12 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
                           dM2 = M_list[[i]]$dM2, time = time, pi_fun = pi_fun, model = fit$type,
                           link_fun_pi = link_fun_pi, link_fun_su = link_fun_su, dlink_fun_su = dlink_fun_su)
         rss[[i]]$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$covariance %*% x)
-        rss[[i]]$ci.lower <- get.link(link.type)(rss[[i]]$Est - qnorm(0.975) * sqrt(rss[[i]]$var))
-        rss[[i]]$ci.upper <- get.link(link.type)(rss[[i]]$Est + qnorm(0.975) * sqrt(rss[[i]]$var))
+        ci1 <- get.link(link.type)(rss[[i]]$Est - qnorm(0.975) * sqrt(rss[[i]]$var))
+        ci2 <- get.link(link.type)(rss[[i]]$Est + qnorm(0.975) * sqrt(rss[[i]]$var))
+        wh <- round(length(ci1) / (2 - .Machine$double.eps))
+        ci_max <- rep(which.max(c(ci1[wh], ci2[wh])), length(ci1))
+        rss[[i]]$ci.lower <- ifelse(ci_max == 1, ci2, ci1)
+        rss[[i]]$ci.upper <- ifelse(ci_max == 1, ci1, ci2)
       }
       rss[[i]]$Est <- get.link(link.type)(rss[[i]]$Est)
 
