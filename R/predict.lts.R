@@ -21,7 +21,7 @@
 #' @example inst/predict.lts.ex.R
 
 
-predict.lts <- function(fit, newdata = NULL, time = NULL, ci = T, expected = NULL, ratetable = survexp.dk,
+lts <- function(fit, newdata = NULL, time = NULL, ci = T, expected = NULL, ratetable = survexp.dk,
                         rmap = rmap){
 
   if(!is.null(time)) time <- sort(time)
@@ -77,7 +77,7 @@ predict.lts <- function(fit, newdata = NULL, time = NULL, ci = T, expected = NUL
   }else{
     rel_surv <- lapply(1:length(expected), function(i){
       predict(fit, newdata = newdata[i,, drop = F],
-              time = time, pars = pars, ci = ci)$res[[1]]
+              time = time, ci = ci)$res[[1]]
     })
   }
 

@@ -35,7 +35,8 @@
 #' @example inst/calc.Crude.ex.R
 
 calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100, reverse = FALSE,
-                       ci = T, expected = NULL, ratetable = survexp.dk, rmap = NULL, link = "logit"){
+                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "loglog",
+                       n = 100000){
 
   #Time points at which to evaluate integral
   if(is.null(time)){
@@ -59,12 +60,13 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
                                     data = data, ratetable = ratetable,
                                     scale = ayear, times = times * ayear)))
     }else{
-      expected <- lapply(1:nrow(newdata), function(x){
-        do.call("survexp",
-                list(formula = ~ 1, rmap = substitute(rmap),
-                     data = newdata[x, ], ratetable = ratetable,
-                     scale = ayear, times = times * ayear))
-      })
+      expected <- vector("list", nrow(newdata))
+      for(i in 1:length(expected)){
+        expected[[i]] <- do.call("survexp",
+                                 list(formula = ~ 1, rmap = substitute(rmap),
+                                      data = newdata[i, ], ratetable = ratetable,
+                                      scale = ayear, times = times * ayear))
+      }
     }
   }
 
@@ -127,21 +129,24 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
   probfun <- switch(type,
                     cancer = prob_cancer,
                     other = prob_other,
-                    othertime = prob_other_time)
+                    othertime = prob_other_time,
+                    othertime2 = prob_other_time2)
 
   probs <- lapply(1:length(expected), function(i){
     prob <- probfun(time = time, rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                     expected_haz = expected_haz[[i]], expected =  expected[[i]], reverse = reverse,
-                    pars = model.params, last.point = last.point, link = link)
+                    pars = model.params, last.point = last.point, link = link, n = n)
     res <- data.frame(prob = prob)
     if(ci){
       prob_gr <- numDeriv::jacobian(probfun, x = model.params, time = time,
                                     rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                                     expected_haz = expected_haz[[i]], expected =  expected[[i]],
-                                    last.point = last.point, link = link, reverse = reverse)
+                                    last.point = last.point, link = link, reverse = reverse, n = n)
       res$var <- apply(prob_gr, 1, function(x) x %*% cov %*% x)
-      res$lower.ci <- get.link(link)(res$prob - sqrt(res$var) * qnorm(0.975))
-      res$upper.ci <- get.link(link)(res$prob + sqrt(res$var) * qnorm(0.975))
+      ci1 <- get.link(link)(res$prob - qnorm(0.975) * sqrt(res$var))
+      ci2 <- get.link(link)(res$prob + qnorm(0.975) * sqrt(res$var))
+      res$lower.ci <- pmin(ci1, ci2)
+      res$upper.ci <- pmax(ci1, ci2)
     }
     res$prob <- get.link(link)(res$prob)
     if(type %in% c("cancer", "other")){
@@ -150,7 +155,7 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
     res
   })
 
-  probs <- list(prob = probs, time = time, ci = ci, type = type)
+  probs <- list(prob = probs, time = time, ci = ci, type = type, reverse = reverse)
   class(probs) <- "crude"
   probs
 }
@@ -171,37 +176,50 @@ int.trapez <- function(func, time, pars, n = 10000){
 }
 
 #Integration function using the rectangular method
-int.square <- function(func, time, pars){
-  t_new <- unique(sort(c(seq(0, max(time), length.out = 100000), time)))
+int.square <- function(func, time, pars, n = 100000){
+  t_new <- unique(sort(c(seq(0, max(time), length.out = n), time)))
   df_time <- diff(t_new)
   mid_points <- t_new[-length(t_new)] + diff(t_new) / 2
   vals_pop <- c(0, cumsum(func(mid_points, pars) * df_time))
   vals_pop[t_new %in% time]
 }
 
-prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse){
+prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n){
   if(all(time == 0)){
     return(rep(0, length(time)))
   }else{
     dens <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-    prob <- int.square(dens, time = time, pars = pars)
+    prob <- int.square(dens, time = time, pars = pars, n = n)
     if(reverse) prob <- 1 - prob
     get.inv.link(link)(prob)
   }
 }
 
-prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse){
+prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n){
   if(all(time == 0)){
     return(rep(0, length(time)))
   }else{
     dens <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
-    prob <- int.square(dens, time = time, pars = pars)
+    prob <- int.square(dens, time = time, pars = pars, n = n)
     if(reverse) prob <- 1 - prob
     get.inv.link(link)(prob)
   }
 }
 
-prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse){
+prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n){
+  dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
+  int_1 <- int.square(dens1, time = time, pars = pars, n = n)
+  btd <- int.square(dens1, time = last.point, pars = pars, n = n)
+  wh <- time == 0
+  prob_t <- rep(NA, length(time))
+  prob_t[!wh] <- rel_surv(time[!wh], pars) * exp_function(time[!wh], expected)
+  prob_t[wh] <- 1
+  prob <- 1 - (btd - int_1) / prob_t
+  if(reverse) prob <- 1 - prob
+  get.inv.link(link)(prob)
+}
+
+prob_other_time2 <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n){
   dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
   int_1 <- int.square(dens1, time = time, pars = pars)
   btd <- int.square(dens1, time = last.point, pars = pars)

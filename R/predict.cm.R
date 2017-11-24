@@ -44,9 +44,6 @@ predict.cm <- function(fit, newdata = NULL, type = "relsurv",
     newdata <- data.frame(x = 1)
     colnames(newdata) <- "(Intercept)"
   }
-  link_fun_pi <- fit$link_fun_pi
-  link_fun_su <- fit$link_fun_su
-  dlink_fun_su <- fit$dlink_fun_su
 
   Ms <- lapply(formulas, get_design, data = newdata)
   pi_fun <- function(pars, M) M %*% pars[1:ncol(M)]
@@ -57,10 +54,10 @@ predict.cm <- function(fit, newdata = NULL, type = "relsurv",
     if(ci){
       grads <- jacobian(pi_fun, x = unlist(fit$coefs), M = Ms[[1]])
       pi$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$cov %*% x)
-      pi$ci.lower <- get.link("logit")(pi$pi - qnorm(0.975) * sqrt(pi$var))
-      pi$ci.upper <- get.link("logit")(pi$pi + qnorm(0.975) * sqrt(pi$var))
+      pi$ci.lower <- get.link(fit$link)(pi$pi - qnorm(0.975) * sqrt(pi$var))
+      pi$ci.upper <- get.link(fit$link)(pi$pi + qnorm(0.975) * sqrt(pi$var))
     }
-    pi$pi <- get.link(pi$pi, type = "curerate")
+    pi$pi <- get.link(fit$link)(pi$pi)
     return(pi)
   }else if(type %in% c("relsurv", "ehaz", "probcure", "survuncured")){
     if(is.null(time)){

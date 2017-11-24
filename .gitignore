@@ -5,3 +5,8 @@
 inst/doc
 *.o
 *.dll
+figure/
+*.tex
+*.log
+*.bbl
+*.gz

@@ -115,7 +115,7 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   #Output list
   L <- list(data = data, formulas = formulas,
             coefs = coefs, dist = dist, link = link,
-            type = type,
+            type = type, ci = covariance,
             ML = optim.out$value, covariance = cov,
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,

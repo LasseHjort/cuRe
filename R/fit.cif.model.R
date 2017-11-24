@@ -33,115 +33,80 @@
 #' @param optim.args List with additional arguments passed to \code{optim}.
 #' @param ini.types Character vector denoting the executed schemes for computing initial values.
 #' @return An object of class \code{fcm}.
-#' @export
 #' @import survival
 #' @import rstpm2
 #' @import numDeriv
 #' @example inst/FlexCureModel.ex.R
 
 
+#data <- read.csv("../../Kurser/AdvancedSurvivalAnalysis/Assignments/Data/bmt1715.txt", sep = " ")
+#formula <- Surv(time, event) ~ 1
+#n.knots <- list("1" = 3, "2" = 3)
 
-FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
-                          knots = NULL, n.knots = 3,
+fit.cif.model <- function(formula, data, bhazard,
+                          knots = NULL, n.knots = NULL,
                           knots.time = NULL, n.knots.time = NULL,
-                          covariance = T, type = "mixture", linkpi = "logit",
-                          linksu = "loglog", verbose = T, constr.optim = F,
+                          covariance = T, link = "loglog",
+                          verbose = T, constr.optim = F,
                           optim.args = NULL, ortho = TRUE,
                           ini.types = c("cure", "flexpara")){
-
-  if(!type %in% c("mixture", "nmixture"))
-    stop("Wrong specication of argument type, must be either 'mixture' or 'nmixture'")
 
   #Extract relevant variables
   times <- eval(formula[[2]][[2]], envir = data)
   event <- eval(formula[[2]][[3]], envir = data)
   d.times <- times[event == 1]
+  cens <- 0
+  events <- unique(sort(event[event != cens]))
+  n.events <- length(events)
+
+  if(is.null(n.knots) & is.null(knots)){
+    n.knots <- rep(list(3), n.events)
+    names(n.knots) <- events
+  }
 
   #Caculate placement of knots and establish basis matrices
   if(is.null(knots)){
-    bd_knots <- log(range(d.times))
-    inner_knots <- log(quantile(d.times, 1 / (n.knots - 1)*1:(n.knots - 2)))
-    knots <- sort(c(bd_knots, inner_knots))
-  }else{
-    knots <- sort(knots)
-    bd_knots <- range(knots)
-    inner_knots <- knots[-c(1, length(knots))]
+      knots <- vector("list", n.events)
+      for(i in 1:n.events){
+        d.times <- times[event == events[i]]
+        bd_knots <- range(d.times)
+        if(n.knots[[i]] > 2 ){
+          inner_knots <- quantile(d.times, 1 / (n.knots[[i]] - 1)*1:(n.knots[[i]] - 2))
+          knots[[i]] <- log(sort(c(bd_knots, inner_knots)))
+        } else {
+          knots[[i]] <- log(bd_knots)
+        }
+      }
   }
 
   #Evaluate baseline model matrices
-  b <- basis(knots = knots, x = log(times), ortho = ortho)
-  colnames(b) <- paste0("basis(knots = knots, x = log(times), ortho = ortho)", 1:ncol(b))
+  b <- lapply(knots, basis, x = log(times), ortho = ortho)
+  #colnames(b) <- paste0("basis(knots = knots, x = log(times), ortho = ortho)", 1:ncol(b))
   R.inv <- attr(b, "R.inv")
-  db <- dbasis(knots = knots, log(times), ortho = ortho, R.inv = R.inv)
+  db <- lapply(knots, dbasis, x = log(times), ortho = ortho, R.inv = R.inv)
 
-  #Calculate time-varying knots
-  if( !is.null(n.knots.time) | !is.null(knots.time) ){
-    if( is.null(knots.time) ){
-      vars <- names(n.knots.time)
-      knots.time <- lapply(vars, function(x){
-        bd_knots <- range(d.times)
-        if( n.knots.time[[x]] > 2 ){
-          inner_knots <- quantile(d.times, 1 / (n.knots.time[[x]] - 1)*1:(n.knots.time[[x]] - 2))
-          log(sort(c(bd_knots, inner_knots)))
-        } else {
-          log(bd_knots)
-        }
-      })
-    }
-    b_list <- lapply(knots.time, basis, x = log(times), ortho = ortho)
-    R.inv_list <- lapply(b_list, attr, "R.inv")
-    db_list <- lapply(1:length(knots.time), function(i){
-      dbasis(x = log(times), knots = knots.time[[i]], ortho = ortho, R.inv = R.inv_list[[i]])
-    })
-    vars2 <- c(vars)
-    tvc.formula <- as.formula(paste0("~ ", paste0(vars2, collapse = " + ")))
-  } else {
-    tvc.formula <- ~ 1
-    R.inv_list <- NULL
-  }
-
-  #Get time-varying design matrices
-  X_time <- model.matrix(tvc.formula, data = data)[,-1, drop = FALSE]
-  if(ncol(X_time) > 0){
-    for(i in 1:ncol(X_time)){
-      colnames(b_list[[i]]) <- paste0("basis(knots = knots, x = log(times), ortho = ortho)",
-                                      1:ncol(b_list[[i]]), ":",
-                                      colnames(X_time)[i])
-      b_list[[i]] <- b_list[[i]] * X_time[,i]
-      db_list[[i]] <- db_list[[i]] * X_time[,i]
-    }
-    b_time <- do.call(cbind, b_list)
-    db_time <- do.call(cbind, db_list)
-  }else{
-    b_time <- NULL
-    db_time <- NULL
-    #tvc.formula <- NULL
-  }
 
   #Construct design matrix
-  X <- model.matrix(smooth.formula, data = data)
-  b <- cbind(b, X[,-1, drop = FALSE], b_time)
-  db <- cbind(db, matrix(0, ncol = ncol(X) - 1, nrow = nrow(X)), db_time)
-  X <- model.matrix(formula, data = data)
+  X <- model.matrix(~ 1, data = data)
+  for(i in 1:length(b)){
+    b[[i]] <- cbind(b[[i]], X[,-1, drop = FALSE])
+    db[[i]] <- cbind(db[[i]], matrix(0, ncol = ncol(X) - 1, nrow = nrow(X)))
+  }
 
 
   #Extract link function
-  link_fun_pi <- get.link(linkpi)
-  link_fun_su <- get.link(linksu)
-  dlink_fun_su <- get.dlink(linksu)
+  link_fun <- get.link(link)
+  dlink_fun <- get.dlink(link)
 
   #Extract minus log likelihood function
-  minusloglik <- switch(type,
-                        mixture = flexible_mixture_minuslog_likelihood,
-                        nmixture = flexible_nmixture_minuslog_likelihood)
+  minusloglik <- minuslog_likelihood
 
   #Prepare optimization arguments
   likelihood.pars <- list(time = times,
-                          event = event, X = X,
-                          b = b, db = db, bhazard = data[, bhazard],
-                          link_fun_pi = link_fun_pi,
-                          link_fun_su = link_fun_su,
-                          dlink_fun_su = dlink_fun_su)
+                          event = event,
+                          b = b, db = db,
+                          link_fun = link_fun,
+                          dlink_fun = dlink_fun)
 
   if(is.null(optim.args$control$maxit)){
     optim.args$control <- list(maxit = 10000)
@@ -172,7 +137,17 @@ FlexCureModel <- function(formula, data, bhazard, smooth.formula = ~ 1,
     optim.args <- optim.args[-which(names(optim.args) == "par")]
   }
 
-  optim.pars <- c(optim.args, likelihood.pars)
+  f <- function(t) 1 - exp(-exp(basis(x = log(t), knots = knots[[1]], ortho = F) %*% c(-1, 0.3, -0.0002)))
+  curve(f, from = 0, to = 10, ylim = c(0, 1))
+
+  inivalues <- rep(list(c(-1, 0.3, -0.0002)), 2)
+
+  inivalues <- unlist(inivalues)
+  optim.pars <- c(optim.args, likelihood.pars, list(inivalues))
+
+  optim.pars$fn <- minuslog_likelihood
+  debug(minuslog_likelihood)
+  do.call(optim, optim.pars)
 
   #Test if initial values are within the feasible region
   ini.eval <- sapply(inivalues, function(inival) do.call(minusloglik, c(likelihood.pars, list(inival))))
@@ -387,70 +362,3 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
   #names(ini_values)[1:ncol(X)] <- colnames(X)
   ini_values
 }
-
-
-#' @export
-#Print function for class fcm
-print.fcm <- function(fit){
-  cat("Call pi:\n")
-  print(fit$formula)
-  cat("Call S_u(t):\n")
-  print(fit$formula_main)
-  cat("\nCoefficients:\n")
-  print(list(pi = fit$coefs,
-             surv = fit$coefs.spline))
-}
-
-#' @export
-#Summary function for class fcm
-summary.fcm <- function(fit){
-  se <- sqrt(diag(fit$covariance))
-  tval <- c(fit$coefs, fit$coefs.spline) / se
-  coefs <- c(fit$coefs, fit$coefs.spline)
-  TAB1 <- cbind(Estimate = fit$coefs,
-                StdErr = se[1:length(fit$coefs)],
-                t.value = tval[1:length(fit$coefs)],
-                p.value = ifelse(is.na(tval[1:length(fit$coefs)]), rep(NA, length(fit$coefs)),
-                                 2*pt(-abs(tval[1:length(fit$coefs)]), df = fit$df)))
-
-  TAB2 <- cbind(Estimate = fit$coefs.spline,
-                StdErr = se[1:length(fit$coefs.spline)],
-                t.value = tval[1:length(fit$coefs.spline)],
-                p.value = ifelse(is.na(tval[1:length(fit$coefs.spline)]), rep(NA, length(fit$coefs.spline)),
-                                 2*pt(-abs(tval[1:length(fit$coefs.spline)]), df = fit$df)))
-
-
-  results <- list(pi = TAB1, surv = TAB2)
-  results$type <- fit$type
-  results$linkpi <- fit$linkpi
-  results$linksu <- fit$linksu
-  results$ML <- fit$NegMaxLik
-  results$formula <- fit$formula
-  results$formula.fix <- fit$formula_main
-  results$formula.tvc <- fit$tvc.formula
-  class(results) <- "summary.fcm"
-  results
-}
-
-#' @export
-#Print for class summary.fcm
-print.summary.fcm <- function(x)
-{
-  cat("Call - pi:\n")
-  print(x$formula)
-  #    cat("\n")
-  printCoefmat(x$pi, P.value = TRUE, has.Pvalue = T)
-  cat("\nCall - surv - baseline: ")
-  print(as.formula(deparse(x$formula.fix)))
-  if(length(all.vars(x$formula.tvc))){
-    cat("Call - surv - tvc: ")
-    print(deparse(x$formula.tvc))
-  }
-  printCoefmat(x$surv, P.value = TRUE, has.Pvalue = T)
-  cat("\n")
-  cat("Type =", x$type, "\n")
-  cat("Link - pi =", x$linkpi, "\n")
-  cat("Link - surv = ", x$linksu, "\n")
-  cat("LogLik(model) =", x$ML, "\n")
-}
-

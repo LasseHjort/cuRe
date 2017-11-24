@@ -30,7 +30,7 @@
 
 plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
                       time = NULL, xlim = NULL, ylim = c(0, 1),
-                      xlab = "Time", ylab = NULL, col = 1, ci = T,
+                      xlab = "Time", ylab = NULL, col = 1, ci = NULL,
                       non.parametric = F, col.non.para = 2,
                       include.knots = F, add = F, ...){
 
@@ -43,6 +43,8 @@ plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
                    lol = "Loss of lifetime",
                    survuncured = "Disease specific survival of the uncured")
   }
+
+  if(is.null(ci)) ci <- fit$ci
 
   if(length(col) == 1 & !is.null(newdata)){
     col <- rep(col, nrow(newdata))

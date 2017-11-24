@@ -21,6 +21,7 @@ plot.crude <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T,
     ylab <- switch(obj$type, cancer = "Cumulative incidence of cancer related death",
                    other = "Cumulative incidence of death from other causes than cancer",
                    othertime = "Probability of eventually dying from other causes than cancer")
+    if(obj$reverse) ylab <- "Probability of eventually dying from cancer"
   }
   if(is.null(xlim)) xlim <- range(obj$time)
 

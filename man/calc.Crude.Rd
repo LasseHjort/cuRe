@@ -6,7 +6,7 @@
 \usage{
 calc.Crude(fit, newdata = NULL, type = "cancer", time = NULL,
   last.point = 100, reverse = FALSE, ci = T, expected = NULL,
-  ratetable = survexp.dk, rmap = NULL, link = "logit")
+  ratetable = survexp.dk, rmap, link = "loglog", n = 1e+05)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are

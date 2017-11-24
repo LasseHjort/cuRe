@@ -1,0 +1,469 @@
+\documentclass{article}
+
+%Packages
+\usepackage{amsthm,amsmath}
+\usepackage{authblk}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage[numbers]{natbib}
+\usepackage{bibentry}
+\usepackage{enumitem}
+\nobibliography*
+
+
+%Definitions
+\newcommand{\p}[1]{\ensuremath{\text{P}(#1)}}
+
+%Set margins of the page
+\geometry{
+  paperwidth=8.5in,
+  paperheight=11in,
+  left=1in,
+  right=1in,
+  asymmetric,
+  bindingoffset=1em,
+  bottom=1in,
+  top=1in
+}
+
+%Start document
+\begin{document}
+
+%Make title
+\title{An introduction to the \textbf{cuRe} package}
+\author{Lasse Hjort Jakobsen}
+\date{}
+\affil{Aalborg University}
+
+\maketitle
+
+%Start content
+
+\section{Bibliography}
+
+\begin{itemize}[leftmargin=*]
+\item[] \bibentry{Lambert2007}
+
+\begin{itemize}
+\item[] This was the first comprehensive description of parametric mixture and non-mixture cure models in a relative survival setting. The authors considered parametric modelling using, e.g., a Weibull distribution for modelling the disease-specific survival of the uncured patients and simple generalized linear models for the cure fraction. The models are implemented in the Stata commands \textbf{strsmix} and \textbf{strsnmix} \citep{Lambert2007Stata}.
+\end{itemize}
+
+\item[] \bibentry{Lambert2010_crude}
+
+\begin{itemize}
+\item[] This article described the usage of relative survival to provide crude cause-specific probability of death. From a relative survival model, the excess hazard can be considered a causes-specific hazard function of death from cancer. Using that the relative survival multiplied with the general population survival provides the all-cause survival function, the cumulative incidences of cancer related death can be estimated. Functionalities for computing crude mortality has been implemented in the Stata module \textbf{stpm2cm}.
+\end{itemize}
+
+\item[] \bibentry{Andersson2011}
+
+\begin{itemize}
+\item[] This study combined parametric cure models with spline-based survival models. The authors introduced a non-mixture cure model which is assumed to be constant after the last knot of the splines, which forces the excess mortality to be zero from this point. The model was implemented as a part of the \textbf{stpm2} function in Stata
+\end{itemize}
+
+\item[] \bibentry{Andersson2013}
+
+\begin{itemize}
+\item[] This paper introduces the loss in expectation of life using flexible relative survival models. The loss in expectation of life is computed as the area under the survival function until time infinity, which in general requires extrapolation. This was conducted by obtaining the survival function as the relative survival multiplied to the general population survival. For the relative survivail, three different models were considered, i.e., a regular spline-based relative survival model, a relative survival which is constant after the last knot of the splines, and a relative survival model which has a constant excess hazard after the last knot. Estimation of the loss in expectation of life can be conducted through the \textbf{stpm2 postestimation} Stata module.
+\end{itemize}
+
+\item[] \bibentry{Eloranta2014}
+
+\begin{itemize}
+\item[] This paper introduced crude analogues of the cure proportion as well as the dynamic probability of cure using a flexible parametric cure model which is constant after 10 years. The crude cure proportion was computed as the cumulative incidence of cancer related death at time 10 years. The dynamic probability of cure analogue, was obtained by using the crude cure proportion, as well as the dumulative incidence of cancer related death and deaths from other causes.
+\end{itemize}
+
+\item[] \bibentry{Jakobsen20172}
+
+\begin{itemize}
+\item[] This paper considered the loss of lifetime function, a generalization of the loss in expectation of life, which provides the numbers of years lost due to the disease, given survival until a specific time-point. As for the loss in expectation of life, this requires extrapolation of the survival function, which was conducted by fitting a flexible parametric relative survival model and multiplying it to the general population survival. The extrapolation accuracy was assessed using three approach; a regular relative survival model, a relative survival model which is constant after the last knot, and a novel mixture cure model which uses spline to model the survival of the uncured.
+\end{itemize}
+\end{itemize}
+
+\section{Quick start}
+The \verb|cuRe| package has two main functions for estimating parameteric cure models on the relative survival scale, namely \verb|FlexCureModel| and \verb|fit.cure.model|. In addition, functionalities for providing crude mortality measures are also included.
+
+Load the \verb|cuRe| package and included dataset, \verb|colonDC| on 15564 colon cancer patients. The name \verb|colonDC|, indicates that the \verb|colon| dataset of the \verb|rstpm2| package is used after some "data cleaning".
+<<message=F, warning=F>>=
+library(cuRe)
+data("colonDC")
+s <- sample(nrow(colonDC), 500)
+colonDC <- colonDC[s,]
+head(colonDC)
+@
+
+Extract general population hazard at the observed follow-up times.
+<<>>=
+colonDC$bhaz <- general.haz(time = "FU", sex = "sex",
+                            age = "agedays", year = "dx",
+                            data = colonDC,
+                            ratetable = survexp.dk)
+@
+
+Fit flexible cure model.
+<<>>=
+fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC,
+                     bhazard = "bhaz", n.knots = 5)
+@
+
+Plot the relative survival, the exess hazard, and the survival of the uncured patients.
+<<fig.height = 3.3, fig.width = 10, fig.align = "center">>=
+par(mfrow = c(1,3))
+plot(fit)
+plot(fit, type = "ehaz")
+plot(fit, type = "survuncured")
+@
+
+%Change mfrow back to the standard
+<<echo = FALSE>>=
+par(mfrow = c(1,1))
+@
+
+Compute the loss of lifetime and the conditional probability of eventually dying from other causes than cancer given survival until time $t$.
+<<fig.height = 5, fig.width = 10, fig.align = "center">>=
+ll <- calc.LL(fit, time = seq(0, 15, length.out = 100),
+               rmap = list(age = agedays, sex = sex, year = dx))
+
+prob <- calc.Crude(fit, time = seq(0, 15, length.out = 100),
+                   type = "othertime",
+                   rmap = list(age = agedays, sex = sex, year = dx), n = 5000)
+
+par(mfrow = c(1,2))
+plot(ll)
+plot(prob)
+@
+
+<<echo = FALSE>>=
+par(mfrow = c(1,1))
+@
+
+
+\section{Parametric cure models}
+
+The relative survival given as,
+\begin{equation}
+R(t) = \frac{S(t)}{S^*(t)}
+\end{equation}
+are commonly used to describe the net disease-specific survival in a patient population. Here $S(\cdot)$ and $S^*(\cdot)$ are the all-cause and general population survival functions, respectively. The term "net" refers to the interpretation of the disease-specific survival which is the survival of the patients in a world where it is impossible to die from other causes than the disease. Non-parametric estimators of the relative survival curve have been available for many years.
+
+The \verb|relsurv| package contains functions for modelling the relative survival non-parametricaly. For instance the immediate relative survival of the colon cancer patients may be computed usig the function \verb|rs.surv| in the following way.
+<<message = F, warning = F, out.width = "70%", fig.align = "center">>=
+library(relsurv)
+fit <- rs.surv(Surv(FU, status2) ~ 1 + ratetable(age = agedays,
+                                                 sex = sex,
+                                                 year = dx),
+               data = colonDC,
+               ratetable = survexp.dk,
+               method = "ederer2")
+plot(fit)
+@
+
+During the last 15 years, parametric relative survival cure models have been developed upon to yield new survival information, particularly for cancers where the patient survival approaches that of the general population. The point at which this occurs is termed the cure point and patients surviving beyond the cure point are termed \textit{statistically cured}. The goal of cure models is to estimate the probability of being statistically cured, the survival of those patients, who are not statistically cured, and the conditional probability of being statistically cured given survival until a certain time point.
+
+Commonly two types of cure models are considered, namely mixture and non-mixture cure models. The mixture cure model is given as:
+\begin{equation}
+R(t|z) = \pi(z) + (1 - \pi(z)) S_u(t|z),
+\label{eq:mixture}
+\end{equation}
+where $\pi(z)$ is the proportion of statistically cured patients and $S_u(t|z)$ is the net disease specific survival of the uncured patients. The non-mixture cure model is commonly described by:
+\begin{equation}
+R(t|z) = \pi(z) ^ {1 - \tilde F(t|z)},
+\end{equation}
+where $\tilde F(t)$ is a proper distribution function, which does not have the same intuitive interpretation as $S_u(\cdot)$.
+
+In the \verb|cuRe| package, the \verb|fit.cure.model| function allows estimation of standard parametric mixture and non-mixture cure models. Using the colon cancer data, we fit a mixture cure model with a Weibull distribution modelling the disease-specific survival of the uncured and a logistic model for the cure fraction. Both include a linear age-effect.
+<<>>=
+fit.cm <- fit.cure.model(Surv(FUyear, status2) ~ age,
+                         data = colonDC,
+                         bhazard = "bhaz",
+                         formula.k1 = ~ age,
+                         formula.k2 = ~ 1)
+
+predict(fit.cm, newdata = data.frame(age = c(50, 60, 70)),
+        type = "curerate")
+@
+
+By using the \verb|plot| function, the relative survival for three new patients can be plotted.
+<<out.width="70%", fig.align = "center">>=
+plot(fit.cm, newdata = data.frame(age = c(50, 60, 70)), col = 1:3)
+@
+
+Now, replace the Weibull distribution with a log-normal distribution, which does not provide a proportional hazards model for the survival of the uncured.
+<<>>=
+fit.cm.ln <- fit.cure.model(Surv(FUyear, status2) ~ age, data = colonDC,
+                         bhazard = "bhaz", formula.k1 = ~ age,
+                         formula.k2 = ~ 1,
+                         dist = "lognormal")
+
+predict(fit.cm.ln, newdata = data.frame(age = c(50, 60, 70)), type = "curerate")
+@
+
+Plot the relative survival of both models for 50, 60, and 70-year-old patients.
+<<out.width = "70%", fig.align = "center">>=
+plot(fit.cm, newdata = data.frame(age = c(50, 60, 70)),
+     col = 1, ci = F)
+plot(fit.cm.ln, newdata = data.frame(age = c(50, 60, 70)),
+     col = 2, ci = F, add = T)
+@
+
+Plot the 5-year relative survival against diagnostic age.
+<<out.width = "70%", fig.align = "center">>=
+ages <- 30:85
+rs5 <- predict(fit.cm, time = 5, newdata = data.frame(age = ages))
+rs5 <- sapply(rs5$res, function(x) x$Est)
+
+rs5.ln <- predict(fit.cm.ln, time = 5, newdata = data.frame(age = ages))
+rs5.ln <- sapply(rs5.ln$res, function(x) x$Est)
+
+plot(rs5 ~ ages, type = "l", ylim = c(0, 1), ylab = "5 year relative survival")
+lines(rs5.ln ~ ages, col = 2)
+@
+
+
+The actual survival curves can be obtained by multiplying the relative survival with the expected survival function, which is done with the \verb|lts| function.
+<<out.width = "70%", fig.align = "center">>=
+lts.wei <- lts(fit.cm,
+               newdata = data.frame(age = c(50, 60, 70), sex = "male",
+                                    year = 2010,
+                                    age_days = c(50, 60, 70) * 365.24),
+               time = seq(0, 20, length.out = 100),
+               rmap = list(age = age_days), ci = F)
+
+plot(lts.wei, ci = F)
+
+lts.ln <- lts(fit.cm.ln,
+              newdata = data.frame(age = c(50, 60, 70), sex = "male",
+                                   year = 2010,
+                                   age_days = c(50, 60, 70) * 365.24),
+              time = seq(0, 20, length.out = 100),
+              rmap = list(age = age_days), ci = F)
+
+plot(lts.ln, ci = F, add = T, col = 2)
+@
+Observe, the all-cause survival curves are very similar despite the relative survival curves being slightly different.
+
+\section{Flexible parametric cure models}
+
+Royston and Parmar \cite{Royston2002} introduced a flexible parametric proportional hazards model using restricted cubic splines to model the baseline hazard function (on the log cumulative hazard scale).
+This approach was applied to relative survival by Nelson et al. \cite{Nelson2007} where the log cumulative excess hazard was modelled by restricted cubic splines.
+Including covariate effects, the relative survival was given by
+\begin{equation}\label{eq:rsflex}
+\log(-\log(R(t| \bm z)) = s_0(x;\bm \gamma_0) + \bm z^T \bm\beta + \sum_{i = 1}^p s_i(x;\bm\gamma_i)z_i,
+\end{equation}
+where $x = \log(t)$, $p$ is the number of time-varying covariate effects, $s_0(x;\bm\gamma_0)$ is a baseline restricted cubic spline, $\bm\beta$ is a vector of regression coefficients, and $s_i(x;\bm\gamma_i)$ is a spline corresponding to the $i^\text{th}$ covariate, providing a time varying coefficient.
+For the $i^\text{th}$ spline, $K_i$ knots, $k_{i1}<k_{i2}<..<k_{iK_{i}}$, are selected on the time scale.
+The spline is then given as a linear combination of base functions defined through the chosen knots, i.e., $s_i(x;\bm\gamma_i) = \sum_{j = 0}^{K_i - 1} v_{ij}(x)\gamma_{ij}$, where $\bm\gamma_i$ are model parameters.
+The base functions are given by $v_{i0}(x) = 1$, $v_{i1}(x) = x$, and
+\begin{equation}
+v_{ij}(x) = (x - k_{ij})^3_+ - \lambda_{ij}(x - k_{i1})^3_+ - (1 - \lambda_{ij}) (x - k_{iK_{i}})^3_+,
+\end{equation}
+for $j = 2, ..., K_i - 1$, where $\lambda_{ij} = \frac{k_{iK_{i}} - k_{ij}}{k_{iK_{i}} - k_{i1}}$ and $x_+ = \max(x, 0)$.
+Generally, the number and placement of the knots in the different spline functions do not need to be the same.
+
+Andersson et al. \cite{Andersson2011} used (\ref{eq:rsflex}) to establish a flexible parametric cure model.
+This model was formulated similarly to (\ref{eq:rsflex}), but the basis functions of the splines were adjusted to ensure that the relative survival had zero slope after a pre-selected time point which was used as last knot in all spline functions, i.e., $k_K = k_{0K_{0}} = k_{1K_{1}} = \cdots = k_{pK_{p}}$. The cure fraction is estimated by $R(k_K)$.
+Rewriting (\ref{eq:rsflex}) we obtain
+\begin{equation}
+R(t|\bm z) = \exp{-\exp{\gamma_{00} + \bm z^T \bm\beta}\exp{\sum_{i = 1}^{K_0 - 1} v_i(x)\gamma_i + \sum_{i = 1}^p s_i(x;\bm\gamma_i)z_i}}.
+\end{equation}
+Hence, the model by Andersson et al. \cite{Andersson2011} can be viewed as a non-mixture cure model where the cure fraction is modelled through the baseline spline parameter, $\gamma_{00}$, and the fixed covariate effects, $\bm z^T\bm\beta$, while the remaining parameters are used to model $1 - S_\zeta(t)$.
+While this model provides a flexible framework for estimating the cure fraction in cancer studies, the assumption of statistical cure after the last knot is strong.
+Therefore, we introduce a new flexible parametric cure model which combines regular mixture cure models with flexible parametric survival models.
+The model is specified by \eqref{eq:mixture} with
+\begin{equation}
+S_u(t|\bm z) = \exp{-\exp{s_0(x;\bm\gamma_0) + \bm z^T\bm\beta + \sum_{i = 1}^p s_i(x;\bm\gamma_i)z_i}}.
+\label{eq:flexcuremodel}
+\end{equation}
+
+Fit the flexible parametric model using the \verb|FlexCureModel| function.
+<<out.width = "70%", fig.align = "center">>=
+fit.flex <- FlexCureModel(Surv(FUyear, status2) ~ age,
+                           data = colonDC, n.knots = 5,
+                           bhazard = "bhaz", smooth.formula = ~ age)
+
+predict(fit.flex, newdata = data.frame(age = c(50, 60, 70)),
+        type = "curerate")
+
+plot(fit.flex, newdata = data.frame(age = c(50, 60, 70)))
+@
+
+Fit the flexible parametric model with a time-varying age-effect using the \verb|n.knots.time| argument.
+<<out.width = "70%", fig.align = "center">>=
+fit.flex.time <- FlexCureModel(Surv(FUyear, status2) ~ age,
+                           data = colonDC, n.knots = 5,
+                           bhazard = "bhaz", n.knots.time = list(age = 3))
+
+plot(fit.flex, newdata = data.frame(age = c(50, 60, 70)),
+     col = 1, ci = F)
+plot(fit.flex.time, newdata = data.frame(age = c(50, 60, 70)),
+     col = 2, ci = F, add = T)
+@
+
+Plot the survival of the uncured from the Weibull cure model, the flexible cure model, and the flexible cure model with a time-varying effect age effect.
+<<fig.align = "center", out.width = "70%">>=
+plot(fit.cm, type = "survuncured", data.frame(age = 50), ci = F)
+plot(fit.flex, type = "survuncured", newdata = data.frame(age = 50),
+     col = 2, ci = F, add = T)
+plot(fit.flex.time, type = "survuncured", newdata = data.frame(age = 50),
+     col = 3, ci = F, add = T)
+legend("topright", fill = 1:3, legend = c("Weibull", "Flex", "Flex (time)"))
+@
+
+Compute the cure fraction for a sequence of diagnostic ages.
+<<fig.align = "center", out.width = "70%">>=
+pred_cure <- predict(fit.flex.time, type = "curerate",
+                     newdata = data.frame(age = ages))
+plot(pi ~ ages, data = pred_cure, type = "l", ylim = c(0, 1),
+     ylab = "Cure rate", xlab = "Diagnostic age")
+@
+
+\section{Loss of lifetime estimation}
+
+The loss of lifetime function is defined as the function,
+\begin{equation}
+L(t) = \frac{\int_t^\infty S^*(u) du}{S^*(t)} - \frac{\int_t^\infty S(u) du}{S(t)}.
+\end{equation}
+A special case of this function is the loss in expectation of life \citep{Andersson2013} which is defined as,
+\begin{equation}
+LL(t) = L(0) = \int_0^\infty S^*(u) du - \int_0^\infty S(u) du.
+\end{equation}
+
+The \verb|cuRe| package contains functions \verb|calc.LL| and \verb|plot.le| for computing and plotting, respectively, the loss of lifetime estimates. Since the function using the \verb|survexp| function from the \verb|survival| package, age, gender, and calendar year normally (depends on the specication of the applied ratetable) has to be specified to compute the loss of lifetime. To compute the loss of lifetime for time point 0 to 20 in the colon cancer data, we use the syntax,
+<<fig.align = "center", out.width = "70%">>=
+ll <- calc.LL(fit.flex,
+              newdata = data.frame(age = c(50, 60, 70),
+                                   sex = "male",
+                                   year = 2010,
+                                   age_days = c(50, 60, 70) * 365.24),
+              time = seq(0, 20, length.out = 100),
+              ci = F, rmap = list(age = age_days))
+
+ll.time <- calc.LL(fit.flex.time,
+                   newdata = data.frame(age = c(50, 60, 70),
+                                        sex = "male",
+                                        year = 2010,
+                                        age_days = c(50, 60, 70) * 365.24),
+                   time = seq(0, 20, length.out = 100),
+                   ci = F, rmap = list(age = age_days))
+
+plot(ll, ci = F)
+plot(ll.time, ci = F, col = 2, add = T)
+@
+A small difference is observed between the loss of lifetime computed using a time-varying coefficient.
+
+The loss of lifetime function also works with the functionalities of the \verb|rstpm2| package \citep{rstpm2}. Consider the following penalized generalized relative survival model with age as time-varying covariate.
+<<>>=
+fit.pen <- pstpm2(Surv(FUyear, status2) ~ 1, data = colonDC,
+                  bhazard = colonDC$bhaz,
+                  smooth.formula=~s(log(FUyear)) + s(log(FUyear), by=age))
+@
+
+Now, compute the loss of lifetime and compare the flexible parametric cure model, also with a time varying age effect.
+
+<<fig.align = "center", out.width = "70%">>=
+ll.time <- calc.LL(fit.flex.time,
+                   newdata = data.frame(age = c(50, 60, 70),
+                                        sex = "male",
+                                        year = 2010,
+                                        age_days = c(50, 60, 70) * 365.24),
+                   time = seq(0, 20, length.out = 100),
+                   ci = F, rmap = list(age = age_days))
+
+ll.pen.time <- calc.LL(fit.pen,
+                       newdata = data.frame(age = c(50, 60, 70),
+                                            sex = "male",
+                                            year = 2010,
+                                            age_days = c(50, 60, 70) * 365.24),
+                       time = seq(0, 20, length.out = 100),
+                       ci = F, rmap = list(age = age_days))
+
+plot(ll.pen.time, ci = F, col = 1)
+plot(ll.time, ci = F, add = T, col = 2)
+@
+Also here, a small difference is observed between the loss of lifetime estimates, the largest seen among the 50-year-old patient.
+
+
+\section{Probability of cancer related death}
+The crude analogue of the conditional probability of cure, as directly derived from the cure models was introduced by \citep{Eloranta2014}. To derive this probability, we need to consider the crude analogue of relative survival, i.e., the cumulative incidence of cancer related death as opposed to the net cancer survival. The cumulative incidene of cancer related death, as described by \citet{Lambert2010_crude} can be computed as,
+\begin{equation}
+\p{T \leq t, D = \text{cancer}} = \int_0^t S^*(u)R(u)\lambda(u)du,
+\label{eq:crudecancer}
+\end{equation}
+where $\lambda(\cdot)$ is the excess mortality. By replacing $\lambda(\cdot)$ by $h^*(\cdot)$, the cumulative incidence of death from other causes than cancer, i.e., \p{T\leq t, D = \text{other}} is obtained. The crude analogue of the cure fraction in \eqref{eq:mixture}, i.e., the probability of eventually dying from cancer, is computed as,
+\begin{equation}
+\p{D = \text{cancer}} = \int_0^\infty S^*(u)R(u)\lambda(u)du.
+\label{eq:crudecure}
+\end{equation}
+
+Using \eqref{eq:crudecure} and \eqref{eq:crudecure}, dynamic probability of death from other causes than cancer given survival until time $t$ can be computed by,
+\begin{align}
+\p{D = \text{other}| T > t} &= 1 - \frac{\p{D = \text{cancer}, T > t}}{\p{T > t}} \\
+&= \frac{\p{D = \text{cancer}} - \p{T \leq t, D = \text{cancer}}}{1 - \p{T \leq t, D = \text{other}} - \p{T \leq t, D = \text{cancer}}}.
+\label{eq:crudecuretime}
+\end{align}
+\citet{Eloranta2014} used the model by \citet{Andersson2011}, where a constant relative survival was assumed after the last knot of the splines. This replaces the $\infty$ in the intgral of \eqref{eq:crudecure} by the value of the last knot.
+
+
+For illustration, we fit a null model, i.e., without any covariates using the \verb|FlexCureModel| function. The crude probabilities are estimated through the \verb|calc.Crude| function. The function has an argument \verb|type| which denotes which type of crude probability to compute; \verb|type = "cancer"| (default) computes \eqref{eq:crudecure}, \verb|type = "other"| computes \eqref{eq:crudecure} with $\lambda(t)$ replaced by $h^*(t)$, and \verb|type = "othertime"| computed \eqref{eq:crudecuretime}. If \verb|reverse = TRUE|, $1 - \p{D = \text{other}| T > t} = \p{D = \text{cancer}| T > t}$ is computed.
+
+<<fig.height = 10, fig.width = 10, fig.align = "center">>=
+fit.null <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC,
+                          bhazard = "bhaz", n.knots = 5)
+
+newdata <- data.frame(age = 60, sex = "male", year = 2010,
+                      age_days = 50 * 365.24)
+
+crude.null.cancer <- calc.Crude(fit.flex.time, newdata = newdata,
+                                time = seq(0, 20, length.out = 100),
+                                ci = T, rmap = list(age = age_days), n = 5000)
+
+crude.null.other <- calc.Crude(fit.flex.time, newdata = newdata,
+                               type = "other",
+                               time = seq(0, 20, length.out = 100),
+                               ci = T, rmap = list(age = age_days), n = 5000)
+
+crude.null.prob <- calc.Crude(fit.flex.time, newdata = newdata,
+                              type = "othertime",
+                              time = seq(0, 20, length.out = 100),
+                              ci = T, rmap = list(age = age_days), n = 5000)
+
+crude.null.prob.reverse <- calc.Crude(fit.flex.time, newdata = newdata,
+                                      type = "othertime",
+                                      time = seq(0, 20, length.out = 100),
+                                      reverse = T,
+                                      ci = T, rmap = list(age = age_days), n = 5000)
+
+
+par(mfrow = c(2,2))
+plot(crude.null.cancer)
+plot(crude.null.other)
+plot(crude.null.prob)
+plot(crude.null.prob.reverse)
+@
+
+Using the previously fitted models with a time-varying age effect, we compute the crude probability of cancer related death.
+<<fig.align = "center", out.width = "70%">>=
+crude.time <- calc.Crude(fit.flex.time, type = "othertime",
+                         newdata = data.frame(age = c(50, 60, 70),
+                                              sex = "male",
+                                              year = 2010,
+                                              age_days = c(50, 60, 70) * 365.24),
+                         time = seq(0, 20, length.out = 100), reverse = T,
+                         ci = F, rmap = list(age = age_days), n = 5000)
+
+crude.pen.time <- calc.Crude(fit.pen, type = "othertime",
+                             newdata = data.frame(age = c(50, 60, 70),
+                                                  sex = "male",
+                                                  year = 2010,
+                                                  age_days = c(50, 60, 70) * 365.24),
+                             time = seq(0, 20, length.out = 100), reverse = T,
+                             ci = F, rmap = list(age = age_days), n = 5000)
+
+plot(crude.time, ci = F, col = 1)
+plot(crude.pen.time, ci = F, add = T, col = 2)
+@
+
+
+\bibliographystyle{plainnat}
+\bibliography{References}
+
+\end{document}

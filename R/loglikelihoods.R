@@ -522,3 +522,33 @@ rhs <- function (formula)
 #   b
 # }
 
+
+
+minuslog_likelihood <- function(param, time, event, b, db, bhazard,
+                                link_fun, dlink_fun){
+  param_list <- split(param, rep(1:length(b), sapply(b, ncol)))
+  lps <- dlps <- haz <- Fks <- delta <- vector("list", length(b))
+  for(i in 1:length(lps)){
+    lps[[i]] <- b[[i]] %*% param_list[[i]]
+    dlps[[i]] <- db[[i]] %*% param_list[[i]]
+    haz[[i]] <- exp(lps[[i]]) * dlps[[i]] / time
+    Fks[[i]] <- exp(-exp(lps[[i]]))
+    delta[[i]] <- as.numeric(event == i)
+  }
+
+  sum_Fks <- inner_sum <- rep(NA, length(time))
+  for(j in 1:length(time)){
+    inner <- sapply(1:length(b), function(i){
+      delta[[i]][j] * (haz[[i]][j] + Fks[[i]][j])
+    })
+    inner_sum[i] <- sum(inner)
+    sum_Fks[i] <- sum(sapply(1:length(b), function(i){
+      Fks[[i]][[j]]
+    }) )
+  }
+
+  event_logical <- as.numeric(event != 0)
+  -sum(inner_sum + (1 - event_logical) * sum_Fks)
+}
+
+
