@@ -50,7 +50,7 @@ predict.fcm <- function(fit, newdata = NULL, type = "relsurv",
 
   if(type == "curerate"){
     pi <- data.frame(pi = pi)
-    if(ci){
+    if(ci & fit$ci){
       grads <- jacobian(pi_fun, x = all.coefs, M = M)
       pi$var <- apply(grads, MARGIN = 1, function(x) x %*% fit$covariance %*% x)
       pi$ci.lower <- get.link("logit")(pi$pi - qnorm(0.975) * sqrt(pi$var))

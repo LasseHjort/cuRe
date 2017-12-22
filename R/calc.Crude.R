@@ -6,33 +6,40 @@
 #' \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
-#' @param type Measure to compute. Possible values are \code{cancer} (default),
+#' @param type Probability to compute. Possible values are \code{cancer} (default),
 #' \code{other}, and \code{othertime} (see details).
 #' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
 #' and \code{last.point} is selected.
-#' @param last.point Constant at which the bound to tie probability is calculated. Default is 100.
+#' @param last.point Upper bound of the cancer related death integral (see details).
+#' The argument is only used for \code{type = othertime}. Default is 100.
 #' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
 #' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
 #' Default is \code{survexp.dk}.
 #' @param expected Object of class \code{list} containing objects of class \code{survexp},
-#' with the expected survival of each row in newdata. If not specified, the function computes the expected
+#' with the expected survival of each row in \code{newdata}. If not specified, the function computes the expected
 #' survival.
-#' @param rmap List to be passed to \code{survexp} from the \code{survival} package.
+#' @param rmap List to be passed to \code{survexp} from the \code{survival} package if \code{expected = NULL}.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param reverse Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
 #' Only applicable for \code{type = othertime}.
-#' @param Link Link function for computing variance in order to bound confidence intervals. Default is \code{logit}.
+#' @param Link Link function for computing variance in order to bound confidence intervals. Default is \code{loglog}.
 #' @return An object of class \code{crude} containing the crude probability estimates
 #' of each individual in \code{newdata}.
-#' @details The types of crude probabilities is the typical measures in relative survival, namely
-#' a crude disease-specific probability (\code{cancer}), the probability of dying from other causes than the
-#' disease (\code{other}), and the conditional probability of eventually dying from other causes than the
-#' disease given survival until time t (\code{othertime}). The proportion of patients bound to die from the
-#' disease can be computed by using \code{cancer} and choosing a sufficiently large time point.
+#' @details The function estimates crude probabilities by using the relative survival, expected survival,
+#' and the cause-specific hazard functions.
+#' The crude cumulative incidence of cancer related death (\code{cancer}) is
+#' \deqn{P(T \leq t, D = cancer) = \int_0^t S^*(u) R(u) \lambda(u)du.}
+#' The crude cumulative incidence of death from other causes (\code{other})is
+#' \deqn{P(T \leq t, D = other) = \int_0^t S^*(u) R(u) h^*(u)du.}
+#' The conditional probability of eventually dying from other causes than cancer (\code{othertime})
+#' \deqn{P(D = other| T > t) = \frac{P(D = cancer) - P(T \leq t, D = cancer)}{P(T > t)}.}
+#' The proportion of patients bound to die from the disease (P(D = cancer))
+#' can be computed by using \code{cancer} and choosing a sufficiently large time point (default is 100).
 #' @references Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
 #' for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
 #' @export
 #' @example inst/calc.Crude.ex.R
+#' @import statmod
 
 calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100, reverse = FALSE,
                        ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "loglog",
@@ -130,18 +137,22 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
                     cancer = prob_cancer,
                     other = prob_other,
                     othertime = prob_other_time,
-                    othertime2 = prob_other_time2)
+                    othertime3 = prob_other_time3)
+
+  gaussxw <- statmod::gauss.quad(30,"legendre")
 
   probs <- lapply(1:length(expected), function(i){
     prob <- probfun(time = time, rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                     expected_haz = expected_haz[[i]], expected =  expected[[i]], reverse = reverse,
-                    pars = model.params, last.point = last.point, link = link, n = n)
+                    pars = model.params, last.point = last.point, link = link, n = n,
+                    gaussxw = gaussxw)
     res <- data.frame(prob = prob)
     if(ci){
       prob_gr <- numDeriv::jacobian(probfun, x = model.params, time = time,
                                     rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                                     expected_haz = expected_haz[[i]], expected =  expected[[i]],
-                                    last.point = last.point, link = link, reverse = reverse, n = n)
+                                    last.point = last.point, link = link, reverse = reverse, n = n,
+                                    gaussxw = gaussxw)
       res$var <- apply(prob_gr, 1, function(x) x %*% cov %*% x)
       ci1 <- get.link(link)(res$prob - qnorm(0.975) * sqrt(res$var))
       ci2 <- get.link(link)(res$prob + qnorm(0.975) * sqrt(res$var))
@@ -184,7 +195,7 @@ int.square <- function(func, time, pars, n = 100000){
   vals_pop[t_new %in% time]
 }
 
-prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n){
+prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
   if(all(time == 0)){
     return(rep(0, length(time)))
   }else{
@@ -195,7 +206,7 @@ prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars
   }
 }
 
-prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n){
+prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
   if(all(time == 0)){
     return(rep(0, length(time)))
   }else{
@@ -206,7 +217,7 @@ prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars,
   }
 }
 
-prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n){
+prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
   dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
   int_1 <- int.square(dens1, time = time, pars = pars, n = n)
   btd <- int.square(dens1, time = last.point, pars = pars, n = n)
@@ -219,13 +230,22 @@ prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, 
   get.inv.link(link)(prob)
 }
 
-prob_other_time2 <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n){
-  dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-  int_1 <- int.square(dens1, time = time, pars = pars)
-  btd <- int.square(dens1, time = last.point, pars = pars)
-  dens2 <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
-  int_2 <- int.square(dens2, time = time, pars = pars)
-  prob <- 1 - (btd - int_1) / (1 - int_1 - int_2)
-  if(reverse) prob <- 1 - prob
+prob_other_time3 <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point,
+                             link, reverse, n, gaussxw){
+  scale <- (last.point - time) / 2
+  scale2 <- (last.point + time) / 2
+  zs <- gaussxw$nodes
+  wt <- gaussxw$weights
+  eval <- rep(NA, length(time))
+  for(i in 1:length(time)){
+    points <- scale[i] * zs + scale2[i]
+    eval_gen <- exp_function(points, expected)
+    eval_rel <- rel_surv(points, pars)
+    eval_haz <- excess_haz(points, pars)
+    eval[i] <- sum(wt * (eval_gen * eval_rel * eval_haz))
+  }
+  eval_surv_t <- rel_surv(time, pars) * exp_function(time, expected)
+  prob <- scale * eval / eval_surv_t
+  if(!reverse) prob <- 1 - prob
   get.inv.link(link)(prob)
 }

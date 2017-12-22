@@ -54,14 +54,14 @@ calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, ex
 
   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))
   ests <- lapply(1:n.obs, function(i){
-    f <- function(time, q) calc.Crude(fit, time = time, type = "othertime",
+    f <- function(time, q) calc.Crude(fit, time = time, type = "othertime3",
                                       ci = F, newdata = newdata[i,,drop = F], last.point = last.point,
                                       expected = expected[i], reverse = reverse)$prob[[1]]$prob - q
     uni <- rootSolve::uniroot.all(f, lower = 0, upper = max.time, q = q)
     if(ci){
       gr <- grad(f, x = uni, q = 0)
       VAR <- calc.Crude(fit, time = uni, expected = expected[i], newdata = newdata[i,,drop = F],
-                        last.point = last.point, type = "othertime", link = "identity",
+                        last.point = last.point, type = "othertime3", link = "identity",
                         reverse = reverse)$prob[[1]]$var
       VAR2 <- gr ^ (-2) * VAR
       upper <- uni + sqrt(VAR2) * qnorm(0.975)

@@ -26,7 +26,7 @@
 #' @example inst/fit.cure.model.ex.R
 
 
-fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 = NULL,
+fit.cure.model <- function(formula, data, bhazard = NULL, formula.k1 = ~ 1, formula.k2 = NULL,
                            formula.k3 = NULL, type = "mixture",
                            dist = "weibull", link = "logit",
                            covariance = TRUE,
@@ -40,7 +40,15 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   Surv_object <- eval(formula[[2]], envir = data)
   time <- Surv_object[,1]
   event <- Surv_object[, 2]
-  bhazard.eval <- data[, bhazard]
+
+  #Create background hazard
+  if(is.null(bhazard)){
+    bhazard <- rep(0, nrow(data))
+  }else {
+    if(!is.numeric(bhazard)){
+      bhazard <- data[, bhazard]
+    }
+  }
 
   #Check if formula is NULL
   if(dist == "weibull" & is.null(formula.k2)){
@@ -62,13 +70,13 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
 
   #Prepare optimization arguments
   likelihood.pars <- list(fn = minuslog_likelihood,
-                           time = time,
-                           event = event,
-                           Xs = X.all,
-                           link = link_fun,
-                           surv_fun = surv_fun,
-                           dens_fun = dens_fun,
-                           bhazard = bhazard.eval)
+                          time = time,
+                          event = event,
+                          Xs = X.all,
+                          link = link_fun,
+                          surv_fun = surv_fun,
+                          dens_fun = dens_fun,
+                          bhazard = bhazard)
 
   if(is.null(optim.args$control$maxit)){
     optim.args$control <- list(maxit = 10000)
@@ -97,14 +105,14 @@ fit.cure.model <- function(formula, data, bhazard, formula.k1 = ~ 1, formula.k2 
   #Compute covariance
   if(covariance){
     cov <- solve(numDeriv::hessian(minuslog_likelihood,
-                                 optim.out$par,
-                                 time = time,
-                                 event = event,
-                                 X = X.all,
-                                 link = link_fun,
-                                 surv_fun = surv_fun,
-                                 dens_fun = dens_fun,
-                                 bhazard = bhazard.eval))
+                                   optim.out$par,
+                                   time = time,
+                                   event = event,
+                                   X = X.all,
+                                   link = link_fun,
+                                   surv_fun = surv_fun,
+                                   dens_fun = dens_fun,
+                                   bhazard = bhazard))
   }else{
     cov <- NULL
   }

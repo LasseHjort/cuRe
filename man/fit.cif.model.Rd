@@ -2,25 +2,33 @@
 % Please edit documentation in R/fit.cif.model.R
 \name{fit.cif.model}
 \alias{fit.cif.model}
-\title{Fit spline-based mixture cure model}
+\title{Fit spline-based cumulative incidence model}
 \usage{
-fit.cif.model(formula, data, bhazard, knots = NULL, n.knots = NULL,
-  knots.time = NULL, n.knots.time = NULL, covariance = T,
+fit.cif.model(formula, data, cens.code = 0, knots = NULL, n.knots = NULL,
+  cure = FALSE, knots.time = NULL, n.knots.time = NULL, covariance = T,
   link = "loglog", verbose = T, constr.optim = F, optim.args = NULL,
   ortho = TRUE, ini.types = c("cure", "flexpara"))
 }
 \arguments{
-\item{formula}{Formula for modelling the the cure rate. Reponse has to be of the form \code{Surv(time, status)}.}
+\item{formula}{Formula for modelling cause specific cumulative incidence function.
+A list of formulas can be provided if different modelling is applied to the causes.
+Reponse has to be of the form \code{Surv(time, status)}.}
 
-\item{data}{Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}.}
+\item{data}{Data frame in which to interpret the variables names in \code{formula}.}
 
-\item{bhazard}{Background hazard.}
+\item{cens.code}{Numeric. The value of the event indicator which indicates censoring.}
 
-\item{knots}{Knots used for the baseline hazard in the disease-specific survival function.}
+\item{knots}{Knots used for the spline baseline effect of the cumulative incidence.
+The knots are provided in a list with each entry denoting the knots corresponding to each cause.}
 
-\item{n.knots}{Number of knots for the disease-specific survival function.
-The knots are calculated as the equidistant quantiles of the uncensored event-times.
+\item{n.knots}{Number of knots for the baseline splines.
+The knots are calculated as the equidistant quantiles of the uncensored cause-specific event-times.
+\code{n.knots} are provided in a list with each entry denoting the number of knots corresponding to each cause.
 If \code{knots} is supplied, this argument will be ignored.}
+
+\item{cure}{List of logicals. If \code{TRUE}, a cure model is fitted for the cause-specific cumulative incidence,
+where cure is assumed after the last selected knot. Typically, cure is only assumed for one cumulative incidence function.
+If \code{cure} is not a list, the same option is assumed for all causes.}
 
 \item{knots.time}{A named list containing the knots of each of time-varying covariate effect.}
 
@@ -42,8 +50,6 @@ This option is only implemented for \code{linksu = loglog}.}
 
 \item{ini.types}{Character vector denoting the executed schemes for computing initial values.}
 
-\item{smooth.formula}{Formula for modelling the disease-specific survival of the uncured.}
-
 \item{type}{A character indicating the type of cure model.
 Possible values are \code{mixture} (default) and \code{nmixture}.}
 
@@ -55,74 +61,4 @@ Possible values are \code{loglog} (default), \code{logit}, and \code{probit}.}
 }
 \value{
 An object of class \code{fcm}.
-}
-\description{
-The following function fits a generalized mixture or non-mixture cure model
-using a link function for the cure rate and for the survival of the uncured, i.e.,
-\deqn{R(t|z) = \pi(z) + (1 - \pi(z)) S_u(t|z)},
-where
-\deqn{g_1[S_u(t|z)] = \eta_1(z) and g_2(\pi(z)) = \eta_2(z)}.
-}
-\examples{
-##Use data cleaned version of the colon cancer data from the rstpm2 package
-data("colonDC")
-
-##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
-                            data = colonDC, ratetable = survexp.dk)
-
-###Without covariates
-##Fit mixture cure model
-fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 5, bhazard = "bhaz")
-
-##Plot model
-plot(fit)
-plot(fit, time = seq(0, 40, length.out = 100))
-plot(fit, type = "ehaz")
-plot(fit, type = "survuncured")
-plot(fit, type = "probcure")
-
-##Predict cure rate
-predict(fit, type = "curerate")
-
-
-##Fit non-mixture cure model
-fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 5, bhazard = "bhaz", type = "nmixture")
-
-##Plot relative survival
-plot(fit)
-
-##Predict cure rate
-predict(fit, type = "curerate")
-
-###With covariates
-##Fit mixture cure model
-fit <- FlexCureModel(Surv(FUyear, status2) ~ sex, data = colonDC, n.knots = 5, bhazard = "bhaz",
-                     smooth.formula = ~ sex)
-
-##Plot model
-plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
-     time = seq(0, 15, length.out = 100), ci = F)
-plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
-     time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T)
-
-
-plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
-     time = seq(0, 15, length.out = 100), ci = F, type = "survuncured")
-plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
-     time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T, type = "survuncured")
-
-predict(fit, type = "curerate", data.frame(sex = factor("female", levels = c("male", "female"))))
-
-
-##Fit mixture cure model with time-varying covariates
-fit <- FlexCureModel(Surv(FUyear, status2) ~ age, data = colonDC, n.knots = 5, bhazard = "bhaz",
-                     n.knots.time = list(age = 3))
-
-##Plot model
-plot(fit, newdata = data.frame(age = 70))
-plot(fit, newdata = data.frame(age = 60), add = T, col = 2)
-
-plot(fit, type = "ehaz", newdata = data.frame(age = 70), ci = F)
-plot(fit, type = "ehaz", newdata = data.frame(age = 60), add = T, col = 2, ci = F)
 }

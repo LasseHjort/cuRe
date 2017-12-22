@@ -168,7 +168,7 @@ calc.lps <- function(Xs, param){
 ######Likelihood functions
 # Parametric Mixture cure model
 mixture_minuslog_likelihood <- function(param, time, event, Xs, link_fun,
-                                         surv_fun, dens_fun, bhazard){
+                                        surv_fun, dens_fun, bhazard){
 
   #Calculate linear predictors
   lps <- calc.lps(Xs, param)
@@ -488,67 +488,86 @@ rhs <- function (formula)
 
 # Cure base functions
 
-# basis_cure <- function(knots, x){
-#   nk <- length(knots)
-#   b <- matrix(nrow = length(x), ncol = nk - 1)
-#   knots_rev <- rev(knots)
-#   if (nk > 0) {
-#     b[, 1] <- 1
-#   }
-#   if (nk > 2) {
-#     for (j in 2:(nk - 1)) {
-#       lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
-#       b[, j] <- pmax(knots_rev[nk - j + 1] - x, 0)^3 - lam * pmax(knots_rev[nk] - x, 0)^3 -
-#         (1 - lam) * pmax(knots_rev[1] - x, 0)^3
-#     }
-#   }
-#   b
-# }
-#
-# dbasis_cure <- function(knots, x){
-#   nk <- length(knots)
-#   b <- matrix(nrow = length(x), ncol = nk - 1)
-#   knots_rev <- rev(knots)
-#   if (nk > 0) {
-#     b[, 1] <- 0
-#   }
-#   if (nk > 2) {
-#     for (j in 2:(nk - 1)) {
-#       lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
-#       b[, j] <- - 3 * pmax(knots_rev[nk - j + 1] - x, 0)^2 + 3 * lam * pmax(knots_rev[nk] - x, 0)^2 +
-#         3 * (1 - lam) * pmax(knots_rev[1] - x, 0)^2
-#     }
-#   }
-#   b
-# }
+basis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
+  nk <- length(knots)
+  b <- matrix(nrow = length(x), ncol = nk - 1)
+  knots_rev <- rev(knots)
+  if (nk > 0) {
+    b[, 1] <- 1
+  }
+  if (nk > 2) {
+    for (j in 2:(nk - 1)) {
+      lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
+      b[, j] <- pmax(knots_rev[nk - j + 1] - x, 0)^3 - lam * pmax(knots_rev[nk] - x, 0)^3 -
+        (1 - lam) * pmax(knots_rev[1] - x, 0)^3
+    }
+  }
+
+  if(!intercept) b <- b[,-1]
+
+  if(ortho){
+    if(is.null(R.inv)){
+      qr_decom <- qr(b)
+      b <- qr.Q(qr_decom)
+      R.inv <- solve(qr.R(qr_decom))
+    } else{
+      b <- b %*% R.inv
+    }
+  }
+  attr(b, "R.inv") <- R.inv
+  b
+
+  b
+}
+
+dbasis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
+  nk <- length(knots)
+  b <- matrix(nrow = length(x), ncol = nk - 1)
+  knots_rev <- rev(knots)
+  if (nk > 0) {
+    b[, 1] <- 0
+  }
+  if (nk > 2) {
+    for (j in 2:(nk - 1)) {
+      lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
+      b[, j] <- - 3 * pmax(knots_rev[nk - j + 1] - x, 0)^2 + 3 * lam * pmax(knots_rev[nk] - x, 0)^2 +
+        3 * (1 - lam) * pmax(knots_rev[1] - x, 0)^2
+    }
+  }
+
+  if(!intercept) b <- b[, -1]
+
+  if(ortho){
+    b <- b %*% R.inv
+  }
+  b
+}
 
 
 
-minuslog_likelihood <- function(param, time, event, b, db, bhazard,
+minuslog_likelihood <- function(param, time, event, b, db,
                                 link_fun, dlink_fun){
+
   param_list <- split(param, rep(1:length(b), sapply(b, ncol)))
-  lps <- dlps <- haz <- Fks <- delta <- vector("list", length(b))
-  for(i in 1:length(lps)){
-    lps[[i]] <- b[[i]] %*% param_list[[i]]
-    dlps[[i]] <- db[[i]] %*% param_list[[i]]
-    haz[[i]] <- exp(lps[[i]]) * dlps[[i]] / time
-    Fks[[i]] <- exp(-exp(lps[[i]]))
-    delta[[i]] <- as.numeric(event == i)
+
+  Sks <- vector("list", length(b))
+  inner_sum <- vector("list", length(b))
+  for(i in 1:length(b)){
+    lp <- b[[i]] %*% param_list[[i]]
+    dlp <- db[[i]] %*% param_list[[i]]
+    Sks[[i]] <- link_fun(lp)
+    haz <- - dlink_fun(lp) / Sks[[i]] * dlp / time
+    inner_sum[[i]] <- rep(0, length(time))
+    suppressWarnings(inner_sum[[i]][event == i] <- log(haz[event == i] * Sks[[i]][event == i]))
   }
 
-  sum_Fks <- inner_sum <- rep(NA, length(time))
-  for(j in 1:length(time)){
-    inner <- sapply(1:length(b), function(i){
-      delta[[i]][j] * (haz[[i]][j] + Fks[[i]][j])
-    })
-    inner_sum[i] <- sum(inner)
-    sum_Fks[i] <- sum(sapply(1:length(b), function(i){
-      Fks[[i]][[j]]
-    }) )
-  }
+  sum_Fks <- length(b) - do.call("+", Sks)
+  inner_sum <- do.call("+", inner_sum)
 
   event_logical <- as.numeric(event != 0)
-  -sum(inner_sum + (1 - event_logical) * sum_Fks)
+  -sum(inner_sum + (1 - event_logical) * log(1 - sum_Fks))
 }
+
+
 
 

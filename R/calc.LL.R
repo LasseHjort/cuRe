@@ -36,7 +36,7 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
                     tau = 100, ci = T, expected = NULL, ratetable = survexp.dk,
                     rmap, pars = NULL){
 
-  if(!type %in% c("ll", "mrl"))
+  if(!type %in% c("ll", "mrl", "ll2"))
     stop("Argument 'type' is wrongly specified, must be either 'll' and 'mrl'")
 
   #Replace coefficients if new ones are provided
@@ -116,26 +116,30 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
 
   .calcArea <- switch(type,
                       ll = .calcArea.LL,
+                      ll2 = .calcArea.LL2,
                       mrl = .calcArea.MRL)
 
   Ests <- lapply(1:length(expected), function(i){
     #Calculate loss of lifetime
     Est <- .calcArea(rel_surv[[i]], exp_function, time = time,
-                     tau = tau, pars = model.params, expected[[i]])
+                     tau = tau, pars = model.params, expected[[i]], gaussxw = gauss.quad(30,"legendre"))
     res <- data.frame(Est)
     names(res) <- type
     if(ci){
       #Calculate variances numerically by the delta method
       J <- numDeriv::jacobian(.calcArea, x = model.params, rel_surv = rel_surv[[i]],
                               exp_function = exp_function, time = time, tau = tau,
-                              expected = expected[[i]])
+                              expected = expected[[i]], gaussxw = gauss.quad(30,"legendre"))
       res$Var <- apply(J, MARGIN = 1, function(x) x %*% cov %*% x)
       res$lower.ci <- res[, type] - sqrt(res$Var) * qnorm(0.975)
       res$upper.ci <- res[, type] + sqrt(res$Var) * qnorm(0.975)
     }
+    if(type == "ll2"){
+      names(res)[names(res) == type] <- "ll"
+    }
     res
   })
-  all_res <- list(Ests = Ests, time = time, type = type)
+  all_res <- list(Ests = Ests, time = time, type = ifelse(type == "ll2", "ll", type), ci = ci)
   class(all_res) <- "le"
   all_res
 }
@@ -152,7 +156,7 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
 #   vals_exp / exp_function(time, expected) - vals_pop / (rel_surv(time, pars) * exp_function(time, expected))
 # }
 
-.calcArea.LL <- function(rel_surv, exp_function, time, tau, pars, expected){
+.calcArea.LL <- function(rel_surv, exp_function, time, tau, pars, expected, gaussxw){
   t_new <- sort(unique(c(time, seq(0, tau, length.out = 5000))), decreasing = T)
   df_time <- -diff(t_new)
   exp_eval <- exp_function(t_new, expected)
@@ -167,7 +171,24 @@ calc.LL <- function(fit, newdata = NULL, time = NULL, type = "ll",
   rev(vals_exp[these]) / rev(exp_eval[these]) - rev(vals_pop[these]) / rev(surv_eval[these])
 }
 
-.calcArea.MRL <- function(rel_surv, exp_function, time, tau, pars, expected){
+.calcArea.LL2 <- function(rel_surv, exp_function, time, tau, pars, expected, gaussxw){
+  scale <- (tau - time) / 2
+  scale2 <- (tau + time) / 2
+  zs <- gaussxw$nodes
+  wt <- gaussxw$weights
+  eval_rel_t <- rel_surv(time, pars)
+  eval_gen_t <- exp_function(time, expected)
+  eval <- rep(NA, length(time))
+  for(i in 1:length(time)){
+    points <- scale[i] * zs + scale2[i]
+    eval_gen <- exp_function(points, expected)
+    eval_rel <- rel_surv(points, pars)
+    eval[i] <- sum(wt * (eval_gen - eval_gen * eval_rel / eval_rel_t[i]))
+  }
+  scale * eval / eval_gen_t
+}
+
+.calcArea.MRL <- function(rel_surv, exp_function, time, tau, pars, expected, gaussxw){
   t_new <- sort(unique(c(time, seq(0, tau, length.out = 5000))), decreasing = T)
   df_time <- -diff(t_new)
   mid_points <- t_new[-length(t_new)] + diff(t_new) / 2

@@ -4,9 +4,10 @@
 \alias{fit.cure.model}
 \title{Parametric cure model}
 \usage{
-fit.cure.model(formula, data, bhazard, formula.k1 = ~1, formula.k2 = NULL,
-  formula.k3 = NULL, type = "mixture", dist = "weibull", link = "logit",
-  covariance = TRUE, optim.args = NULL)
+fit.cure.model(formula, data, bhazard = NULL, formula.k1 = ~1,
+  formula.k2 = NULL, formula.k3 = NULL, type = "mixture",
+  dist = "weibull", link = "logit", covariance = TRUE,
+  optim.args = NULL)
 }
 \arguments{
 \item{formula}{Formula for modelling the the cure fraction Reponse has to be of the form \code{Surv(time, status)}.}

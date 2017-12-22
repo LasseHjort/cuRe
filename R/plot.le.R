@@ -20,6 +20,9 @@ plot.le <- function(obj, ylim = NULL, xlim = NULL, ci = T, col = 1,
                    ll = "Loss of lifetime",
                    mrl = "Mean residual lifetime")
   }
+
+  ci <- ci & obj$ci
+
   if(length(col) == 1){
     col <- rep(col, length(obj$Ests))
   }
