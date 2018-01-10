@@ -10,6 +10,11 @@ predict.fcm2 <- function (object, newdata = NULL,
   type <- match.arg(type)
   args <- object$args
 
+  if(!is.null(pars)){
+    object$coefs <- pars[1:length(object$coefs)]
+    object$coefs.spline <- pars[(length(object$coefs) + 1):length(pars)]
+  }
+
   calcX <- !is.null(newdata)
   if (is.null(newdata)) {
     if(indi){
@@ -40,6 +45,9 @@ predict.fcm2 <- function (object, newdata = NULL,
       time <- seq(1e-05, max(object$time), length.out = 100)
     }else{
       time <- eval(object$timeExpr, newdata, parent.frame())
+    }
+    if(type == "curerate"){
+      time <- 1
     }
   }
 
@@ -185,11 +193,11 @@ local <- function(object, newdata, type = "surv", var.link = function(x) x,
 
   pi <- get.link(link.type.cr)(eta_pi)
   Su <- link.surv$ilink(eta)
-  hu <- link.surv$h(eta, etaD)
+  hazu <- link.surv$h(eta, etaD)
   Hu = link.surv$H(eta)
   S <- if(object$type == "mixture") pi + (1 - pi) * Su else pi ^ (1 - Su)
   dSu <- link.surv$gradS(eta, etaD)
-  h <- - (1 - pi) * dSu / Su
+  haz <- - (1 - pi) * dSu / Su
   if (!object$excess && any(h < 0))
     warning(sprintf("Predicted hazards less than zero (n=%i).",
                     sum(h < 0)))
@@ -197,16 +205,15 @@ local <- function(object, newdata, type = "surv", var.link = function(x) x,
   Sigma = object$covariance
   est <- switch(type, linkS = eta, linkpi = eta_pi, curerate = pi,
                 probcure = pi / S, survuncured = Su,
-                hazarduncured = hu, cumhazuncured = Hu,
-                densityuncured = Su * hu, failuncured = 1 - Su,
-                oddsuncured = (1 - Su)/Su, loghazarduncured = log(hu),
+                hazarduncured = hazu, cumhazuncured = Hu,
+                densityuncured = Su * hazu, failuncured = 1 - Su,
+                oddsuncured = (1 - Su)/Su, loghazarduncured = log(hazu),
                 surv = S, hazard = haz, density = S * haz, fail = 1 - S,
                 loghazard = log(haz), odds = (1 - S) / S, cumhaz = H)
 
   est <- var.link(est)
   return(est)
 }
-
 
 
 

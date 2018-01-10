@@ -2,7 +2,7 @@
 #'
 #' Function for computing crude event probabilties from relative survival models.
 #'
-#' @param fit Fitted model to do predictions from. Possible classes are
+#' @param object Fitted model to do predictions from. Possible classes are
 #' \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
@@ -42,7 +42,7 @@
 #' @import statmod
 
 calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, last.point = 100, reverse = FALSE,
-                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "loglog"){
+                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "loglog", n = 100){
 
   #Time points at which to evaluate integral
   if(is.null(time)){
@@ -54,12 +54,12 @@ calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, las
 
     #Extract expected survival function
     if(is.null(newdata)){
-      if(any(class(fit) %in% c("stpm2", "pstpm2"))){
-        data <- fit@data
+      if(any(class(object) %in% c("stpm2", "pstpm2"))){
+        data <- object@data
         #if(class(data) == "list") data <- do.call(cbind, data)
         newdata <- data.frame(arbritary_var = 0)
       }else{
-        data <- fit$data
+        data <- object$data
       }
       expected <- list(do.call("survexp",
                                list(formula = ~ 1, rmap = substitute(rmap),
@@ -77,23 +77,23 @@ calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, las
   }
 
   #Extract relative survival function
-  if(any(class(fit) %in% c("stpm2", "pstpm2"))){
-    if(class(fit) == "stpm2"){
-      response_name <- all.vars(fit@call.formula)[1]
+  if(any(class(object) %in% c("stpm2", "pstpm2"))){
+    if(class(object) == "stpm2"){
+      response_name <- all.vars(object@call.formula)[1]
     }else{
-      response_name <- all.vars(fit@fullformula)[1]
+      response_name <- all.vars(object@fullformula)[1]
     }
 
-    fit_tmp <- fit
+    object_tmp <- object
     rel_surv <- lapply(1:length(expected), function(i){
       function(t, pars){
         #res <- rep(NA, length(t))
-        fit_tmp@fullcoef <- pars
+        object_tmp@fullcoef <- pars
         #wh <- which(t != 0)
         suppressWarnings(newdata_tmp <- cbind(newdata[i,,drop = F], t))
         names(newdata_tmp)[ncol(newdata_tmp)] <- response_name
         #res[wh] <-
-        as.numeric(predict(fit_tmp, newdata = newdata_tmp, type = "surv"))
+        as.numeric(predict(object_tmp, newdata = newdata_tmp, type = "surv"))
         #res[-wh] <- 1
         #res
       }
@@ -101,27 +101,27 @@ calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, las
 
     excess_haz <- lapply(1:length(expected), function(i){
       function(t, pars){
-        fit_tmp@fullcoef <- pars
+        object_tmp@fullcoef <- pars
         suppressWarnings(newdata_tmp <- cbind(newdata[i,,drop = F], t))
         names(newdata_tmp)[ncol(newdata_tmp)] <- response_name
-        as.numeric(predict(fit_tmp, newdata = newdata_tmp, type = "hazard"))
+        as.numeric(predict(object_tmp, newdata = newdata_tmp, type = "hazard"))
       }
     })
-    model.params <- fit@fullcoef
-    cov <- fit@vcov
+    model.params <- object@fullcoef
+    cov <- object@vcov
   }else{
     rel_surv <- lapply(1:length(expected), function(i){
-      function(t, pars) predict(fit, newdata = newdata[i,, drop = F],
-                                time = t, pars = pars, ci = F)$res[[1]]$Est
+      function(t, pars) predict(object, newdata = newdata[i,, drop = F],
+                                time = t, pars = pars, ci = "n")[[1]]$Estimate
     })
 
     excess_haz <- lapply(1:length(expected), function(i){
-      function(t, pars) predict(fit, newdata = newdata[i,, drop = F],
-                                time = t, pars = pars, type = "ehaz",
-                                ci = F)$res[[1]]$Est
+      function(t, pars) predict(object, newdata = newdata[i,, drop = F],
+                                time = t, pars = pars, type = "hazard",
+                                ci = "n")[[1]]$Estimate
     })
-    model.params <- c(unlist(fit$coefs), fit$coefs.spline)
-    cov <- fit$covariance
+    model.params <- c(unlist(object$coefs), object$coefs.spline)
+    cov <- object$covariance
   }
 
   expected_haz <- lapply(1:length(expected), function(i){
@@ -133,25 +133,28 @@ calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, las
 
 
   probfun <- switch(type,
-                    cancer = prob_cancer,
-                    other = prob_other,
-                    othertime = prob_other_time,
-                    othertime3 = prob_other_time3)
+                    cancer = prob_cuminc,
+                    other = prob_cuminc,
+                    othertime = cprob_time)
 
-  gaussxw <- legendre.quadrature.rule.200
+  cs_haz <- switch(type,
+                   cancer = excess_haz,
+                   other = expected_haz,
+                   othertime = excess_haz)
+
+  gaussxw <- statmod::gauss.quad(n)
 
   probs <- lapply(1:length(expected), function(i){
-    prob <- probfun(time = time, rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
-                    expected_haz = expected_haz[[i]], expected =  expected[[i]], reverse = reverse,
-                    pars = model.params, last.point = last.point, link = link, n = n,
+    prob <- probfun(time = time, rel_surv = rel_surv[[i]], cs_haz = cs_haz[[i]],
+                    expected =  expected[[i]], reverse = reverse,
+                    pars = model.params, last.point = last.point, link = link,
                     gaussxw = gaussxw)
     res <- data.frame(prob = prob)
     if(ci){
       prob_gr <- numDeriv::jacobian(probfun, x = model.params, time = time,
-                                    rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
-                                    expected_haz = expected_haz[[i]], expected =  expected[[i]],
-                                    last.point = last.point, link = link, reverse = reverse, n = n,
-                                    gaussxw = gaussxw)
+                                    rel_surv = rel_surv[[i]], cs_haz = cs_haz[[i]],
+                                    expected =  expected[[i]], last.point = last.point,
+                                    link = link, reverse = reverse, gaussxw = gaussxw)
       res$var <- apply(prob_gr, 1, function(x) x %*% cov %*% x)
       ci1 <- get.link(link)(res$prob - qnorm(0.975) * sqrt(res$var))
       ci2 <- get.link(link)(res$prob + qnorm(0.975) * sqrt(res$var))
@@ -171,66 +174,87 @@ calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, las
 }
 
 
-#Integration function using the trapez method
-int.trapez <- function(func, time, pars, n = 10000){
-  eps <- .Machine$double.eps
-  t_new <- sort(unique(c(seq(eps, max(time), length.out = n), time)))
-  t_new <- t_new[t_new != 0]
-  df_time <- diff(t_new)
-  surv_eval <- func(t_new, pars)
-  surv_diff <- diff(surv_eval)
-  inner <- abs(surv_diff) / 2 + pmin(surv_eval[-length(surv_eval)], surv_eval[-1])
-  vals_pop <- cumsum(c(0, inner * df_time))
-  if(any(time == 0)) t_new[1] <- 0
-  vals_pop[t_new %in% time]
-}
+# #Integration function using the trapez method
+# int.trapez <- function(func, time, pars, n = 10000){
+#   eps <- .Machine$double.eps
+#   t_new <- sort(unique(c(seq(eps, max(time), length.out = n), time)))
+#   t_new <- t_new[t_new != 0]
+#   df_time <- diff(t_new)
+#   surv_eval <- func(t_new, pars)
+#   surv_diff <- diff(surv_eval)
+#   inner <- abs(surv_diff) / 2 + pmin(surv_eval[-length(surv_eval)], surv_eval[-1])
+#   vals_pop <- cumsum(c(0, inner * df_time))
+#   if(any(time == 0)) t_new[1] <- 0
+#   vals_pop[t_new %in% time]
+# }
 
-#Integration function using the rectangular method
-int.square <- function(func, time, pars, n = 100000){
-  t_new <- unique(sort(c(seq(0, max(time), length.out = n), time)))
-  df_time <- diff(t_new)
-  mid_points <- t_new[-length(t_new)] + diff(t_new) / 2
-  vals_pop <- c(0, cumsum(func(mid_points, pars) * df_time))
-  vals_pop[t_new %in% time]
-}
+# #Integration function using the rectangular method
+# int.square <- function(func, time, pars, n = 100000){
+#   t_new <- unique(sort(c(seq(0, max(time), length.out = n), time)))
+#   df_time <- diff(t_new)
+#   mid_points <- t_new[-length(t_new)] + diff(t_new) / 2
+#   vals_pop <- c(0, cumsum(func(mid_points, pars) * df_time))
+#   vals_pop[t_new %in% time]
+# }
+#
+# prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
+#   if(all(time == 0)){
+#     return(rep(0, length(time)))
+#   }else{
+#     dens <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
+#     prob <- int.square(dens, time = time, pars = pars, n = n)
+#     if(reverse) prob <- 1 - prob
+#     get.inv.link(link)(prob)
+#   }
+# }
+#
+# prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
+#   if(all(time == 0)){
+#     return(rep(0, length(time)))
+#   }else{
+#     dens <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
+#     prob <- int.square(dens, time = time, pars = pars, n = n)
+#     if(reverse) prob <- 1 - prob
+#     get.inv.link(link)(prob)
+#   }
+# }
+#
+# prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
+#   dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
+#   int_1 <- int.square(dens1, time = time, pars = pars, n = n)
+#   btd <- int.square(dens1, time = last.point, pars = pars, n = n)
+#   wh <- time == 0
+#   prob_t <- rep(NA, length(time))
+#   prob_t[!wh] <- rel_surv(time[!wh], pars) * exp_function(time[!wh], expected)
+#   prob_t[wh] <- 1
+#   prob <- 1 - (btd - int_1) / prob_t
+#   if(reverse) prob <- 1 - prob
+#   get.inv.link(link)(prob)
+# }
 
-prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
-  if(all(time == 0)){
-    return(rep(0, length(time)))
-  }else{
-    dens <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-    prob <- int.square(dens, time = time, pars = pars, n = n)
-    if(reverse) prob <- 1 - prob
-    get.inv.link(link)(prob)
+prob_cuminc <- function(time, rel_surv, cs_haz, expected, pars,
+                        last.point, link, reverse, gaussxw){
+  scale <- time / 2
+  eval <- rep(NA, length(time))
+  for(i in 1:length(time)){
+    if(time[i] == 0){
+      eval[i] <- 0
+    } else {
+      points <- scale[i] * (gaussxw$nodes + 1)
+      eval_gen <- exp_function(points, expected)
+      eval_rel <- rel_surv(points, pars)
+      eval_haz <- cs_haz(points, pars)
+      eval[i] <- sum(gaussxw$weights * (eval_gen * eval_rel * eval_haz))
+    }
   }
-}
-
-prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
-  if(all(time == 0)){
-    return(rep(0, length(time)))
-  }else{
-    dens <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
-    prob <- int.square(dens, time = time, pars = pars, n = n)
-    if(reverse) prob <- 1 - prob
-    get.inv.link(link)(prob)
-  }
-}
-
-prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
-  dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-  int_1 <- int.square(dens1, time = time, pars = pars, n = n)
-  btd <- int.square(dens1, time = last.point, pars = pars, n = n)
-  wh <- time == 0
-  prob_t <- rep(NA, length(time))
-  prob_t[!wh] <- rel_surv(time[!wh], pars) * exp_function(time[!wh], expected)
-  prob_t[wh] <- 1
-  prob <- 1 - (btd - int_1) / prob_t
-  if(reverse) prob <- 1 - prob
+  prob <- scale * eval
+  prob[time == 0] <- 0
   get.inv.link(link)(prob)
 }
 
-prob_other_time3 <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point,
-                             link, reverse, n, gaussxw){
+
+cprob_time <- function(time, rel_surv, cs_haz, expected, pars, last.point,
+                       link, reverse, n, gaussxw){
   scale <- (last.point - time) / 2
   scale2 <- (last.point + time) / 2
   zs <- gaussxw$nodes
@@ -240,7 +264,7 @@ prob_other_time3 <- function(time, rel_surv, excess_haz, expected_haz, expected,
     points <- scale[i] * zs + scale2[i]
     eval_gen <- exp_function(points, expected)
     eval_rel <- rel_surv(points, pars)
-    eval_haz <- excess_haz(points, pars)
+    eval_haz <- cs_haz(points, pars)
     eval[i] <- sum(wt * (eval_gen * eval_rel * eval_haz))
   }
   eval_surv_t <- rel_surv(time, pars) * exp_function(time, expected)
