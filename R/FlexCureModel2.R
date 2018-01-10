@@ -40,100 +40,146 @@
 #' @example inst/FlexCureModel.ex.R
 
 
-
-FlexCureModel <- function(formula, data, bhazard = NULL, smooth.formula = ~ 1,
-                          knots = NULL, n.knots = 3,
-                          knots.time = NULL, n.knots.time = NULL,
-                          covariance = T, type = "mixture", linkpi = "logit",
-                          linksu = "loglog", verbose = T, constr.optim = F,
-                          optim.args = NULL, ortho = TRUE,
-                          ini.types = c("cure", "flexpara")){
+FlexCureModel2 <- function(formula, data, smooth.formula = NULL, smooth.args = NULL,
+                           df = 3, logH.args = NULL, logH.formula = NULL, tvc = NULL,
+                           tvc.formula = NULL, bhazard = NULL, cr.formula = ~ 1,
+                           type = "mixture",
+                           link.type.cr = c("logit", "loglog", "identity"),
+                           link.type = c("PH", "PO", "probit", "AH", "AO"),
+                           init = NULL, timeVar = "",
+                           covariance = T, verbose = T,
+                           control = list(maxit = 10000, method = c("Nelder-Mead")),
+                           ini.types = c("cure", "flexpara"), cure = FALSE){
 
   if(!type %in% c("mixture", "nmixture"))
-    stop("Wrong specication of argument type, must be either 'mixture' or 'nmixture'")
+    stop("Wrong specication of argument 'type', must be either 'mixture' or 'nmixture'")
 
-  #Extract relevant variables
-  times <- eval(formula[[2]][[2]], envir = data)
-  event <- eval(formula[[2]][[3]], envir = data)
-  d.times <- times[event == 1]
+  link.type <- match.arg(link.type)
+  link.surv <- switch(link.type, PH = rstpm2:::link.PH, PO = rstpm2:::link.PO, probit = rstpm2:::link.probit,
+                      AH = rstpm2:::link.AH)
 
-  #Caculate placement of knots and establish basis matrices
-  if(is.null(knots)){
-    bd_knots <- log(range(d.times))
-    inner_knots <- log(quantile(d.times, 1 / (n.knots - 1)*1:(n.knots - 2)))
-    knots <- sort(c(bd_knots, inner_knots))
-  }else{
-    knots <- sort(knots)
-    bd_knots <- range(knots)
-    inner_knots <- knots[-c(1, length(knots))]
+  link.type.cr <- match.arg(link.type.cr)
+
+  if (!is.null(smooth.formula) && is.null(logH.formula))
+    logH.formula <- smooth.formula
+  if (!is.null(smooth.args) && is.null(logH.args))
+    logH.args <- smooth.args
+
+  eventInstance <- eval(rstpm2:::lhs(formula),envir = data)
+  stopifnot(length(rstpm2:::lhs(formula)) >= 2)
+  eventExpr <- rstpm2:::lhs(formula)[[length(rstpm2:::lhs(formula))]]
+  delayed <- length(rstpm2:::lhs(formula)) >= 4
+  surv.type <- attr(eventInstance, "type")
+  if (surv.type %in% c("interval2", "left", "mstate"))
+    stop("stpm2 not implemented for Surv type ", surv.type,
+         ".")
+
+  counting <- attr(eventInstance, "type") == "counting"
+  interval <- attr(eventInstance, "type") == "interval"
+  timeExpr <- rstpm2:::lhs(formula)[[ifelse(delayed, 3, 2)]]
+  if (timeVar == "")
+    timeVar <- all.vars(timeExpr)
+
+  if (is.null(logH.formula) && is.null(logH.args)) {
+    logH.args$df <- df
+    if (cure)
+      logH.args$cure <- cure
+  }
+  if (is.null(logH.formula))
+    logH.formula <- as.formula(call("~", as.call(c(quote(nsx),
+                                                   call("log", timeExpr), rstpm2:::vector2call(logH.args)))))
+  if (is.null(tvc.formula) && !is.null(tvc)) {
+    tvc.formulas <- lapply(names(tvc), function(name) call(":",
+                                                           as.name(name),
+                                                           as.call(c(quote(nsx),
+                                                                     call("log",
+                                                                          timeExpr),
+                                                                     rstpm2:::vector2call(if (cure) list(cure = cure,
+                                                                                                         df = tvc[[name]]) else list(df = tvc[[name]]))))))
+
+    if (length(tvc.formulas) > 1)
+      tvc.formulas <- list(Reduce(rstpm2:::`%call+%`, tvc.formulas))
+    tvc.formula <- as.formula(call("~", tvc.formulas[[1]]))
+  }
+  if (!is.null(tvc.formula)) {
+    rstpm2:::rhs(logH.formula) <- rstpm2:::rhs(logH.formula) %call+% (rstpm2:::rhs(tvc.formula))
   }
 
-  #Evaluate baseline model matrices
-  b <- basis(knots = knots, x = log(times), ortho = ortho)
-  colnames(b) <- paste0("basis(knots = knots, x = log(times), ortho = ortho)", 1:ncol(b))
-  R.inv <- attr(b, "R.inv")
-  db <- dbasis(knots = knots, log(times), ortho = ortho, R.inv = R.inv)
+  full.formula <- formula
+  rstpm2:::rhs(full.formula) <- rstpm2:::rhs(formula) %call+% rstpm2:::rhs(logH.formula)
 
-  #Calculate time-varying knots
-  if( !is.null(n.knots.time) | !is.null(knots.time) ){
-    if( is.null(knots.time) ){
-      vars <- names(n.knots.time)
-      knots.time <- lapply(vars, function(x){
-        bd_knots <- range(d.times)
-        if( n.knots.time[[x]] > 2 ){
-          inner_knots <- quantile(d.times, 1 / (n.knots.time[[x]] - 1)*1:(n.knots.time[[x]] - 2))
-          log(sort(c(bd_knots, inner_knots)))
-        } else {
-          log(bd_knots)
-        }
-      })
-    }
-    b_list <- lapply(knots.time, basis, x = log(times), ortho = ortho)
-    R.inv_list <- lapply(b_list, attr, "R.inv")
-    db_list <- lapply(1:length(knots.time), function(i){
-      dbasis(x = log(times), knots = knots.time[[i]], ortho = ortho, R.inv = R.inv_list[[i]])
-    })
-    vars2 <- c(vars)
-    tvc.formula <- as.formula(paste0("~ ", paste0(vars2, collapse = " + ")))
+  .include <- apply(model.matrix(formula, data, na.action = na.pass),
+                    1, function(row) !any(is.na(row))) & !is.na(eval(eventExpr,
+                                                                     data)) & !is.na(eval(timeExpr, data))
+  data <- data[.include, , drop = FALSE]
+  Call <- match.call()
+  mf <- match.call(expand.dots = FALSE)
+  m <- match(c("formula", "data", "subset", "contrasts", "weights"),
+             names(mf), 0L)
+  mf <- mf[c(1L, m)]
+  time <- eval(timeExpr, data, parent.frame())
+  if (any(time > 0 & time < 1e-04))
+    warning("Some event times < 1e-4: consider transforming time to avoid problems with finite differences")
+  time0Expr <- NULL
+  if (delayed) {
+    time0Expr <- rstpm2:::lhs(formula)[[2]]
+    if (time0Var == "")
+      time0Var <- all.vars(time0Expr)
+    time0 <- eval(time0Expr, data, parent.frame())
+    if (any(time0 > 0 & time0 < 1e-04))
+      warning("Some entry times < 1e-4: consider transforming time to avoid problems with finite differences")
+  }
+  event <- eval(eventExpr, data)
+  event <- if (length(unique(event)) == 1){
+    rep(TRUE, length(event))
   } else {
-    tvc.formula <- ~ 1
-    R.inv_list <- NULL
+    event <- event > min(event)
   }
 
-  #Get time-varying design matrices
-  X_time <- model.matrix(tvc.formula, data = data)[,-1, drop = FALSE]
-  if(ncol(X_time) > 0){
-    for(i in 1:ncol(X_time)){
-      colnames(b_list[[i]]) <- paste0("basis(knots = knots, x = log(times), ortho = ortho)",
-                                      1:ncol(b_list[[i]]), ":",
-                                      colnames(X_time)[i])
-      b_list[[i]] <- b_list[[i]] * X_time[,i]
-      db_list[[i]] <- db_list[[i]] * X_time[,i]
-    }
-    b_time <- do.call(cbind, b_list)
-    db_time <- do.call(cbind, db_list)
-  }else{
-    b_time <- NULL
-    db_time <- NULL
-    #tvc.formula <- NULL
-  }
+  # if (!interval) {
+  #   coxph.call <- mf
+  #   coxph.call[[1L]] <- as.name("coxph")
+  #   coxph.call$model <- TRUE
+  #   coxph.obj <- eval(coxph.call, envir = parent.frame())
+  #   y <- model.extract(model.frame(coxph.obj), "response")
+  #   data$logHhat <- pmax(-18, link.surv$link(rstpm2:::Shat(coxph.obj)))
+  # }
+  # if (interval) {
+  #   survreg.call <- mf
+  #   survreg.call[[1L]] <- as.name("survreg")
+  #   survreg.obj <- eval(survreg.call, envir = parent.frame())
+  #   weibullShape <- 1/survreg.obj$scale
+  #   weibullScale <- predict(survreg.obj)
+  #   y <- model.extract(model.frame(survreg.obj), "response")
+  #   data$logHhat <- pmax(-18, link$link(pweibull(time, weibullShape,
+  #                                                weibullScale, lower.tail = FALSE)))
+  # }
+  # lm.call <- mf
+  # lm.call[[1L]] <- as.name("lm")
+  # lm.formula <- full.formula
+  # rstpm2:::lhs(lm.formula) <- quote(logHhat)
+  # lm.call$formula <- lm.formula
+  # dataEvents <- data[event, ]
+  # if (interval)
+  #   dataEvents <- data
+  # lm.call$data <- quote(dataEvents)
+  # lm.obj <- eval(lm.call)
+  # mt <- terms(lm.obj)
+  # mf <- model.frame(lm.obj)
 
-  #Construct design matrix
-  X <- model.matrix(smooth.formula, data = data)
-  b <- cbind(b, X[,-1, drop = FALSE], b_time)
-  db <- cbind(db, matrix(0, ncol = ncol(X) - 1, nrow = nrow(X)), db_time)
-  X <- model.matrix(formula, data = data)
 
+  lm.call <- mf
+  lm.call[[1L]] <- as.name("lm")
+  lm.formula <- full.formula
+  rstpm2:::lhs(lm.formula) <- quote(arbri)
+  lm.call$formula <- lm.formula
+  dataEvents <- data[event, ]
+  dataEvents$arbri <- rnorm(nrow(dataEvents))
+  if (interval)
+    dataEvents <- data
+  lm.call$data <- quote(dataEvents)
+  lm.obj <- eval(lm.call)
 
-  #Extract link function
-  link_fun_pi <- get.link(linkpi)
-  link_fun_su <- get.link(linksu)
-  dlink_fun_su <- get.dlink(linksu)
-
-  #Extract minus log likelihood function
-  minusloglik <- switch(type,
-                        mixture = flexible_mixture_minuslog_likelihood,
-                        nmixture = flexible_nmixture_minuslog_likelihood)
 
   #Create background hazard
   if(is.null(bhazard)){
@@ -143,84 +189,124 @@ FlexCureModel <- function(formula, data, bhazard = NULL, smooth.formula = ~ 1,
       bhazard <- data[, bhazard]
     }
   }
+  excess <- !all(bhazard == 0)
+
 
   if(length(bhazard) != nrow(data))
     stop("Length of bhazard is not the same as nrow(data)")
 
-  #Prepare optimization arguments
-  likelihood.pars <- list(time = times,
-                          event = event, X = X,
-                          b = b, db = db, bhazard = bhazard,
-                          link_fun_pi = link_fun_pi,
-                          link_fun_su = link_fun_su,
-                          dlink_fun_su = dlink_fun_su)
-
-  if(is.null(optim.args$control$maxit)){
-    optim.args$control <- list(maxit = 10000)
+  lpfunc <- function(delta, fit, dataset, var) {
+    dataset[[var]] <- dataset[[var]] + delta
+    rstpm2:::lpmatrix.lm(fit, dataset)
   }
 
+  transX <- function(X, data) X
+  transXD <- function(XD) XD
 
-  #Generate initial values if these are not provided by the user
-  if(is.null(optim.args$par)){
+
+  if (!interval) {
+    X <- rstpm2:::lpmatrix.lm(lm.obj, data)
+    if (link.type == "AH") {
+      datat0 <- data
+      datat0[[timeVar]] <- 0
+      index0 <- which.dim(X - lpmatrix.lm(lm.obj, datat0))
+      transX <- function(X, data) {
+        datat0 <- data
+        datat0[[timeVar]] <- 0
+        Xt0 <- lpmatrix.lm(lm.obj, datat0)
+        (X - Xt0)[, index0, drop = FALSE]
+      }
+      transXD <- function(XD) XD[, index0, drop = FALSE]
+      init <- init[index0]
+    }
+    X <- transX(X, data)
+    XD <- rstpm2:::grad(lpfunc, 0, lm.obj, data, timeVar)
+    XD <- transXD(matrix(XD, nrow = nrow(X)))
+    X1 <- matrix(0, nrow(X), ncol(X))
+    X0 <- matrix(0, 1, ncol(X))
+    if (delayed && all(time0 == 0))
+      delayed <- FALSE
+    if (delayed) {
+      ind0 <- time0 > 0
+      map0 <- vector("integer", nrow(X))
+      map0[ind0] <- as.integer(1:sum(ind0))
+      map0[!ind0] <- NaN
+      which0 <- 1:nrow(X)
+      which0[!ind0] <- NaN
+      data0 <- data[ind0, , drop = FALSE]
+      data0[[timeVar]] <- data0[[time0Var]]
+      X0 <- transX(lpmatrix.lm(lm.obj, data0), data0)
+      wt0 <- wt[ind0]
+      rm(data0)
+    }
+  }
+  else {
+    ttype <- eventInstance[, 3]
+    X1 <- transX(lpmatrix.lm(lm.obj, data), data)
+    data0 <- data
+    data0[[timeVar]] <- data0[[time0Var]]
+    X <- transX(lpmatrix.lm(lm.obj, data0), data0)
+    XD <- grad(lpfunc, 0, lm.obj, data0, timeVar)
+    XD <- transXD(matrix(XD, nrow = nrow(X)))
+    X0 <- matrix(0, nrow(X), ncol(X))
+    rm(data0)
+  }
+
+  X.cr <- model.matrix(cr.formula, data = data)
+
+  if(is.null(init)){
     if(verbose) cat("Finding initial values... ")
-    inivalues <- lapply(ini.types,
-                        function(ini.type) get.ini.values(smooth.formula = smooth.formula,
-                                                          tvc.formula =  tvc.formula,
-                                                          data = data,
-                                                          bhazard = bhazard,
-                                                          linkpi = linkpi,
-                                                          linksu = linksu,
-                                                          formula = formula,
-                                                          type = type,
-                                                          times = times,
-                                                          event = event,
-                                                          n.knots.time = n.knots.time,
-                                                          knots.parse = knots,
-                                                          X = X, b = b,
-                                                          method = ini.type))
-  }else{
+    init <- vector("list", length(ini.types))
+    for(i in 1:length(init)){
+      args <- list(formula = formula, data = data, smooth.formula = smooth.formula,
+                   logH.formula = logH.formula, tvc.formula = tvc.formula, cr.formula = cr.formula,
+                   full.formula = full.formula, X = X, X.cr = X.cr,
+                   bhazard = bhazard, type = type, link.type.cr = link.type.cr,
+                   link.surv = link.surv, time = time, timeExpr = as.character(timeExpr),
+                   lm.obj = lm.obj, method = ini.types[i])
+      init[[i]] <- do.call(get.init, args)
+    }
+  } else {
     if(verbose) cat("Initial values provided by the user... ")
-    inivalues <- optim.args$par
-    optim.args <- optim.args[-which(names(optim.args) == "par")]
   }
 
-  optim.pars <- c(optim.args, likelihood.pars)
+
+  #Extract minus log likelihood function
+  minusloglik <- switch(type,
+                        mixture = flexible_mixture_minuslog_likelihood2,
+                        nmixture = flexible_nmixture_minuslog_likelihood2)
+
+  #Prepare optimization arguments
+  args <- list(event = event, X = X, XD = XD, X.cr = X.cr,
+               bhazard = bhazard, link.type.cr = link.type.cr,
+               link.surv = link.surv)
+
+  if(is.null(control$maxit)){
+    control$maxit <- 10000
+  }
+
+  optim.args <- c(control = list(control), args)
 
   #Test if initial values are within the feasible region
-  ini.eval <- sapply(inivalues, function(inival) do.call(minusloglik, c(likelihood.pars, list(inival))))
+  ini.eval <- sapply(init, function(inival) do.call(minusloglik, c(args, list(inival))))
   run.these <- !is.na(ini.eval)
+
+  if(all(!run.these))
+    stop("Initial values are outside feasible region")
 
   if(verbose) cat("Completed!\nFitting the model... ")
 
-  #Fit each model
-  if(constr.optim){
-    if(constr.optim & linksu != "loglog"){
-      stop("Constrained optimization only works for linksu = 'loglog'")
-    }
-    optim.pars$ui <- cbind(matrix(0, nrow = nrow(X), ncol(X)), db)
-    optim.pars$ci <- .Machine$double.eps
-    optim.pars$f <- minusloglik
-    optim.pars["grad"] <- list(NULL)
-
-    res_list <- lapply(inivalues[run.these], function(inival){
-      optim.pars$theta <- inival
-      suppressWarnings(do.call(constrOptim, optim.pars))
-    })
-
-  }else{
-    optim.pars$fn <- minusloglik
-    res_list <- lapply(inivalues[run.these], function(inival){
-      optim.pars$par <- inival
-      suppressWarnings(do.call(optim, optim.pars))
-    })
-  }
+  optim.args$fn <- minusloglik
+  res_list <- lapply(init[run.these], function(inival){
+    optim.args$par <- inival
+    suppressWarnings(do.call(optim, optim.args))
+  })
 
   #Choose the best model according to the maximum likelihood estimate
   MLs <- sapply(res_list, function(x) tail(x$value, 1))
   wh <- which.min(MLs)
   res <- res_list[[wh]]
 
-  #names(res$par) <- gsub("spline_", "", names(res$par))
   if(res$convergence != 0){
     warning("Convergence not reached")
   }
@@ -228,156 +314,106 @@ FlexCureModel <- function(formula, data, bhazard = NULL, smooth.formula = ~ 1,
 
   #Compute the covariance matrix matrix
   if(covariance){
-    cov <- solve(numDeriv::hessian(minusloglik, res$par,
-                                   time = times, event = event,
-                                   X = X, b = b, db = db,
-                                   bhazard = bhazard,
-                                   link_fun_pi = link_fun_pi,
-                                   link_fun_su = link_fun_su,
-                                   dlink_fun_su = dlink_fun_su))
+    args$x0 <- res$par
+    args$f <- minusloglik
+    hes <- do.call(pracma::hessian, args)
+    cov <- solve(hes)
+    if(any(is.na(cov))){
+      warning("Hessian is not invertible!")
+    }
   }else{
     cov <- NULL
   }
 
   #Output the results
-  L <- list(formula = formula,
-            data = data,
-            coefs = res$par[1:ncol(X)],
-            coefs.spline = res$par[(ncol(X) + 1):length(res$par)],
-            knots = knots, knots.time = knots.time,
-            NegMaxLik = min(MLs), covariance = cov, ci = covariance,
-            tvc.formula = tvc.formula, formula = formula,
-            formula_main = smooth.formula, type = type,
-            link_fun_pi = link_fun_pi,
-            link_fun_su = link_fun_su,
-            dlink_fun_su = dlink_fun_su,
-            linkpi = linkpi, linksu = linksu,
-            R.inv = R.inv, R.inv_list = R.inv_list, ortho = ortho,
-            df = length(res$par) - 1, NegMaxLiks = MLs, optim.pars = optim.pars,
-            times = times, constr.optim = constr.optim)
+  L <- list(formula = formula, smooth.formula = smooth.formula, tvc.formula = tvc.formula,
+            logH.formula = logH.formula, cr.formula = cr.formula,
+            coefs = res$par[1:ncol(X.cr)],
+            coefs.spline = res$par[(ncol(X.cr) + 1):length(res$par)],
+            data = data, NegMaxLik = min(MLs), covariance = cov, ci = covariance,
+            type = type, NegMaxLiks = MLs, optim.pars = optim.args[c("control", "fn")],
+            args = args, timeExpr = timeExpr, lm.obj = lm.obj, link.type.cr = link.type.cr,
+            link.surv = link.surv, excess = excess, timeVar = timeVar, transX = transX, transXD = transXD,
+            time = time, event = event, eventExpr = eventExpr)
 
-  class(L) <- c("fcm", "cuRe")
+  class(L) <- c("fcm2", "cuRe")
   L
 }
 
 
 #Function for computing initial values
-get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, linksu, formula, type,
-                           times, event, n.knots.time, knots.parse, X, b, method = "cure"){
+get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, cr.formula, full.formula,
+                     bhazard, type, link.type.cr, link.surv, timeExpr, time, lm.obj, X, X.cr, method){
+
+  if(!method %in% c("cure", "flexpara")){
+    stop("Argument method should be either 'cure' or 'flexpara'")
+  }
+
   if(method == "cure"){
 
-    #Merge smooth.formula with variables in time-varying effects
-    vars <- all.vars(tvc.formula)
+    formula.pi <- cr.formula
+    rstpm2:::lhs(formula.pi) <- rstpm2:::lhs(formula)
+    formula.k1 <- formula
+    rstpm2:::lhs(formula.k1) <- NULL
 
-    formula.2 <- as.formula(paste0(Reduce(paste, deparse(smooth.formula)),
-                                   ifelse(length(vars), " + ", ""),
-                                   vars,
-                                   collapse = " + "))
-
-    formula.new <- as.formula(paste0(deparse(lhs(formula)), " ~ -1 + X"))
-    #Fit mixture or non-mixture cure model
-    fit <- fit.cure.model(formula.new, data = data, bhazard = bhazard, covariance = F,
-                          formula.k1 = formula.2, formula.k2 = ~ 1, type = type)
-
-    #Scale by link function
-    pi_hat <- get.link("logit")(X %*% fit$coefs[["gamma"]])
-    gpi_hat <- get.inv.link(linkpi)(pi_hat)
-    #Fit linear model to obtain initial values
-    ini_pi <- lm(gpi_hat ~ -1 + X)$coefficients
-    names(ini_pi) <- colnames(X)
-
-    #Predict survival of the uncured
-    lp <- exp(model.matrix(formula.2, data = data) %*% fit$coefs[[2]])
-    shat <- exp(-lp * times ^ exp(fit$coefs[[3]]))
-    gshat <- get.inv.link(linksu)(shat)
-
-    finites <- is.finite(gshat)
-    gshat <- gshat[finites]
-    b <- b[finites,]
-    fit_lm <- lm(gshat ~ -1 + b)
-
-  }else if(method == "deaths"){
-    formula.2 <- reformulate(termlabels = ifelse(length(vars) == 0, "1", vars),
-                             response = formula[[2]])
-    event2 <- 1 - event
-    fit_glm <- glm(event2 ~ -1 + X, family = binomial(link = "logit"))
-    pi_hat <- get.link("logit")(predict(fit_glm))
-    gpi_hat <- get.inv.link(linkpi)(pi_hat)
-    pi_fit <- lm(gpi_hat ~ -1 + X)
-    ini_pi <- pi_fit$coefficients
-    fit <- coxph(formula.2, data = data[event == 1,])
-    cum_base_haz <- get_basehaz(fit)
-    shat <- exp(-cum_base_haz$hazard) ^ exp(fit$linear.predictors)
-    suppressWarnings(gshat <- get.inv.link(linksu)(shat))
-    fit_lm <- lm(gshat ~ -1 + b[event == 1,])
-  }else if(method == "flexpara"){
-
-    vars1 <- attr(terms(formula), "term.labels")
-    vars2 <- c(attr(terms(smooth.formula), "term.labels"),
-               attr(terms(tvc.formula), "term.labels"))
-
-    wh.vars <- vars1[which(vars1 %in% vars2)]
-
-    if(length(wh.vars)){
-      rm.formula <- paste0(".~. -", paste0(wh.vars, collapse = " + "))
-      formula.2 <- update(formula, rm.formula)
-    }else{
-      formula.2 <- formula
+    if(length(attr(terms(formula.k1), "term.labels"))){
+      a <- Reduce(paste, deparse(formula.k1))
+      a <- gsub("-1", "1", a)
+      formula.k1 <- as.formula(a)
+    } else {
+      formula.k1 <- ~ 1
     }
 
-    X_new <- lapply(list(formula.2, smooth.formula, tvc.formula), function(form){
-      M <- model.matrix(form, data = data)[, -1, drop = FALSE]
-      if(ncol(M)){
-        wh <- grepl("basis\\(", colnames(M))
-        if(any(wh)) colnames(M)[wh] <- paste0("b", 1:sum(wh))
-      }
-      M
-    })
+    #Fit mixture or non-mixture cure model
+    fit <- fit.cure.model(formula = formula.pi, data = data, bhazard = bhazard, covariance = F,
+                          formula.k1 = formula.k1, formula.k2 = ~ 1, type = type)
 
-    X_new <- do.call(cbind, X_new)
+    #Scale by link function
+    pi_hat <- predict(fit, type = "curerate", newdata = data)[,1]
 
-    #Merge data into a single data frame
-    data2 <- cbind(data, X_new)
+    #Predict survival of the uncured
+    lp <- exp(model.matrix(formula.k1, data = data) %*% fit$coefs[[2]])
+    suhat <- exp(-lp * time ^ exp(fit$coefs[[3]]))
 
-    #Formula for survival of the uncred
-    fuvar <- as.character(formula.2[[2]][[2]])
-    base_formula <- as.formula(paste0("~basis(knots = knots.parse, x = log(",
-                                      fuvar, "), ortho = F, intercept = F)"))
+  }else if(method == "flexpara"){
 
-    rhs(formula.2) <- rhs(as.formula(paste0("~ ", paste0(c(1, colnames(X_new)), collapse = " + "))))
-    environment(formula.2) <- environment()
+    formula.2 <- formula
+    vars1 <- attr(terms(cr.formula), "term.labels")
+    vars2 <- attr(terms(formula.2), "term.labels")
+
+    wh <- which(!vars1 %in% vars2)
+    if(length(wh)){
+      formula.pi <- as.formula(paste0("~ ", paste(vars1, collapse = "+")))
+      rstpm2:::rhs(formula.2) <- rstpm2:::rhs(formula) %call+% rstpm2:::rhs(formula.pi)
+    }
+
+    if(length(attr(terms(formula.2), "term.labels"))){
+      a <- Reduce(paste, deparse(formula.2))
+      a <- gsub("-1", "1", a)
+      formula.2 <- as.formula(a)
+    } else {
+      rstpm2:::rhs(formula.2) <- 1
+    }
 
     #Fit relative survival model
-    suppressWarnings(fit <- rstpm2::stpm2(formula.2, data = data2,
-                                          smooth.formula = base_formula,
+    suppressWarnings(fit <- rstpm2::stpm2(formula.2, data = data,
                                           bhazard = bhazard))
 
-    #plot(fit, newdata = data.frame(age_years = 50, sex = c("male")), ylim = c(0,1))
 
     #Predict survival function
-    shat <- predict(fit, newdata = data2, se.fit = F)
+    shat <- predict(fit, newdata = data, se.fit = F, keep.attributes = F)
 
     #If predictions are all 1, we manually change these
     shat[shat == 1] <- shat[shat == 1] - 0.01
-    #Scale by link function
-    gshat <- get.inv.link(linksu)(shat)
 
     #Change follow-up times and predict cure rate
-    fu_time <- all.vars(formula)[1]
-    data2[, fu_time] <- max(data2[, fu_time]) + 0.1
-    pi_hat <- predict(fit, newdata = data2, se.fit = F)
+    data2 <- data
+    data2[, timeExpr] <- max(data2[, timeExpr]) + 0.1
+    pi_hat <- predict(fit, newdata = data2, se.fit = F, keep.attributes = F)
 
     #Change cases with increasing relative survival
     wh <- which(pi_hat >= shat)
     pi_hat[wh] <- shat[wh] - 0.01
-
-    #Scale by link function
-    data$gpi_hat <- get.inv.link(linkpi)(pi_hat)
-
-    #Run linear model for pi to obtain initial values
-    pi_fit <- lm(gpi_hat ~ -1 + X, data = data)
-    ini_pi <- pi_fit$coefficients
-    names(ini_pi) <- colnames(X)
 
     #Run linear model for S_u(t) to obtain initial values for either mixture or non-mixture models
     if(type == "mixture"){
@@ -385,19 +421,20 @@ get.ini.values <- function(smooth.formula, tvc.formula, data, bhazard, linkpi, l
     } else {
       suhat <- 1 - log(shat) / log(pi_hat)
     }
-    gsuhat <- get.inv.link(linksu)(suhat)
-    finites <- is.finite(gsuhat)
-    gsuhat <- gsuhat[finites]
-    b <- b[finites,]
-    fit_lm <- lm(gsuhat ~ -1 + b)
   }
 
-  #Make proper naming of the initial values
-  suppressWarnings(coefs <- summary(fit_lm)$coefficients[, "Estimate"])
-  names(coefs) <- colnames(b)
-  ini_values <- c(ini_pi, coefs)
-  #names(ini_values)[1:ncol(X)] <- colnames(X)
-  ini_values
+  #Run linear model for pi to obtain initial values
+  gpi_hat <- get.inv.link(link.type.cr)(pi_hat)
+  ini_pi <- lm(gpi_hat ~ -1 + X.cr)$coefficients
+  names(ini_pi) <- colnames(X.cr)
+
+  #Run linear model for survival to obtain initial values
+  gsuhat <- link.surv$link(suhat)
+  finites <- is.finite(gsuhat)
+  suppressWarnings(ini_surv <- lm(gsuhat[finites] ~ -1 + X[finites,])$coefficients)
+  names(ini_surv) <- colnames(X)
+
+  c(ini_pi, ini_surv)
 }
 
 

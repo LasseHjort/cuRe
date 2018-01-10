@@ -41,9 +41,8 @@
 #' @example inst/calc.Crude.ex.R
 #' @import statmod
 
-calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.point = 100, reverse = FALSE,
-                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "loglog",
-                       n = 100000){
+calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, last.point = 100, reverse = FALSE,
+                       ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "loglog"){
 
   #Time points at which to evaluate integral
   if(is.null(time)){
@@ -139,7 +138,7 @@ calc.Crude <- function(fit, newdata = NULL, type = "cancer", time = NULL, last.p
                     othertime = prob_other_time,
                     othertime3 = prob_other_time3)
 
-  gaussxw <- statmod::gauss.quad(30,"legendre")
+  gaussxw <- legendre.quadrature.rule.200
 
   probs <- lapply(1:length(expected), function(i){
     prob <- probfun(time = time, rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],

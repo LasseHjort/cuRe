@@ -152,6 +152,8 @@ get.dens <- function(dist){
   }
 }
 
+`%call+%` <- function(left,right) call("+",left,right)
+
 #Function to calculate linear predictors for the simple parametric cure models
 calc.lps <- function(Xs, param){
   lps <- vector("list", length(Xs))
@@ -305,6 +307,29 @@ flexible_mixture_minuslog_likelihood <- function(param, time, event, X, b, db, b
   -sum(likterms)
 }
 
+flexible_mixture_minuslog_likelihood2 <- function(param, event, X, XD, X.cr, bhazard,
+                                                  link.type.cr, link.surv){
+  #Get parameters
+  gamma <- param[1:ncol(X.cr)]
+  beta <- param[(ncol(X.cr) + 1):length(param)]
+
+  #Calculate linear predictors
+  eta.pi <- X.cr %*% gamma
+  pi <- get.link(link.type.cr)(eta.pi)
+  eta <- X %*% beta
+  surv <- link.surv$ilink(eta)
+  rsurv <- pi + (1 - pi) * surv
+  likterms <- log(rsurv)
+
+  #Add the hazard term only for events
+  etaD <- XD[event,] %*% beta
+  ehaz <- - ( 1 - pi[event] ) * link.surv$gradS(eta[event], etaD) / rsurv[event]
+  suppressWarnings(likterms[event] <- likterms[event] + log( bhazard[event] + ehaz))
+
+  #Output the negative log likelihood
+  -sum(likterms)
+}
+
 
 # flexible_mixture_minuslog_likelihood2 <- function(param, time, event, X2, b, db, bhazard,
 #                                                  link_fun_pi, link_fun_su, dlink_fun_su){
@@ -416,7 +441,9 @@ basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
       b <- b %*% R.inv
     }
   }
-  attr(b, "R.inv") <- R.inv
+
+  a <- list(knots = knots[1,], ortho = ortho, R.inv = R.inv, intercept = intercept)
+  attributes(b) <- c(attributes(b), a)
   b
 }
 
@@ -514,9 +541,10 @@ basis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
       b <- b %*% R.inv
     }
   }
-  attr(b, "R.inv") <- R.inv
-  b
 
+  a <- list(R.inv = R.inv)
+  attributes(b) <- a
+  class(b) <- c("bsx", "basis", "matrix")
   b
 }
 
@@ -569,5 +597,8 @@ minuslog_likelihood <- function(param, time, event, b, db,
 }
 
 
+
+#legendre.quadrature.rule.200 <- legendre.quadrature.rules(200)[[200]]
+#save(legendre.quadrature.rule.200, file = "data/legendre.quadrature.rules.200.RData")
 
 
