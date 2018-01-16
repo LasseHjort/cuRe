@@ -5,9 +5,10 @@
 #' @param fit Object of class \code{cuRe}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
-#' @param type Type of prediction to do. Possible values are \code{relsurv} (default) for the relative survival,
-#' \code{curerate} for the cure rate, \code{ehaz} for the excess hazard, and \code{probcure} for the
-#' conditional probability of being cured.
+#' @param type Character. Defines the function to plot.
+#' Possible values are \code{relsurv} (default) for the relative survival, \code{ehaz} for the excess hazard,
+#' \code{probcure} for the conditional probability of being cured, and \code{survuncured}
+#' for the survival of the uncured patients.
 #' @param time Optional time points at which to compute predictions.
 #' This argument is not used if type is \code{curerate}.
 #' @param xlim Limits of the x-axis
@@ -28,19 +29,18 @@
 #' @export
 #' @import relsurv
 
-plot.cuRe <- function(fit, newdata = NULL, type = "relsurv",
+plot.cuRe <- function(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure", "survuncured"),
                       time = NULL, xlim = NULL, ylim = c(0, 1),
                       xlab = "Time", ylab = NULL, col = 1, ci = NULL,
                       non.parametric = F, col.non.para = 2,
                       include.knots = F, add = F, ...){
 
+  type <- match.arg(type)
   if(is.null(ylab)){
     ylab <- switch(type,
                    relsurv = "Relative survival",
                    ehaz = "Excess hazard",
                    probcure = "Conditional probability of cure",
-                   crude_prob = "Probability of eventually dying from other causes than cancer",
-                   lol = "Loss of lifetime",
                    survuncured = "Disease specific survival of the uncured")
   }
 

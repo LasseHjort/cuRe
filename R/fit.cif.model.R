@@ -1,42 +1,42 @@
-#' Fit spline-based cumulative incidence model
-#'
-#' The following function fits a generalized cumulative incidence function
-#' using a link function formulation, i.e.,
-#' \deqn{g(F_k(t|z)) \eta(t, z).
-#'
-#' @param formula Formula for modelling cause specific cumulative incidence function.
-#' A list of formulas can be provided if different modelling is applied to the causes.
-#' Reponse has to be of the form \code{Surv(time, status)}.
-#' @param data Data frame in which to interpret the variables names in \code{formula}.
-#' @param cens.code Numeric. The value of the event indicator which indicates censoring.
-#' @param knots Knots used for the spline baseline effect of the cumulative incidence.
-#' The knots are provided in a list with each entry denoting the knots corresponding to each cause.
-#' @param n.knots Number of knots for the baseline splines.
-#' The knots are calculated as the equidistant quantiles of the uncensored cause-specific event-times.
-#' \code{n.knots} are provided in a list with each entry denoting the number of knots corresponding to each cause.
-#' If \code{knots} is supplied, this argument will be ignored.
-#' @param cure List of logicals. If \code{TRUE}, a cure model is fitted for the cause-specific cumulative incidence,
-#' where cure is assumed after the last selected knot. Typically, cure is only assumed for one cumulative incidence function.
-#' If \code{cure} is not a list, the same option is assumed for all causes.
-#' @param knots.time A named list containing the knots of each of time-varying covariate effect.
-#' @param n.knots.time A named list, containing the number of knots for the time-varying covariate effects.
-#' The knots are calculated as the equidistant quantiles of the uncensored event-times.
-#' If \code{knots.time} is supplied, this argument will be ignored.
-#' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
-#' @param verbose Logical. If \code{TRUE} status messages of the function is outputted.
-#' @param type A character indicating the type of cure model.
-#' Possible values are \code{mixture} (default) and \code{nmixture}.
-#' @param linkpi Character giving the link function selected for the cure rate.
-#' Possible values are \code{logit} (default), \code{identity}, \code{loglog}, and \code{probit}.
-#' @param linksu Character giving the link function selected for the survival of the uncured.
-#' Possible values are \code{loglog} (default), \code{logit}, and \code{probit}.
-#' @param constr.optim Logical. If \code{TRUE} the model is fitted using constraints optimization yielding
-#' a non-negative hazard of the uncured (default is \code{FALSE}).
-#' This option is only implemented for \code{linksu = loglog}.
-#' @param ortho Logical. If \code{TRUE} (default), all splines are orthogonalized using a QR-decomposition.
-#' @param optim.args List with additional arguments passed to \code{optim}.
-#' @param ini.types Character vector denoting the executed schemes for computing initial values.
-#' @return An object of class \code{fcm}.
+# Fit spline-based cumulative incidence model
+#
+# The following function fits a generalized cumulative incidence function
+# using a link function formulation, i.e.,
+# \deqn{g(F_k(t|z)) \eta(t, z).
+#
+# @param formula Formula for modelling cause specific cumulative incidence function.
+# A list of formulas can be provided if different modelling is applied to the causes.
+# Reponse has to be of the form \code{Surv(time, status)}.
+# @param data Data frame in which to interpret the variables names in \code{formula}.
+# @param cens.code Numeric. The value of the event indicator which indicates censoring.
+# @param knots Knots used for the spline baseline effect of the cumulative incidence.
+# The knots are provided in a list with each entry denoting the knots corresponding to each cause.
+# @param n.knots Number of knots for the baseline splines.
+# The knots are calculated as the equidistant quantiles of the uncensored cause-specific event-times.
+# \code{n.knots} are provided in a list with each entry denoting the number of knots corresponding to each cause.
+# If \code{knots} is supplied, this argument will be ignored.
+# @param cure List of logicals. If \code{TRUE}, a cure model is fitted for the cause-specific cumulative incidence,
+# where cure is assumed after the last selected knot. Typically, cure is only assumed for one cumulative incidence function.
+# If \code{cure} is not a list, the same option is assumed for all causes.
+# @param knots.time A named list containing the knots of each of time-varying covariate effect.
+# @param n.knots.time A named list, containing the number of knots for the time-varying covariate effects.
+# The knots are calculated as the equidistant quantiles of the uncensored event-times.
+# If \code{knots.time} is supplied, this argument will be ignored.
+# @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
+# @param verbose Logical. If \code{TRUE} status messages of the function is outputted.
+# @param type A character indicating the type of cure model.
+# Possible values are \code{mixture} (default) and \code{nmixture}.
+# @param linkpi Character giving the link function selected for the cure rate.
+# Possible values are \code{logit} (default), \code{identity}, \code{loglog}, and \code{probit}.
+# @param linksu Character giving the link function selected for the survival of the uncured.
+# Possible values are \code{loglog} (default), \code{logit}, and \code{probit}.
+# @param constr.optim Logical. If \code{TRUE} the model is fitted using constraints optimization yielding
+# a non-negative hazard of the uncured (default is \code{FALSE}).
+# This option is only implemented for \code{linksu = loglog}.
+# @param ortho Logical. If \code{TRUE} (default), all splines are orthogonalized using a QR-decomposition.
+# @param optim.args List with additional arguments passed to \code{optim}.
+# @param ini.types Character vector denoting the executed schemes for computing initial values.
+# @return An object of class \code{fcm}.
 
 
 fit.cif.model <- function(formula, data, cens.code = 0,

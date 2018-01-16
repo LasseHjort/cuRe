@@ -17,7 +17,9 @@
 #' @param type Type of life expectancy measure. Possible values are "ll" for the loss of lifetime
 #' and "mrl" for the mean residual lifetime.
 #' @return The estimated cure points.
+#' @import rootSolve
 #' @export
+
 
 
 calc.LL.quantile <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRUE,
@@ -59,10 +61,10 @@ calc.LL.quantile <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRU
       gr <- grad(f, x = uni, q = 0)
       VAR <- calc.LL(fit, time = uni, expected = expected[i],
                      newdata = newdata[i,, drop = F], tau = tau)$Ests[[1]]$Var
-      VAR2 <- gr ^ (-2) * VAR
-      upper <- uni + sqrt(VAR2) * qnorm(0.975)
-      lower <- uni - sqrt(VAR2) * qnorm(0.975)
-      data.frame(Est = uni, var = VAR2, lower.ci = lower, upper.ci = upper)
+      VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)
+      upper <- log(uni) + sqrt(VAR2) * qnorm(0.975)
+      lower <- log(uni) - sqrt(VAR2) * qnorm(0.975)
+      data.frame(Est = uni, var = VAR2 * uni ^ 2, lower.ci = exp(lower), upper.ci = exp(upper))
     } else {
       data.frame(Est = uni)
     }

@@ -27,11 +27,15 @@
 
 
 fit.cure.model <- function(formula, data, bhazard = NULL, formula.k1 = ~ 1, formula.k2 = NULL,
-                           formula.k3 = NULL, type = "mixture",
-                           dist = "weibull", link = "logit",
+                           formula.k3 = NULL, type = c("mixture", "nmixture"),
+                           dist = c("weibull", "exponential", "lognormal"),
+                           link = c("logit", "loglog", "identity", "probit"),
                            covariance = TRUE,
                            optim.args = NULL){
 
+  type <- match.arg(type)
+  dist <- match.arg(dist)
+  link <- match.arg(link)
   #Delete missing observations and extract response data
   formulas <- list(formula, formula.k1, formula.k2, formula.k3)
   all.vars <- unique(unlist(lapply(formulas, all.vars)))

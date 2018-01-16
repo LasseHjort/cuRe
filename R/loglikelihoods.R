@@ -307,8 +307,8 @@ flexible_mixture_minuslog_likelihood <- function(param, time, event, X, b, db, b
   -sum(likterms)
 }
 
-flexible_mixture_minuslog_likelihood2 <- function(param, event, X, XD, X.cr, bhazard,
-                                                  link.type.cr, link.surv){
+GenFlexMixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
+                                link.type.cr, link.surv){
   #Get parameters
   gamma <- param[1:ncol(X.cr)]
   beta <- param[(ncol(X.cr) + 1):length(param)]
@@ -329,6 +329,32 @@ flexible_mixture_minuslog_likelihood2 <- function(param, event, X, XD, X.cr, bha
   #Output the negative log likelihood
   -sum(likterms)
 }
+
+GenFlexNmixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
+                                link.type.cr, link.surv){
+  #Get parameters
+  gamma <- param[1:ncol(X.cr)]
+  beta <- param[(ncol(X.cr) + 1):length(param)]
+
+  #Calculate linear predictors
+  eta.pi <- X.cr %*% gamma
+  pi <- get.link(link.type.cr)(eta.pi)
+  eta <- X %*% beta
+  surv <- link.surv$ilink(eta)
+  rsurv <- pi ^ (1 - surv)
+  likterms <- log(rsurv)
+
+  #Add the hazard term only for events
+  etaD <- XD[event,] %*% beta
+  ehaz <- log( pi[event] ) * link.surv$gradS( eta[event], etaD )
+  suppressWarnings(likterms[event] <- likterms[event] + log( bhazard[event] + ehaz))
+
+  #Output the negative log likelihood
+  -sum(likterms)
+}
+
+
+
 
 
 # flexible_mixture_minuslog_likelihood2 <- function(param, time, event, X2, b, db, bhazard,

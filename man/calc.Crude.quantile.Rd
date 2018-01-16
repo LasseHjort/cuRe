@@ -33,6 +33,8 @@ Default is \code{survexp.dk}}
 
 \item{last.point}{Constant at which the bound to tie probability is calculated. Default is 100.}
 
+\item{reverse}{Passed to the \code{calc.crude} function.}
+
 \item{type}{Type of life expectancy measure. Possible values are "ll" for the loss of lifetime
 and "mrl" for the mean residual lifetime.}
 }

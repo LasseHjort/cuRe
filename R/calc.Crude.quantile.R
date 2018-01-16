@@ -19,6 +19,7 @@
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param type Type of life expectancy measure. Possible values are "ll" for the loss of lifetime
 #' and "mrl" for the mean residual lifetime.
+#' @param reverse Passed to the \code{calc.crude} function.
 #' @return The estimated cure points.
 #' @export
 
@@ -63,10 +64,10 @@ calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, ex
       VAR <- calc.Crude(fit, time = uni, expected = expected[i], newdata = newdata[i,,drop = F],
                         last.point = last.point, type = "othertime3", link = "identity",
                         reverse = reverse)$prob[[1]]$var
-      VAR2 <- gr ^ (-2) * VAR
-      upper <- uni + sqrt(VAR2) * qnorm(0.975)
-      lower <- uni - sqrt(VAR2) * qnorm(0.975)
-      data.frame(Est = uni, var = VAR2, lower.ci = lower, upper.ci = upper)
+      VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)
+      upper <- log(uni) + sqrt(VAR2) * qnorm(0.975)
+      lower <- log(uni) - sqrt(VAR2) * qnorm(0.975)
+      data.frame(Est = uni, var = VAR2 * uni ^ 2, lower.ci = exp(lower), upper.ci = exp(upper))
     } else{
       data.frame(Est = uni)
     }

@@ -4,11 +4,12 @@
 \alias{calc.LL}
 \title{Loss of lifetime estimation}
 \usage{
-calc.LL(fit, newdata = NULL, time = NULL, type = "ll", tau = 100,
-  ci = T, expected = NULL, ratetable = survexp.dk, rmap, pars = NULL)
+calc.LL(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
+  tau = 100, ci = T, expected = NULL, ratetable = survexp.dk, rmap,
+  pars = NULL, n = 100)
 }
 \arguments{
-\item{fit}{Fitted model to do predictions from. Possible classes are
+\item{object}{Fitted model to do predictions from. Possible classes are
 \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
@@ -36,18 +37,19 @@ Default is \code{survexp.dk}}
 Detailed documentation on this argument can be found by \code{?survexp}.}
 }
 \value{
-A object of class \code{le} containing the life expectancy estimates
+An object of class \code{le} containing the life expectancy estimates
 of each individual in \code{newdata}.
 }
 \description{
-Function for computing loss of lifetime function from an estimated relative survival model
+Function for computing loss of lifetime function based on relative survival models.
 }
 \details{
 The function computes
 \deqn{L(t) = \frac{\int_0^\infty S^*(u)}{S^*(t)} - \frac{\int_0^\infty S(u)}{S(t)}}
 for a given t, where \eqn{S^*(t)} and \eqn{S(t)} is the survival function in the general
-population and the patient population, respectively. The integral is computed by the trapezoidal rule,
+population and the patient population, respectively. The integral is computed by Gauss-Legendre quadrature
 and the point wise variance is estimated using the delta method and numerical differentiation.
+If \code{type = mrl}, only \eqn{\int_0^\infty S^*(u) / S^*(t)} is computed.
 }
 \examples{
 ###Use data cleaned version of the colon cancer data from the rstpm2 package

@@ -1,50 +1,60 @@
-#' Fit spline-based mixture cure model
+#' Fit generalized mixture cure model
 #'
 #' The following function fits a generalized mixture or non-mixture cure model
 #' using a link function for the cure rate and for the survival of the uncured, i.e.,
 #' \deqn{R(t|z) = \pi(z) + (1 - \pi(z)) S_u(t|z)},
 #' where
 #' \deqn{g_1[S_u(t|z)] = \eta_1(z) and g_2(\pi(z)) = \eta_2(z)}.
+#' This function deviates from \code{FlexCureModel} in its use of formulas,
+#' which allows the use of more smoothers than the restricted cubic splines from the \code{flexsurv} package.
 #'
-#' @param formula Formula for modelling the the cure rate. Reponse has to be of the form \code{Surv(time, status)}.
+#' @param formula Formula for modelling the survival of the uncured. A linear term for time-varying coefficients is required here.
+#' Reponse has to be of the form \code{Surv(time, status)}.
 #' @param data Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}.
+#' @param smooth.formula Formula for describing the time-effect of the survival of the uncured (default is \code{NULL}).
+#' @param smooth.args List. Optional arguments to the time-effect of the survival of the uncured (default is \code{NULL}).
+#' @param df Integer. Degrees of freedom (default is 3) for the time-effect of the survival of the uncured.
+# @param logH.args
+# @param logH.formula blabal
+#' @param tvc Name list of integers. Specifies the degrees of freedom for a time-varying covariate effect.
+#' For instance, \code{tvc = list(a = 3)} creates a time-varying spline-effect of the covariate a with 3 degrees of freedom.
+#' @param tvc.formula Formula for the time-varying covariate effects.
+#' For time-varying effects, a linear term of the covariate has to be included in \code{formula}.
+#' @param cr.formula Formula for the cure rate.
+#' The left hand side of the formula is not used and should therefore not be specified.
 #' @param bhazard Background hazard.
-#' @param smooth.formula Formula for modelling the disease-specific survival of the uncured.
-#' @param knots Knots used for the baseline hazard in the disease-specific survival function.
-#' @param n.knots Number of knots for the disease-specific survival function.
-#' The knots are calculated as the equidistant quantiles of the uncensored event-times.
-#' If \code{knots} is supplied, this argument will be ignored.
-#' @param knots.time A named list containing the knots of each of time-varying covariate effect.
-#' @param n.knots.time A named list, containing the number of knots for the time-varying covariate effects.
-#' The knots are calculated as the equidistant quantiles of the uncensored event-times.
-#' If \code{knots.time} is supplied, this argument will be ignored.
-#' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
-#' @param verbose Logical. If \code{TRUE} status messages of the function is outputted.
 #' @param type A character indicating the type of cure model.
 #' Possible values are \code{mixture} (default) and \code{nmixture}.
-#' @param linkpi Character giving the link function selected for the cure rate.
-#' Possible values are \code{logit} (default), \code{identity}, \code{loglog}, and \code{probit}.
-#' @param linksu Character giving the link function selected for the survival of the uncured.
-#' Possible values are \code{loglog} (default), \code{logit}, and \code{probit}.
-#' @param constr.optim Logical. If \code{TRUE} the model is fitted using constraints optimization yielding
-#' a non-negative hazard of the uncured (default is \code{FALSE}).
-#' This option is only implemented for \code{linksu = loglog}.
-#' @param ortho Logical. If \code{TRUE} (default), all splines are orthogonalized using a QR-decomposition.
-#' @param optim.args List with additional arguments passed to \code{optim}.
+#' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
+#' @param verbose Logical. If \code{TRUE} status messages of the function is outputted.
+#' @param link.type.cr Character giving the link function selected for the cure rate.
+#' Possible values are \code{logit} (default), \code{loglog}, \code{identity}, and \code{probit}.
+#' @param link.type Character giving the link function selected for the survival of the uncured.
+#' Possible values are \code{PH} (default), \code{PO}, \code{probit}, \code{AH}, and \code{AO}.
+#' @param init Providing initial values for the optimization procedure.
+#' If not specified, the function will create initial values internally.
+#' @param timeVar Character giving the name of the variable specifying the time component of the \code{Surv} object.
+#' @param control Named list with additional arguments passed to \code{optim}.
 #' @param ini.types Character vector denoting the executed schemes for computing initial values.
-#' @return An object of class \code{fcm}.
+#' @param cure Logical. Indicates whether a cure model specification is needed for the survival of the uncured.
+#' This is usually \code{FALSE} (default).
+#' @return An object of class \code{gfcm}.
+#' @details This functions generalizes the \code{FlexCureModel} function using formulas.
+#' The default smoother is natural cubic splines established by the \code{rstpm2::nsx} function.
+#' Functions such as \code{ns}, \code{bs} are readily available for usage. Also the \code{basis} function of \code{flexsurv} works.
+#' The function also allows for the use of any smoother from the \code{mgvc} package.
 #' @export
 #' @import survival
 #' @import rstpm2
 #' @import numDeriv
-#' @example inst/FlexCureModel.ex.R
+#' @example inst/GenFlexCureModel.ex.R
 
 
-FlexCureModel2 <- function(formula, data, smooth.formula = NULL, smooth.args = NULL,
-                           df = 3, logH.args = NULL, logH.formula = NULL, tvc = NULL,
+GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args = NULL,
+                           df = 3, tvc = NULL,
                            tvc.formula = NULL, bhazard = NULL, cr.formula = ~ 1,
                            type = "mixture",
-                           link.type.cr = c("logit", "loglog", "identity"),
+                           link.type.cr = c("logit", "loglog", "identity", "probit"),
                            link.type = c("PH", "PO", "probit", "AH", "AO"),
                            init = NULL, timeVar = "",
                            covariance = T, verbose = T,
@@ -53,6 +63,9 @@ FlexCureModel2 <- function(formula, data, smooth.formula = NULL, smooth.args = N
 
   if(!type %in% c("mixture", "nmixture"))
     stop("Wrong specication of argument 'type', must be either 'mixture' or 'nmixture'")
+
+  logH.args <- NULL
+  logH.formula <- NULL
 
   link.type <- match.arg(link.type)
   link.surv <- switch(link.type, PH = rstpm2:::link.PH, PO = rstpm2:::link.PO, probit = rstpm2:::link.probit,
@@ -273,8 +286,8 @@ FlexCureModel2 <- function(formula, data, smooth.formula = NULL, smooth.args = N
 
   #Extract minus log likelihood function
   minusloglik <- switch(type,
-                        mixture = flexible_mixture_minuslog_likelihood2,
-                        nmixture = flexible_nmixture_minuslog_likelihood2)
+                        mixture = GenFlexMixMinLogLik,
+                        nmixture = GenFlexNmixMinLogLik)
 
   #Prepare optimization arguments
   args <- list(event = event, X = X, XD = XD, X.cr = X.cr,
@@ -336,7 +349,7 @@ FlexCureModel2 <- function(formula, data, smooth.formula = NULL, smooth.args = N
             link.surv = link.surv, excess = excess, timeVar = timeVar, transX = transX, transXD = transXD,
             time = time, event = event, eventExpr = eventExpr)
 
-  class(L) <- c("fcm2", "cuRe")
+  class(L) <- c("gfcm", "cuRe")
   L
 }
 
@@ -440,7 +453,7 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
 
 #' @export
 #Print function for class fcm
-print.fcm <- function(fit){
+print.gfcm <- function(fit){
   cat("Call pi:\n")
   print(fit$formula)
   cat("Call S_u(t):\n")
@@ -452,7 +465,7 @@ print.fcm <- function(fit){
 
 #' @export
 #Summary function for class fcm
-summary.fcm <- function(fit){
+summary.gfcm <- function(fit){
   se <- sqrt(diag(fit$covariance))
   tval <- c(fit$coefs, fit$coefs.spline) / se
   coefs <- c(fit$coefs, fit$coefs.spline)
@@ -483,7 +496,7 @@ summary.fcm <- function(fit){
 
 #' @export
 #Print for class summary.fcm
-print.summary.fcm <- function(x)
+print.summary.gfcm <- function(x)
 {
   cat("Call - pi:\n")
   print(x$formula)

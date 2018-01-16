@@ -15,8 +15,9 @@
 #' @return An object of class \code{matrix} including the predictions.
 #' @export
 #'
-predict.cm <- function(fit, newdata = NULL, type = "relsurv",
+predict.cm <- function(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure", "survuncured"),
                               time = NULL, ci = T, pars = NULL){
+  type <- match.arg(type)
   if(!is.null(pars)){
     groups <- factor(rep(1:4, fit$n.param.formula), 1:4, labels = c("gamma", "k1", "k2", "k3"))
     fit$coefs <- split(pars, f = groups)

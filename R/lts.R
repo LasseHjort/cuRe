@@ -2,8 +2,8 @@
 #'
 #' Function for computing loss of lifetime estimates from an estimated relative survival model
 #'
-#' @param fit Fitted model to do predictions from. Possible classes are \code{fcm}, \code{stpm2},
-#' \code{pstpm2}, and \code{CureModel}.
+#' @param fit Fitted model to do predictions from. Possible classes are \code{fcm}, \code{gfcm}, \code{stpm2},
+#' \code{pstpm2}, and \code{cm}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0

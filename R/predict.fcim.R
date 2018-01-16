@@ -1,19 +1,19 @@
-#' Predict function for Flexible parametric cumulative incidence function
-#'
-#' Function for doing predictions for class \code{fcim}
-#'
-#' @param fit Object of class \code{fcim} to do predictions from.
-#' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
-#' the model was fitted on.
-#' @param type Type of prediction to do. Possible values are \code{cuminc} (default) for the cumulative incidence,
-#' and \code{subhaz} for the sub-distribution hazard.
-#' @param time Optional time points at which to compute predictions.
-#' This argument is not used if type is \code{curerate}.
-#' @param ci Logical. If \code{TRUE}, confidence intervals are computed.
-#' @param pars Numerical vector containing the parameters values of the model.
-#' In general, this argument can be ignored by the user.
-#' @return A list containing the predictions of each individual in \code{newdata}.
-#' @export
+# Predict function for Flexible parametric cumulative incidence function
+#
+# Function for doing predictions for class \code{fcim}
+#
+# @param fit Object of class \code{fcim} to do predictions from.
+# @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
+# the model was fitted on.
+# @param type Type of prediction to do. Possible values are \code{cuminc} (default) for the cumulative incidence,
+# and \code{subhaz} for the sub-distribution hazard.
+# @param time Optional time points at which to compute predictions.
+# This argument is not used if type is \code{curerate}.
+# @param ci Logical. If \code{TRUE}, confidence intervals are computed.
+# @param pars Numerical vector containing the parameters values of the model.
+# In general, this argument can be ignored by the user.
+# @return A list containing the predictions of each individual in \code{newdata}.
+# @export
 
 predict.fcim <- function(fit, newdata = NULL, type = "cuminc",
                          time = NULL, ci = T, pars = NULL){

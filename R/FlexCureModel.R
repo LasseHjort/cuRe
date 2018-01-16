@@ -44,10 +44,16 @@
 FlexCureModel <- function(formula, data, bhazard = NULL, smooth.formula = ~ 1,
                           knots = NULL, n.knots = 3,
                           knots.time = NULL, n.knots.time = NULL,
-                          covariance = T, type = "mixture", linkpi = "logit",
-                          linksu = "loglog", verbose = T, constr.optim = F,
+                          covariance = T, type = c("mixture", "nmixture"),
+                          linkpi = c("logit", "identity", "loglog", "probit"),
+                          linksu = c("loglog", "logit", "probit"),
+                          verbose = T, constr.optim = F,
                           optim.args = NULL, ortho = TRUE,
                           ini.types = c("cure", "flexpara")){
+
+  type <- match.arg(type)
+  linkpi <- match.arg(linkpi)
+  linksu <- match.arg(linksu)
 
   if(!type %in% c("mixture", "nmixture"))
     stop("Wrong specication of argument type, must be either 'mixture' or 'nmixture'")

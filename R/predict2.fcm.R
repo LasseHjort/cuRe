@@ -1,4 +1,4 @@
-predict.fcm2 <- function (object, newdata = NULL,
+predict.gfcm <- function (object, newdata = NULL,
                           type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
                                    "cumhazuncured", "densityuncured", "failuncured", "oddsuncured",
                                    "loghazarduncured", "hazard", "density", "fail",
@@ -18,7 +18,7 @@ predict.fcm2 <- function (object, newdata = NULL,
   calcX <- !is.null(newdata)
   if (is.null(newdata)) {
     if(indi){
-      vars <- c(all.vars(formula), all.vars(object$logH.formula))
+      vars <- c(all.vars(formula), all.vars(object$cr.formula))
       vars <- vars[!vars %in% c(as.character(object$timeExpr), as.character(object$eventExpr))]
       if(length(vars) != 0){
         stop("'newdata' needs to be specified with option 'indi = TRUE' when covariates are present")
@@ -219,13 +219,15 @@ local <- function(object, newdata, type = "surv", var.link = function(x) x,
 
 
 
-plot.fcm2 <- function(object, newdata = NULL, type = c("surv", "probcure", "survuncured", "hazarduncured",
+plot.gfcm <- function(object, newdata = NULL, type = c("surv", "probcure", "survuncured", "hazarduncured",
                                                        "cumhazuncured", "densityuncured", "failuncured",
                                                        "oddsuncured", "loghazarduncured", "hazard",
                                                        "density", "fail", "loghazard", "odds", "cumhaz"),
                       time = NULL, xlim = NULL, ylim = c(0, 1),
                       xlab = "Time", ylab = NULL, col = 1, ci = NULL,
                       add = F, ...){
+
+  type <- match.arg(type)
 
   if(is.null(ylab)){
     if(!object$excess){
@@ -274,8 +276,8 @@ plot.fcm2 <- function(object, newdata = NULL, type = c("surv", "probcure", "surv
     }
   }
 
-  pred <- predict2.fcm(object, newdata, time, type = type,
-                       var.type = ci, indi = TRUE)
+  pred <- predict(object, newdata, time, type = type,
+                  var.type = ci, indi = TRUE)
 
   if(type == "hazard"){
     ylim <- range(unlist(lapply(pred, function(x) x[,-2])), na.rm = T, finite = T)

@@ -1,6 +1,6 @@
 #' Crude event probabilities
 #'
-#' Function for computing crude event probabilties from relative survival models.
+#' Function for computing crude event probabilties based on relative survival models.
 #'
 #' @param object Fitted model to do predictions from. Possible classes are
 #' \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
@@ -41,8 +41,11 @@
 #' @example inst/calc.Crude.ex.R
 #' @import statmod
 
-calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, last.point = 100, reverse = FALSE,
+calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othertime"),
+                       time = NULL, last.point = 100, reverse = FALSE,
                        ci = T, expected = NULL, ratetable = survexp.dk, rmap, link = "loglog", n = 100){
+
+  type <- match.arg(type)
 
   #Time points at which to evaluate integral
   if(is.null(time)){
@@ -110,16 +113,29 @@ calc.Crude <- function(object, newdata = NULL, type = "cancer", time = NULL, las
     model.params <- object@fullcoef
     cov <- object@vcov
   }else{
-    rel_surv <- lapply(1:length(expected), function(i){
-      function(t, pars) predict(object, newdata = newdata[i,, drop = F],
-                                time = t, pars = pars, ci = "n")[[1]]$Estimate
-    })
+    if ("gfmc" %in% class(object)) {
+      rel_surv <- lapply(1:length(expected), function(i){
+        function(t, pars) predict(object, newdata = newdata[i,, drop = F],
+                                  time = t, pars = pars, ci = "n")[[1]]$Estimate
+      })
 
-    excess_haz <- lapply(1:length(expected), function(i){
-      function(t, pars) predict(object, newdata = newdata[i,, drop = F],
-                                time = t, pars = pars, type = "hazard",
-                                ci = "n")[[1]]$Estimate
-    })
+      excess_haz <- lapply(1:length(expected), function(i){
+        function(t, pars) predict(object, newdata = newdata[i,, drop = F],
+                                  time = t, pars = pars, type = "hazard",
+                                  ci = "n")[[1]]$Estimate
+      })
+    } else {
+      rel_surv <- lapply(1:length(expected), function(i){
+        function(t, pars) predict(object, newdata = newdata[i,, drop = F],
+                                  time = t, pars = pars, ci = F)$res[[1]]$Est
+      })
+
+      excess_haz <- lapply(1:length(expected), function(i){
+        function(t, pars) predict(object, newdata = newdata[i,, drop = F],
+                                  time = t, pars = pars, type = "ehaz",
+                                  ci = F)$res[[1]]$Est
+      })
+    }
     model.params <- c(unlist(object$coefs), object$coefs.spline)
     cov <- object$covariance
   }
