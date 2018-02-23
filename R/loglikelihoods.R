@@ -307,8 +307,31 @@ flexible_mixture_minuslog_likelihood <- function(param, time, event, X, b, db, b
   -sum(likterms)
 }
 
+# GenFlexMixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
+#                                 link.type.cr, link.surv, kappa){
+#   #Get parameters
+#   gamma <- param[1:ncol(X.cr)]
+#   beta <- param[(ncol(X.cr) + 1):length(param)]
+#
+#   #Calculate linear predictors
+#   eta.pi <- X.cr %*% gamma
+#   pi <- get.link(link.type.cr)(eta.pi)
+#   eta <- X %*% beta
+#   surv <- link.surv$ilink(eta)
+#   rsurv <- pi + (1 - pi) * surv
+#   likterms <- log(rsurv)
+#
+#   #Add the hazard term only for events
+#   etaD <- XD[event,] %*% beta
+#   ehaz <- - ( 1 - pi[event] ) * link.surv$gradS(eta[event], etaD) / rsurv[event]
+#   suppressWarnings(likterms[event] <- likterms[event] + log( bhazard[event] + ehaz))
+#
+#   #Output the negative log likelihood
+#   -sum(likterms)
+# }
+
 GenFlexMixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
-                                link.type.cr, link.surv){
+                                 link.type.cr, link.surv, kappa){
   #Get parameters
   gamma <- param[1:ncol(X.cr)]
   beta <- param[(ncol(X.cr) + 1):length(param)]
@@ -322,16 +345,21 @@ GenFlexMixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
   likterms <- log(rsurv)
 
   #Add the hazard term only for events
-  etaD <- XD[event,] %*% beta
-  ehaz <- - ( 1 - pi[event] ) * link.surv$gradS(eta[event], etaD) / rsurv[event]
-  suppressWarnings(likterms[event] <- likterms[event] + log( bhazard[event] + ehaz))
+  etaD <- XD %*% beta
+  ehaz <- - ( 1 - pi[event] ) * link.surv$gradS(eta[event], etaD[event]) / rsurv[event]
+  haz <- bhazard[event] + ehaz
+  haz[haz <= 0] <- .Machine$double.eps
+  likterms[event] <- likterms[event] + log(haz)
+
+  #Calculate hazard for which constraints are used
+  hazsu <- link.surv$h(eta, etaD)
 
   #Output the negative log likelihood
-  -sum(likterms)
+  -sum( likterms ) + kappa / 2 * sum( ( hazsu[hazsu < 0] ) ^ 2 )
 }
 
 GenFlexNmixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
-                                link.type.cr, link.surv){
+                                link.type.cr, link.surv, kappa){
   #Get parameters
   gamma <- param[1:ncol(X.cr)]
   beta <- param[(ncol(X.cr) + 1):length(param)]
@@ -345,12 +373,17 @@ GenFlexNmixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
   likterms <- log(rsurv)
 
   #Add the hazard term only for events
-  etaD <- XD[event,] %*% beta
-  ehaz <- log( pi[event] ) * link.surv$gradS( eta[event], etaD )
-  suppressWarnings(likterms[event] <- likterms[event] + log( bhazard[event] + ehaz))
+  etaD <- XD %*% beta
+  ehaz <- log( pi[event] ) * link.surv$gradS( eta[event], etaD[event] )
+  haz <- bhazard[event] + ehaz
+  haz[ haz < 0 ] <- .Machine$double.eps
+  likterms[event] <- likterms[event] + log( haz )
+
+  #Calculate hazard for which constraints are used
+  hazZ <- link.surv$h(eta, etaD)
 
   #Output the negative log likelihood
-  -sum(likterms)
+  -sum(likterms) + kappa / 2 * sum( ( hazZ[hazZ < 0] ) ^ 2 )
 }
 
 

@@ -9,8 +9,8 @@ GenFlexCureModel(formula, data, smooth.formula = NULL, smooth.args = NULL,
   cr.formula = ~1, type = "mixture", link.type.cr = c("logit", "loglog",
   "identity", "probit"), link.type = c("PH", "PO", "probit", "AH", "AO"),
   init = NULL, timeVar = "", covariance = T, verbose = T,
-  control = list(maxit = 10000, method = c("Nelder-Mead")),
-  ini.types = c("cure", "flexpara"), cure = FALSE)
+  control = list(maxit = 10000), method = "Nelder-Mead",
+  constraint = TRUE, ini.types = c("cure", "flexpara"), cure = FALSE)
 }
 \arguments{
 \item{formula}{Formula for modelling the survival of the uncured. A linear term for time-varying coefficients is required here.
@@ -54,6 +54,12 @@ If not specified, the function will create initial values internally.}
 \item{verbose}{Logical. If \code{TRUE} status messages of the function is outputted.}
 
 \item{control}{Named list with additional arguments passed to \code{optim}.}
+
+\item{method}{Character passed to \code{optim} indicating the optimization method to use.
+See \code{?optim} for details.}
+
+\item{constraint}{Logical. Indicates whether non-negativity constraints should be forced upon
+the hazard of the uncured patients}
 
 \item{ini.types}{Character vector denoting the executed schemes for computing initial values.}
 

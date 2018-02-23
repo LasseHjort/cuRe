@@ -15,7 +15,7 @@
 #' @return An object of class \code{matrix} including the predictions.
 #' @export
 #'
-predict.cm <- function(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure", "survuncured"),
+predict.cm <- function(fit, newdata = NULL, type = c("relsurv", "curerate", "ehaz", "probcure", "survuncured"),
                               time = NULL, ci = T, pars = NULL){
   type <- match.arg(type)
   if(!is.null(pars)){

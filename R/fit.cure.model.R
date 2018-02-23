@@ -108,7 +108,7 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.k1 = ~ 1, form
 
   #Compute covariance
   if(covariance){
-    cov <- solve(numDeriv::hessian(minuslog_likelihood,
+    hes <- numDeriv::hessian(minuslog_likelihood,
                                    optim.out$par,
                                    time = time,
                                    event = event,
@@ -116,7 +116,11 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.k1 = ~ 1, form
                                    link = link_fun,
                                    surv_fun = surv_fun,
                                    dens_fun = dens_fun,
-                                   bhazard = bhazard))
+                                   bhazard = bhazard)
+    cov <- if (!inherits(vcov <- try(solve(hes)), "try-error"))  vcov
+    if(!is.null(cov) && any(is.na(cov))){
+      warning("Hessian is not invertible!")
+    }
   }else{
     cov <- NULL
   }

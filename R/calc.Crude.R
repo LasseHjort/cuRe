@@ -113,7 +113,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
     model.params <- object@fullcoef
     cov <- object@vcov
   }else{
-    if ("gfmc" %in% class(object)) {
+    if ("gfcm" %in% class(object)) {
       rel_surv <- lapply(1:length(expected), function(i){
         function(t, pars) predict(object, newdata = newdata[i,, drop = F],
                                   time = t, pars = pars, ci = "n")[[1]]$Estimate
@@ -144,7 +144,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
     D <- data.frame(Cum_haz = c(0, -log(summary(expected[[i]])$surv)), Time = c(-0.1, expected[[i]]$time))
     sm_fit <- loess(Cum_haz ~ Time, data = D, span = 0.1)
     cum_haz_smooth <- function(t) predict(sm_fit, newdata = data.frame(Time = t))
-    function(t) numDeriv::grad(func = cum_haz_smooth, t)
+    function(t, pars) numDeriv::grad(func = cum_haz_smooth, t)
   })
 
 
@@ -179,7 +179,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
     }
     res$prob <- get.link(link)(res$prob)
     if(type %in% c("cancer", "other")){
-      res[time == 0,] <- ifelse(reverse, 1, 0)
+      res[time == 0,] <- 1
     }
     res
   })

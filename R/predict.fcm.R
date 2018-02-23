@@ -17,9 +17,9 @@
 #' @return A list containing the predictions of each individual in \code{newdata}.
 #' @export
 
-predict.fcm <- function(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure", "survuncured"),
+predict.fcm <- function(fit, newdata = NULL, type = c("relsurv", "curerate", "ehaz", "probcure", "survuncured"),
                         time = NULL, ci = T, pars = NULL){
-  type <- match(type)
+  type <- match.arg(type)
   if(!is.null(pars)){
     fit$coefs <- pars[1:length(fit$coefs)]
     if(length(fit$coefs) < length(pars)){

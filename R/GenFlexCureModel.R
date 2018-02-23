@@ -35,6 +35,10 @@
 #' If not specified, the function will create initial values internally.
 #' @param timeVar Character giving the name of the variable specifying the time component of the \code{Surv} object.
 #' @param control Named list with additional arguments passed to \code{optim}.
+#' @param method Character passed to \code{optim} indicating the optimization method to use.
+#' See \code{?optim} for details.
+#' @param constraint Logical. Indicates whether non-negativity constraints should be forced upon
+#' the hazard of the uncured patients
 #' @param ini.types Character vector denoting the executed schemes for computing initial values.
 #' @param cure Logical. Indicates whether a cure model specification is needed for the survival of the uncured.
 #' This is usually \code{FALSE} (default).
@@ -51,15 +55,16 @@
 
 
 GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args = NULL,
-                           df = 3, tvc = NULL,
-                           tvc.formula = NULL, bhazard = NULL, cr.formula = ~ 1,
-                           type = "mixture",
-                           link.type.cr = c("logit", "loglog", "identity", "probit"),
-                           link.type = c("PH", "PO", "probit", "AH", "AO"),
-                           init = NULL, timeVar = "",
-                           covariance = T, verbose = T,
-                           control = list(maxit = 10000, method = c("Nelder-Mead")),
-                           ini.types = c("cure", "flexpara"), cure = FALSE){
+                             df = 3, tvc = NULL,
+                             tvc.formula = NULL, bhazard = NULL, cr.formula = ~ 1,
+                             type = "mixture",
+                             link.type.cr = c("logit", "loglog", "identity", "probit"),
+                             link.type = c("PH", "PO", "probit", "AH", "AO"),
+                             init = NULL, timeVar = "",
+                             covariance = T, verbose = T,
+                             control = list(maxit = 10000), method = "Nelder-Mead",
+                             constraint = TRUE,
+                             ini.types = c("cure", "flexpara"), cure = FALSE){
 
   if(!type %in% c("mixture", "nmixture"))
     stop("Wrong specication of argument 'type', must be either 'mixture' or 'nmixture'")
@@ -252,8 +257,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
       wt0 <- wt[ind0]
       rm(data0)
     }
-  }
-  else {
+  } else {
     ttype <- eventInstance[, 3]
     X1 <- transX(lpmatrix.lm(lm.obj, data), data)
     data0 <- data
@@ -292,13 +296,12 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   #Prepare optimization arguments
   args <- list(event = event, X = X, XD = XD, X.cr = X.cr,
                bhazard = bhazard, link.type.cr = link.type.cr,
-               link.surv = link.surv)
+               link.surv = link.surv, kappa = 0)
 
   if(is.null(control$maxit)){
     control$maxit <- 10000
   }
 
-  optim.args <- c(control = list(control), args)
 
   #Test if initial values are within the feasible region
   ini.eval <- sapply(init, function(inival) do.call(minusloglik, c(args, list(inival))))
@@ -309,11 +312,27 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
 
   if(verbose) cat("Completed!\nFitting the model... ")
 
+  optim.args <- c(control = list(control), args)
+  optim.args$kappa <- if(constraint) 1 else 0
   optim.args$fn <- minusloglik
-  res_list <- lapply(init[run.these], function(inival){
-    optim.args$par <- inival
-    suppressWarnings(do.call(optim, optim.args))
-  })
+  optim.args$method <- method
+  res_list <- vector("list", length(init[run.these]))
+  for(i in 1:length(res_list)){
+    neghaz <- T
+    while(neghaz){
+      #cat(optim.args$kappa, "\n")
+      optim.args$par <- init[run.these][[i]]
+      res.optim <- do.call(optim, optim.args)
+      beta <- res.optim$par[(ncol(X.cr) + 1):length(res.optim$par)]
+      eta <- X %*% beta
+      etaD <- XD %*% beta
+      hazsu <- link.surv$h(eta, etaD)
+      neghaz <- any(hazsu < 0)
+      optim.args$kappa <- optim.args$kappa * 10
+    }
+    optim.args$kappa <- if(constraint) 1 else 0
+    res_list[[i]] <- res.optim
+  }
 
   #Choose the best model according to the maximum likelihood estimate
   MLs <- sapply(res_list, function(x) tail(x$value, 1))
@@ -327,11 +346,13 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
 
   #Compute the covariance matrix matrix
   if(covariance){
+    args$kappa <- 0
     args$x0 <- res$par
     args$f <- minusloglik
     hes <- do.call(pracma::hessian, args)
-    cov <- solve(hes)
-    if(any(is.na(cov))){
+    cov <- if (!inherits(vcov <- try(solve(hes)), "try-error"))  vcov
+  # cov <- solve(hes)
+    if(!is.null(cov) && any(is.na(cov))){
       warning("Hessian is not invertible!")
     }
   }else{
@@ -515,4 +536,3 @@ print.summary.gfcm <- function(x)
   cat("Link - surv = ", x$linksu, "\n")
   cat("LogLik(model) =", x$ML, "\n")
 }
-

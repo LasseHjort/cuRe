@@ -97,11 +97,13 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
       function(t, pars){
         res <- rep(NA, length(t))
         object_tmp@fullcoef <- pars
-        wh <- which(t != 0)
-        suppressWarnings(newdata_tmp <- cbind(newdata[i,,drop = F], t[wh]))
-        names(newdata_tmp)[ncol(newdata_tmp)] <- response_name
-        res[wh] <- as.numeric(predict(object_tmp, newdata = newdata_tmp, type = "surv"))
-        res[-wh] <- 1
+        wh <- t != 0
+        if(any(wh)){
+          suppressWarnings(newdata_tmp <- cbind(newdata[i,,drop = F], t[wh]))
+          names(newdata_tmp)[ncol(newdata_tmp)] <- response_name
+          res[wh] <- as.numeric(predict(object_tmp, newdata = newdata_tmp, type = "surv")) 
+        }
+        res[!wh] <- 1
         res
       }
     })
