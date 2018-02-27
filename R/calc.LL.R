@@ -1,3 +1,4 @@
+
 #' Loss of lifetime estimation
 #'
 #' Function for computing loss of lifetime function based on relative survival models.
@@ -110,7 +111,7 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
     model.params <- object@fullcoef
     cov <- object@vcov
   } else {
-    if ("gfmc" %in% class(object)) {
+    if ("gfcm" %in% class(object)) {
       rel_surv <- lapply(1:length(expected), function(i){
         function(t, pars){
           res <- rep(NA, length(t))
