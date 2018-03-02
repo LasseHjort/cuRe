@@ -44,7 +44,13 @@ plot.cuRe <- function(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure
                    survuncured = "Disease specific survival of the uncured")
   }
 
-  if(is.null(ci)) ci <- fit$ci
+  if(is.null(ci)){
+    if(add){
+      ci <- "n"
+    } else {
+      ci <- ifelse(fit$ci, "ci", "n")
+    }
+  }
 
   if(length(col) == 1 & !is.null(newdata)){
     col <- rep(col, nrow(newdata))
@@ -58,22 +64,22 @@ plot.cuRe <- function(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure
     xlim <- range(time)
   }
 
-  predict_rs <- predict(fit, newdata, time, type = type, ci = ci)
-  nr.samples <- length(predict_rs$res)
+  predict_rs <- predict(fit, newdata, time, type = type, var.type = ci)
+  nr.samples <- length(predict_rs)
   if(type == "ehaz"){
-    ylim <- range(unlist(lapply(predict_rs$res, function(x) x[,-2])), na.rm = T, finite = T)
+    ylim <- range(unlist(lapply(predict_rs, function(x) x[,-2])), na.rm = T, finite = T)
   }
 
   for(i in 1:nr.samples){
     if(i == 1 & !add){
-      plot(Est ~ time, data = predict_rs$res[[i]], type = "l", ylim = ylim, xlim = xlim,
+      plot(Estimate ~ time, data = predict_rs[[i]], type = "l", ylim = ylim, xlim = xlim,
            xlab = xlab, ylab = ylab, col = col[i], ...)
     }else{
-      lines(Est ~ time, data = predict_rs$res[[i]], type = "l", col = col[i], ...)
+      lines(Estimate ~ time, data = predict_rs[[i]], type = "l", col = col[i], ...)
     }
-    if(ci){
-      lines(ci.upper ~ time, data = predict_rs$res[[i]], type = "l", col = col[i], lty = 2, ...)
-      lines(ci.lower ~ time, data = predict_rs$res[[i]], type = "l", col = col[i], lty = 2, ...)
+    if(ci == "ci"){
+      lines(ci.upper ~ time, data = predict_rs[[i]], type = "l", col = col[i], lty = 2, ...)
+      lines(ci.lower ~ time, data = predict_rs[[i]], type = "l", col = col[i], lty = 2, ...)
     }
   }
   if(non.parametric){

@@ -113,27 +113,16 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
     model.params <- object@fullcoef
     cov <- object@vcov
   }else{
-    if ("gfcm" %in% class(object)) {
+    if ("cuRe" %in% class(object)) {
       rel_surv <- lapply(1:length(expected), function(i){
         function(t, pars) predict(object, newdata = newdata[i,, drop = F],
-                                  time = t, pars = pars, ci = "n")[[1]]$Estimate
+                                  time = t, pars = pars, var.type = "n")[[1]]$Estimate
       })
 
       excess_haz <- lapply(1:length(expected), function(i){
         function(t, pars) predict(object, newdata = newdata[i,, drop = F],
                                   time = t, pars = pars, type = "hazard",
-                                  ci = "n")[[1]]$Estimate
-      })
-    } else {
-      rel_surv <- lapply(1:length(expected), function(i){
-        function(t, pars) predict(object, newdata = newdata[i,, drop = F],
-                                  time = t, pars = pars, ci = F)$res[[1]]$Est
-      })
-
-      excess_haz <- lapply(1:length(expected), function(i){
-        function(t, pars) predict(object, newdata = newdata[i,, drop = F],
-                                  time = t, pars = pars, type = "ehaz",
-                                  ci = F)$res[[1]]$Est
+                                  var.type = "n")[[1]]$Estimate
       })
     }
     model.params <- c(unlist(object$coefs), object$coefs.spline)

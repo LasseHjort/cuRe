@@ -102,7 +102,7 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
         if(any(wh)){
           suppressWarnings(newdata_tmp <- cbind(newdata[i,,drop = F], t[wh]))
           names(newdata_tmp)[ncol(newdata_tmp)] <- response_name
-          res[wh] <- as.numeric(predict(object_tmp, newdata = newdata_tmp, type = "surv")) 
+          res[wh] <- as.numeric(predict(object_tmp, newdata = newdata_tmp, type = "surv"))
         }
         res[!wh] <- 1
         res
@@ -111,27 +111,14 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
     model.params <- object@fullcoef
     cov <- object@vcov
   } else {
-    if ("gfcm" %in% class(object)) {
+    if ("cuRe" %in% class(object)) {
       rel_surv <- lapply(1:length(expected), function(i){
         function(t, pars){
           res <- rep(NA, length(t))
           wh <- t != 0
           if(any(wh)){
             res[wh] <- predict(object, newdata = newdata[i,, drop = F],
-                               time = t[wh], pars = pars, ci = F)[[1]]$Estimate
-          }
-          res[!wh] <- 1
-          res
-        }
-      })
-    } else {
-      rel_surv <- lapply(1:length(expected), function(i){
-        function(t, pars){
-          res <- rep(NA, length(t))
-          wh <- t != 0
-          if(any(wh)){
-            res[wh] <- predict(object, newdata = newdata[i,, drop = F],
-                               time = t[wh], pars = pars, ci = F)$res[[1]]$Est
+                               time = t[wh], pars = pars, var.type = "n")[[1]]$Estimate
           }
           res[!wh] <- 1
           res
