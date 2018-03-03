@@ -23,12 +23,13 @@
 #' @return The estimated cure points.
 #' @export
 
-calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, expected = NULL, ci = TRUE,
+calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, exp.fun = NULL, ci = TRUE,
                                 rmap, ratetable = survexp.dk, last.point = 100, reverse = FALSE){
 
-  if(is.null(expected)){
+
+  if(is.null(exp.fun)){
     #The time points for the expected survival
-    times <- seq(0, last.point + 1, by = 0.05)
+    times <- seq(0, last.point + 1, by = 0.1)
 
     #Extract expected survival function
     if(is.null(newdata)){
@@ -50,6 +51,10 @@ calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, ex
                      scale = ayear, times = times * ayear))
       })
     }
+    exp.fun <- lapply(1:length(expected), function(i){
+      smooth.obj <- smooth.spline(x = expected[[i]]$time, y = expected[[i]]$surv, all.knots = T)
+      function(time) predict(smooth.obj, x = time)$y
+    })
   }
 
 
@@ -57,11 +62,11 @@ calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, ex
   ests <- lapply(1:n.obs, function(i){
     f <- function(time, q) calc.Crude(fit, time = time, type = "othertime",
                                       ci = F, newdata = newdata[i,,drop = F], last.point = last.point,
-                                      expected = expected[i], reverse = reverse, link = "identity")$prob[[1]]$prob - q
+                                      exp.fun = exp.fun[i], reverse = reverse, link = "identity")$prob[[1]]$prob - q
     uni <- rootSolve::uniroot.all(f, lower = 1e-05, upper = max.time, q = q)
     if(ci){
       gr <- grad(f, x = uni, q = 0)
-      VAR <- calc.Crude(fit, time = uni, expected = expected[i], newdata = newdata[i,,drop = F],
+      VAR <- calc.Crude(fit, time = uni, exp.fun = exp.fun[i], newdata = newdata[i,,drop = F],
                         last.point = last.point, type = "othertime", link = "identity",
                         reverse = reverse)$prob[[1]]$var
       VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)

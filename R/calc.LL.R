@@ -35,7 +35,7 @@
 
 
 calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
-                    tau = 100, ci = T, expected = NULL, ratetable = survexp.dk,
+                    tau = 100, ci = T, exp.fun = NULL, ratetable = survexp.dk,
                     rmap, pars = NULL, n = 100){
 
   type <- match.arg(type)
@@ -57,9 +57,9 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
     time <- seq(0, tau, length.out = 100)
   }
 
-  if(is.null(expected)){
+  if(is.null(exp.fun)){
     #The time points for the expected survival
-    times <- seq(0, tau + 1, by = 0.05)
+    times <- seq(0, tau + 1, by = 0.1)
 
     #Extract expected survival function
     if(is.null(newdata)){
@@ -83,7 +83,15 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
                                       scale = ayear, times = times * ayear))
       }
     }
+    exp.fun <- lapply(1:length(expected), function(i){
+      smooth.obj <- smooth.spline(x = expected[[i]]$time, y = expected[[i]]$surv, all.knots = T)
+      function(time) predict(smooth.obj, x = time)$y
+    })
   }
+
+  # expected <- list(survexp(~ 1, rmap = list(age = agedays, sex = sex, year = dx),
+  #                     data = data, ratetable = survexp.dk, scale = ayear, times = times * ayear))
+
 
   #Extract relative survival function
   if(any(class(object) %in% c("stpm2", "pstpm2"))){
@@ -94,7 +102,7 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
     }
 
     object_tmp <- object
-    rel_surv <- lapply(1:length(expected), function(i){
+    rel_surv <- lapply(1:length(exp.fun), function(i){
       function(t, pars){
         res <- rep(NA, length(t))
         object_tmp@fullcoef <- pars
@@ -112,7 +120,7 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
     cov <- object@vcov
   } else {
     if ("cuRe" %in% class(object)) {
-      rel_surv <- lapply(1:length(expected), function(i){
+      rel_surv <- lapply(1:length(exp.fun), function(i){
         function(t, pars){
           res <- rep(NA, length(t))
           wh <- t != 0
@@ -131,16 +139,15 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
 
   gaussxw <- statmod::gauss.quad(n)
 
-  Ests <- lapply(1:length(expected), function(i){
+  Ests <- lapply(1:length(exp.fun), function(i){
     #Calculate loss of lifetime
-    Est <- calcMean(rel_surv[[i]], exp_function, time = time,
-                    tau = tau, pars = model.params, expected = expected[[i]],
+    Est <- calcMean(rel_surv[[i]], exp.fun = exp.fun[[i]], time = time,
+                    tau = tau, pars = model.params,
                     gaussxw = gaussxw)
 
     if(type == "ll"){
-      Est_exp <- calcExpMean(exp_function, time = time,
-                             tau = tau, expected = expected[[i]],
-                             gaussxw = gaussxw)
+      Est_exp <- calcExpMean(exp.fun = exp.fun[[i]], time = time,
+                             tau = tau, gaussxw = gaussxw)
       Est <- Est_exp - Est
     }
 
@@ -149,8 +156,8 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
     if(ci){
       #Calculate variances numerically by the delta method
       J <- numDeriv::jacobian(calcMean, x = model.params, rel_surv = rel_surv[[i]],
-                              exp_function = exp_function, time = time, tau = tau,
-                              expected = expected[[i]], gaussxw = gaussxw)
+                              exp.fun = exp.fun[[i]], time = time, tau = tau,
+                              gaussxw = gaussxw)
       res$Var <- apply(J, MARGIN = 1, function(x) x %*% cov %*% x)
       res$lower.ci <- res[, type] - sqrt(res$Var) * qnorm(0.975)
       res$upper.ci <- res[, type] + sqrt(res$Var) * qnorm(0.975)
@@ -192,29 +199,29 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
 #   rev(vals_exp[these]) / rev(exp_eval[these]) - rev(vals_pop[these]) / rev(surv_eval[these])
 # }
 
-calcMean <- function(rel_surv, exp_function, time, tau, pars, expected, gaussxw){
+calcMean <- function(rel_surv, exp.fun, time, tau, pars, gaussxw){
   scale <- (tau - time) / 2
   scale2 <- (tau + time) / 2
   eval_rel_t <- rel_surv(time, pars)
-  eval_gen_t <- exp_function(time, expected)
+  eval_gen_t <- exp.fun(time)
   eval <- rep(NA, length(time))
   for(i in 1:length(time)){
     points <- scale[i] * gaussxw$nodes + scale2[i]
-    eval_gen <- exp_function(points, expected)
+    eval_gen <- exp.fun(points)
     eval_rel <- rel_surv(points, pars)
     eval[i] <- sum(gaussxw$weights * (eval_gen * eval_rel / eval_rel_t[i]))
   }
   scale * eval / eval_gen_t
 }
 
-calcExpMean <- function(exp_function, time, tau, expected, gaussxw){
+calcExpMean <- function(exp.fun, time, tau, gaussxw){
   scale <- (tau - time) / 2
   scale2 <- (tau + time) / 2
-  eval_gen_t <- exp_function(time, expected)
+  eval_gen_t <- exp.fun(time)
   eval <- rep(NA, length(time))
   for(i in 1:length(time)){
     points <- scale[i] * gaussxw$nodes + scale2[i]
-    eval_gen <- exp_function(points, expected)
+    eval_gen <- exp.fun(points)
     eval[i] <- sum(gaussxw$weights * (eval_gen))
   }
   scale * eval / eval_gen_t

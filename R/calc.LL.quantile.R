@@ -23,12 +23,12 @@
 
 
 calc.LL.quantile <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRUE,
-                             expected = NULL, rmap = NULL, ratetable = survexp.dk,
+                             exp.fun = NULL, rmap = NULL, ratetable = survexp.dk,
                              tau = 100, type = "ll"){
 
-  if(is.null(expected)){
+  if(is.null(exp.fun)){
     #The time points for the expected survival
-    times <- seq(0, tau + 1, by = 0.05)
+    times <- seq(0, tau + 1, by = 0.1)
 
     #Extract expected survival function
     if(is.null(newdata)){
@@ -50,16 +50,20 @@ calc.LL.quantile <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRU
                      scale = ayear, times = times * ayear))
       })
     }
+    exp.fun <- lapply(1:length(expected), function(i){
+      smooth.obj <- smooth.spline(x = expected[[i]]$time, y = expected[[i]]$surv, all.knots = T)
+      function(time) predict(smooth.obj, x = time)$y
+    })
   }
 
   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))
   ests <- lapply(1:n.obs, function(i){
-    f <- function(time, q) calc.LL(fit, time = time, ci = F, expected = expected[i],
+    f <- function(time, q) calc.LL(fit, time = time, ci = F, exp.fun = exp.fun[i],
                                    newdata = newdata[i,,drop = F], tau = tau)$Ests[[1]][, type] - q
     uni <- rootSolve::uniroot.all(f, lower = 0, upper = max.time, q = q)
     if(ci){
       gr <- grad(f, x = uni, q = 0)
-      VAR <- calc.LL(fit, time = uni, expected = expected[i],
+      VAR <- calc.LL(fit, time = uni, exp.fun = exp.fun[i],
                      newdata = newdata[i,, drop = F], tau = tau)$Ests[[1]]$Var
       VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)
       upper <- log(uni) + sqrt(VAR2) * qnorm(0.975)
@@ -76,8 +80,8 @@ calc.LL.quantile <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRU
 
 
 quantile.calc.LL2 <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRUE,
-                             expected = NULL, rmap, ratetable = survexp.dk,
-                             last.point = 100, type = "ll"){
+                              expected = NULL, rmap, ratetable = survexp.dk,
+                              last.point = 100, type = "ll"){
 
   if(is.null(expected)){
     #The time points for the expected survival
