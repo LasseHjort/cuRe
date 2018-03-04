@@ -40,19 +40,35 @@ calc.cure.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, ci 
 
   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))
   ests <- lapply(1:n.obs, function(i){
+    ci.new <- F
     if(reverse){
       f <- function(time, q) 1 - pred(time, newdata = newdata[i,,drop = F])$Estimate - q
     }else {
       f <- function(time, q) pred(time, newdata = newdata[i,,drop = F])$Estimate - q
     }
-    uni <- rootSolve::uniroot.all(f, lower = 1e-05, upper = max.time, q = q)
+    lower <- 1e-05
+    if(f(lower, q = q) > 0 & f(max.time, q = q) < 0){
+      uni <- rootSolve::uniroot.all(f, lower = lower, upper = max.time, q = q)
+    }else{
+      if(f(lower, q = q) <= 0){
+        uni <- 0
+        ci.new <- T
+      } else if(f(max.time, q = q) >= 0){
+        uni <- NA
+        ci.new <- T
+      }
+    }
     if(ci){
-      gr <- grad(f, x = uni, q = 0)
-      VAR <- pred(time = uni, newdata = newdata[i,,drop = F], var.type = "se")$SE ^ 2
-      VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)
-      upper <- log(uni) + sqrt(VAR2) * qnorm(0.975)
-      lower <- log(uni) - sqrt(VAR2) * qnorm(0.975)
-      data.frame(Est = uni, var = VAR2 * uni ^ 2, lower.ci = exp(lower), upper.ci = exp(upper))
+      if(!ci.new){
+        gr <- grad(f, x = uni, q = 0)
+        VAR <- pred(time = uni, newdata = newdata[i,,drop = F], var.type = "se")$SE ^ 2
+        VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)
+        upper <- log(uni) + sqrt(VAR2) * qnorm(0.975)
+        lower <- log(uni) - sqrt(VAR2) * qnorm(0.975)
+        data.frame(Est = uni, var = VAR2 * uni ^ 2, lower.ci = exp(lower), upper.ci = exp(upper))
+      }else{
+        data.frame(Est = uni, var = NA, lower.ci = NA, upper.ci = NA)
+      }
     } else{
       data.frame(Est = uni)
     }
