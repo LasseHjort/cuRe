@@ -15,166 +15,138 @@
 #' @return An object of class \code{matrix} including the predictions.
 #' @export
 #'
-predict.cm <- function(fit, newdata = NULL, type = c("relsurv", "curerate", "hazard", "probcure", "survuncured"),
-                       time = NULL, var.type = c("ci", "se", "n"), pars = NULL, link.type = NULL){
+predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
+                                                     "cumhazuncured", "densityuncured", "failuncured", "oddsuncured",
+                                                     "loghazarduncured", "hazard", "density", "fail",
+                                                     "loghazard", "odds", "cumhaz"),
+                       time = NULL, var.type = c("ci", "se", "n"), pars = NULL, link = NULL, keep.attributes = F){
   type <- match.arg(type)
   if(!is.null(pars)){
-    groups <- factor(rep(1:4, fit$n.param.formula), 1:4, labels = c("gamma", "k1", "k2", "k3"))
+    groups <- factor(rep(1:length(fit$coefs), fit$n.param.formula), 1:length(fit$coefs))
     fit$coefs <- split(pars, f = groups)
   }
   is_null_newdata <- is.null(newdata)
 
-  #Edit formulas
-  formulas <- fit$formulas
-  tt <- terms(formulas[[1]])
-  formulas[[1]] <- formula(delete.response(tt))
-
   #Check if covariates are included in the model in cases where newdata is not provided
   if(is_null_newdata){
-    vars <- lapply(formulas, function(formula){
-      if(!is.null(formula)){
-        all.vars(formula)
-      }else{
-        return(NULL)
-      }
-    })
-    vars <- unlist(vars)
-    if(length(vars) != 0){
+    classes <- sapply(lapply(fit$all.formulas, rstpm2:::rhs), class)
+    if(any(classes != "numeric")){
       stop("'newdata' must be specified for model including covariates")
     }
     newdata <- data.frame(x = 1)
-    colnames(newdata) <- "(Intercept)"
+    #colnames(newdata) <- "(Intercept)"
   }
 
-  Ms <- lapply(formulas, get_design, data = newdata)
-  pi_fun <- function(pars, M) M %*% pars[1:ncol(M)]
-  pi <- pi_fun(unlist(fit$coefs), Ms[[1]])
+  if(is.null(time)) time <- 0
 
-  var.type <- match.arg(var.type)
+  all.formulas <- lapply(fit$all.formulas, function(x){
+    rstpm2:::lhs(x) <- NULL
+    x
+  }
+  )
 
-  if(type == "curerate"){
-    pi <- data.frame(pi = pi)
-    if(var.type %in% c("ci", "se") & fit$ci){
-      grads <- jacobian(pi_fun, x = unlist(fit$coefs), M = Ms[[1]])
-      pi$SE <- sqrt(apply(grads, MARGIN = 1, function(x) x %*% fit$cov %*% x))
+  X.all <- lapply(all.formulas, get_design, data = newdata)
+
+  if(fit$ci){
+    var.type <- match.arg(var.type)
+  } else {
+    var.type <- "n"
+  }
+
+  pred <- if (!var.type %in% c("ci", "se")) {
+    lapply(1:nrow(newdata), function(i){
+      data.frame(Estimate = local.cm(fit, type = type, X.all = lapply(X.all, function(X) X[i,, drop = F]),
+                                     time = time))
+    })
+  } else {
+    gd <- NULL
+    if (is.null(link)){
+      if(!fit$excess){
+        link <- switch(type, linkS = "I", linkpi = "I", curerate = "cloglog",
+                       probcure = "cloglog", survuncured = "cloglog",
+                       hazarduncured = "log", cumhazuncured = "log",
+                       densityuncured = "log", failuncured = "cloglog",
+                       oddsuncured = "cloglog", loghazarduncured = "I",
+                       surv = "cloglog", hazard = "log", density = "log", fail = "cloglog",
+                       loghazard = "I", odds = "cloglog", cumhaz = "log")
+      } else {
+        link <- switch(type, linkS = "I", linkpi = "I", curerate = "cloglog",
+                       probcure = "cloglog", survuncured = "log",
+                       hazarduncured = "I", cumhazuncured = "I",
+                       densityuncured = "I", failuncured = "log2",
+                       oddsuncured = "cloglog", loghazarduncured = "I",
+                       surv = "log", hazard = "I", density = "I", fail = "log2",
+                       loghazard = "I", odds = "cloglog", cumhaz = "I")
+      }
+    }
+
+    var.link <- switch(link, I = function(x) x, log = function(x) log(x),
+                       cloglog = function(x) log(-log(x)), log2 = function(x) -log(x))
+    var.link.inv <- switch(link, I = function(x) x, log = function(x) exp(x),
+                           cloglog = function(x) exp(-exp(x)), log2 = function(x) exp(-x))
+
+
+    lapply(1:nrow(newdata), function(i){
+      res <- predictnl.default.cm(fit, local.cm, var.link = var.link, type = type,
+                                  X.all = lapply(X.all, function(X) X[i,, drop = F]), time = time)
       if(var.type == "ci"){
-        pi$ci.lower <- get.link(fit$link)(pi$pi - qnorm(0.975) * SE)
-        pi$ci.upper <- get.link(fit$link)(pi$pi + qnorm(0.975) * SE)
-        pi <- subset(pi, select = -SE)
+        lower <- var.link.inv(res$Estimate - res$SE * qnorm(0.975))
+        upper <- var.link.inv(res$Estimate + res$SE * qnorm(0.975))
+        res$lower <- pmin(lower, upper)
+        res$upper <- pmax(lower, upper)
+        res <- subset(res, select = -SE)
       }
-    }
-    pi$pi <- get.link(fit$link)(pi$pi)
-    return(pi)
-  }else if(type %in% c("relsurv", "hazard", "probcure", "survuncured")){
-    if(is.null(time)){
-      time <- seq(min(fit$times), max(fit$times), length.out = 100)
-    }
 
-    out.fun <- switch(type,
-                      relsurv = relsurv_fun_simple,
-                      hazard = ehaz_fun_simple,
-                      probcure = probcure_fun_simple,
-                      survuncured = survuncured_fun_simple)
-
-    if(is.null(link.type)){
-      link.type <- switch(type,
-                          relsurv = "logit",
-                          hazard = "identity",
-                          probcure = "probit",
-                          survuncured = "logit")
-    }
-
-    rss <- vector("list", nrow(newdata))
-    for(i in 1:nrow(newdata)){
-      Ms_indi <- lapply(Ms, function(x) x[i,, drop = F])
-      rss[[i]] <- data.frame(Estimate = c(out.fun(Ms_indi = Ms_indi, pars = unlist(fit$coefs), time = time,
-                                                  dist = fit$dist, model = fit$type, link = fit$link,
-                                                  surv_fun = fit$surv_fun,
-                                                  dens_fun = fit$dens_fun,
-                                                  link.type = link.type)))
-      if(var.type %in% c("ci", "se") & fit$ci){
-        grads <- jacobian(out.fun, x = unlist(fit$coefs), Ms_indi = Ms_indi, time = time,
-                          dist = fit$dist, model = fit$type, link = fit$link,
-                          surv_fun = fit$surv_fun,
-                          dens_fun = fit$dens_fun,
-                          link.type = link.type)
-
-        rss[[i]]$SE <- sqrt(apply(grads, MARGIN = 1, function(x) x %*% fit$cov %*% x))
-        if(var.type == "ci"){
-          rss[[i]]$ci.lower <- get.link(link.type)(rss[[i]]$Estimate - qnorm(0.975) * rss[[i]]$SE)
-          rss[[i]]$ci.upper <- get.link(link.type)(rss[[i]]$Estimate + qnorm(0.975) * rss[[i]]$SE)
-          rss[[i]] <- subset(rss[[i]], select = -SE)
-
-        }
-      }
-      rss[[i]]$Estimate <- get.link(link.type)(rss[[i]]$Estimate)
-
-      if(type %in% c("relsurv", "survuncured")){
-        if(var.type == "ci"){
-          rss[[i]][time == 0, ] <- c(1, 1, 1)
-        }else if(var.type == "se"){
-          rss[[i]][time == 0, ] <- c(1, 0)
-        }else{
-          rss[[i]][time == 0, ] <- 1
-        }
-      }
-    }
-    return(rss)
+      res$Estimate <- var.link.inv(res$Estimate)
+      res
+    })
   }
+  if (keep.attributes)
+    attr(pred, "newdata") <- newdata
+  return(pred)
 }
 
 
-relsurv_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "relsurv", surv_fun, dens_fun, link.type){
-  surv_fun <- get.surv(dist)
-  lps <- calc.lps(Xs = Ms_indi, param = pars)
-  lps <- lapply(lps, c)
-  pi.eval <- get.link(link)(lps[[1]])
-  surv.eval <- surv_fun(time, lps = lps)
-  if(model == "mixture"){
-    get.inv.link(link.type)(pi.eval + (1 - pi.eval) * surv.eval)
-  }else if(model == "nmixture"){
-    get.inv.link(link.type)(pi.eval ^ (1 - surv.eval))
+predictnl.default.cm <- function (fit, fun, ...)
+{
+  localf <- function(coef, ...) {
+    fit$coefs <- split(coef, rep(1:length(fit$coefs), fit$n.param.formula))
+    fun(fit, ...)
   }
+  numDeltaMethod.cm(fit, localf, ...)
 }
 
-ehaz_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "hazard", surv_fun, dens_fun, link.type){
-  surv_fun <- get.surv(dist)
-  lps <- calc.lps(Xs = Ms_indi, param = pars)
-  lps <- lapply(lps, c)
-  pi.eval <- get.link(link)(lps[[1]])
-  dens.eval <- dens_fun(time, lps = lps)
-  surv.eval <- surv_fun(time, lps = lps)
-  if(model == "mixture"){
-    get.inv.link(link.type)((1 - pi.eval) * dens.eval / (pi.eval + (1 - pi.eval) * surv.eval))
-  }else if(model == "nmixture"){
-    get.inv.link(link.type)(-log(pi.eval) * dens.eval)
-  }
+
+numDeltaMethod.cm <- function (fit, fun, ...)
+{
+  coef <- unlist(fit$coefs)
+  est <- fun(coef, ...)
+  Sigma <- fit$covariance
+  gd <- rstpm2:::grad(fun, coef, ...)
+  se.est <- as.vector(sqrt(colSums(gd * (Sigma %*% gd))))
+  data.frame(Estimate = est, SE = se.est)
 }
 
-probcure_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "probcure", surv_fun, dens_fun, link.type){
-  surv_fun <- get.surv(dist)
-  lps <- calc.lps(Xs = Ms_indi, param = pars)
-  lps <- lapply(lps, c)
-  pi.eval <- get.link(link)(lps[[1]])
-  surv.eval <- surv_fun(time, lps = lps)
-  if(model == "mixture"){
-    get.inv.link(link.type)(pi.eval / (pi.eval + (1 - pi.eval) * surv.eval))
-  }else if(model == "nmixture"){
-    get.inv.link(link.type)(pi.eval / (pi.eval ^ (1 - surv.eval)))
-  }
-}
 
-survuncured_fun_simple <- function(Ms_indi, pars, time, dist, model, link, type = "survuncured", surv_fun, dens_fun, link.type){
-  surv_fun <- get.surv(dist)
-  lps <- calc.lps(Xs = Ms_indi, param = pars)
-  lps <- lapply(lps, c)
-  surv.eval <- surv_fun(time, lps = lps)
-  if(model == "mixture"){
-    get.inv.link(link.type)(surv.eval)
-  }else if(model == "nmixture"){
-    pi.eval <- get.link(link)(lps[[1]])
-    get.inv.link(link.type)((pi.eval ^ (1 - surv.eval) - pi.eval) / (1 - pi.eval))
-  }
-}
+local.cm <- function(fit, type = "surv", var.link = function(x) x,
+                     X.all, time) {
+  lps <- lapply(1:length(fit$coefs), function(i) as.vector(X.all[[i]] %*% fit$coefs[[i]]))
+  pi <- as.vector(get.link(fit$link)(lps[[1]]))
+  Su <- fit$surv.fun(x = time, lps = lps)
+  fu <- fit$dens.fun(x = time, lps = lps)
+  Hu <- -log(Su)
+  S <- if(fit$type == "mixture") pi + (1 - pi) * Su else pi ^ (1 - Su)
+  f <- if(fit$type == "mixture") (1 - pi) * fu else - log(pi) * fu * S
+  H <- -log(S)
+  est <- switch(type, linkS = lps, linkpi = lps[[1]], curerate = pi,
+                probcure = pi / S, survuncured = Su,
+                hazarduncured = Su * fu, cumhazuncured = Hu,
+                densityuncured = fu, failuncured = 1 - Su,
+                oddsuncured = (1 - Su)/Su, loghazarduncured = log(Su * fu),
+                surv = S, hazard = S * f, density = f, fail = 1 - S,
+                loghazard = log(S * f), odds = (1 - S) / S, cumhaz = H)
 
+  est <- var.link(est)
+  return(est)
+}
 

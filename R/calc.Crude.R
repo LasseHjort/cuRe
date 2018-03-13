@@ -9,8 +9,8 @@
 #' @param type Probability to compute. Possible values are \code{cancer} (default),
 #' \code{other}, and \code{othertime} (see details).
 #' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
-#' and \code{last.point} is selected.
-#' @param last.point Upper bound of the cancer related death integral (see details).
+#' and \code{tau} is selected.
+#' @param tau Upper bound of the cancer related death integral (see details).
 #' The argument is only used for \code{type = othertime}. Default is 100.
 #' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
 #' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
@@ -23,6 +23,7 @@
 #' @param reverse Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
 #' Only applicable for \code{type = othertime}.
 #' @param Link Link function for computing variance in order to bound confidence intervals. Default is \code{loglog}.
+#' @param n Number of knots used for the Gauss-Legendre quadrature.
 #' @return An object of class \code{crude} containing the crude probability estimates
 #' of each individual in \code{newdata}.
 #' @details The function estimates crude probabilities by using the relative survival, expected survival,
@@ -42,18 +43,19 @@
 #' @import statmod
 
 calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othertime"),
-                       time = NULL, last.point = 100, reverse = FALSE,
-                       ci = T, exp.fun = NULL, ratetable = survexp.dk, rmap, link = "loglog", n = 100){
+                       time = NULL, tau = 100, reverse = FALSE,
+                       ci = T, exp.fun = NULL, ratetable = survexp.dk, rmap,
+                       link = "loglog", n = 100){
 
   type <- match.arg(type)
 
   #Time points at which to evaluate integral
   if(is.null(time)){
-    time <- seq(0, last.point, length.out = 100)
+    time <- seq(0, tau, length.out = 100)
   }
   if(is.null(exp.fun)){
     #The time points for the expected survival
-    times <- seq(0, last.point + 1, by = 0.1)
+    times <- seq(0, tau + 1, by = 0.1)
 
     #Extract expected survival function
     if(is.null(newdata)){
@@ -161,13 +163,13 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
   probs <- lapply(1:length(exp.fun), function(i){
     prob <- probfun(time = time, rel_surv = rel_surv[[i]], cs_haz = cs_haz[[i]],
                     exp.fun = exp.fun[[i]], reverse = reverse,
-                    pars = model.params, last.point = last.point, link = link,
+                    pars = model.params, tau = tau, link = link,
                     gaussxw = gaussxw)
     res <- data.frame(prob = prob)
     if(ci){
       prob_gr <- numDeriv::jacobian(probfun, x = model.params, time = time,
                                     rel_surv = rel_surv[[i]], cs_haz = cs_haz[[i]],
-                                    exp.fun =  exp.fun[[i]], last.point = last.point,
+                                    exp.fun =  exp.fun[[i]], tau = tau,
                                     link = link, reverse = reverse, gaussxw = gaussxw)
       res$var <- apply(prob_gr, 1, function(x) x %*% cov %*% x)
       ci1 <- get.link(link)(res$prob - qnorm(0.975) * sqrt(res$var))
@@ -211,7 +213,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
 #   vals_pop[t_new %in% time]
 # }
 #
-# prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
+# prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, tau, link, reverse, n, gaussxw){
 #   if(all(time == 0)){
 #     return(rep(0, length(time)))
 #   }else{
@@ -222,7 +224,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
 #   }
 # }
 #
-# prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
+# prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, tau, link, reverse, n, gaussxw){
 #   if(all(time == 0)){
 #     return(rep(0, length(time)))
 #   }else{
@@ -233,10 +235,10 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
 #   }
 # }
 #
-# prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, last.point, link, reverse, n, gaussxw){
+# prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, tau, link, reverse, n, gaussxw){
 #   dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
 #   int_1 <- int.square(dens1, time = time, pars = pars, n = n)
-#   btd <- int.square(dens1, time = last.point, pars = pars, n = n)
+#   btd <- int.square(dens1, time = tau, pars = pars, n = n)
 #   wh <- time == 0
 #   prob_t <- rep(NA, length(time))
 #   prob_t[!wh] <- rel_surv(time[!wh], pars) * exp_function(time[!wh], expected)
@@ -247,7 +249,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
 # }
 
 prob_cuminc <- function(time, rel_surv, cs_haz, exp.fun, pars,
-                        last.point, link, reverse, gaussxw){
+                        tau, link, reverse, gaussxw){
   scale <- time / 2
   eval <- rep(NA, length(time))
   for(i in 1:length(time)){
@@ -267,10 +269,10 @@ prob_cuminc <- function(time, rel_surv, cs_haz, exp.fun, pars,
 }
 
 
-cprob_time <- function(time, rel_surv, cs_haz, exp.fun, pars, last.point,
+cprob_time <- function(time, rel_surv, cs_haz, exp.fun, pars, tau,
                        link, reverse, n, gaussxw){
-  scale <- (last.point - time) / 2
-  scale2 <- (last.point + time) / 2
+  scale <- (tau - time) / 2
+  scale2 <- (tau + time) / 2
   zs <- gaussxw$nodes
   wt <- gaussxw$weights
   eval <- rep(NA, length(time))

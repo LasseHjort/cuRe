@@ -29,66 +29,149 @@
 #' @export
 #' @import relsurv
 
-plot.cuRe <- function(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure", "survuncured"),
+# plot.cuRe <- function(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure", "survuncured"),
+#                       time = NULL, xlim = NULL, ylim = c(0, 1),
+#                       xlab = "Time", ylab = NULL, col = 1, ci = NULL,
+#                       non.parametric = F, col.non.para = 2,
+#                       include.knots = F, add = F, ...){
+#
+#   type <- match.arg(type)
+#   if(is.null(ylab)){
+#     ylab <- switch(type,
+#                    relsurv = "Relative survival",
+#                    ehaz = "Excess hazard",
+#                    probcure = "Conditional probability of cure",
+#                    survuncured = "Disease specific survival of the uncured")
+#   }
+#
+#   if(is.null(ci)){
+#     if(add){
+#       ci <- "n"
+#     } else {
+#       ci <- ifelse(fit$ci, "ci", "n")
+#     }
+#   }
+#
+#   if(length(col) == 1 & !is.null(newdata)){
+#     col <- rep(col, nrow(newdata))
+#   }
+#   if(is.null(time)){
+#     if(is.null(xlim)){
+#       xlim <- c(0, max(fit$times))
+#       time <- seq(xlim[1], xlim[2], length.out = 100)
+#     }
+#   }else{
+#     xlim <- range(time)
+#   }
+#
+#   predict_rs <- predict(fit, newdata, time, type = type, var.type = ci)
+#   nr.samples <- length(predict_rs)
+#   if(type == "ehaz"){
+#     ylim <- range(unlist(lapply(predict_rs, function(x) x[,-2])), na.rm = T, finite = T)
+#   }
+#
+#   for(i in 1:nr.samples){
+#     if(i == 1 & !add){
+#       plot(Estimate ~ time, data = predict_rs[[i]], type = "l", ylim = ylim, xlim = xlim,
+#            xlab = xlab, ylab = ylab, col = col[i], ...)
+#     }else{
+#       lines(Estimate ~ time, data = predict_rs[[i]], type = "l", col = col[i], ...)
+#     }
+#     if(ci == "ci"){
+#       lines(ci.upper ~ time, data = predict_rs[[i]], type = "l", col = col[i], lty = 2, ...)
+#       lines(ci.lower ~ time, data = predict_rs[[i]], type = "l", col = col[i], lty = 2, ...)
+#     }
+#   }
+#   if(non.parametric){
+#     rsfit <- relsurv::rs.surv(Surv(FU, status) ~ 1 + ratetable(age = age, sex = sex, year = diag_date),
+#                      data = fit$data, ratetable = survexp.dk, method = "ederer2")
+#     rsfit$time <- rsfit$time / year
+#     lines(rsfit$surv ~ rsfit$time, type = "s", col = col.non.para, ...)
+#   }
+#   if(include.knots){
+#     abline(v = exp(fit$knots), lty = 2)
+#   }
+# }
+
+
+
+
+plot.cuRe <- function(object, newdata = NULL, type = c("surv", "probcure", "survuncured", "hazarduncured",
+                                                       "cumhazuncured", "densityuncured", "failuncured",
+                                                       "oddsuncured", "loghazarduncured", "hazard",
+                                                       "density", "fail", "loghazard", "odds", "cumhaz"),
                       time = NULL, xlim = NULL, ylim = c(0, 1),
                       xlab = "Time", ylab = NULL, col = 1, ci = NULL,
-                      non.parametric = F, col.non.para = 2,
-                      include.knots = F, add = F, ...){
+                      add = F, ...){
 
   type <- match.arg(type)
-  if(is.null(ylab)){
-    ylab <- switch(type,
-                   relsurv = "Relative survival",
-                   ehaz = "Excess hazard",
-                   probcure = "Conditional probability of cure",
-                   survuncured = "Disease specific survival of the uncured")
-  }
 
-  if(is.null(ci)){
-    if(add){
-      ci <- "n"
+  if(is.null(ylab)){
+    if(!object$excess){
+      ylab <- switch(type,
+                     linkS = "Linear predictor", probcure = "Probability of cure",
+                     survuncured = "Survival of the uncured", hazarduncured = "Hazard of the uncured",
+                     cumhazuncured = "Cumulative hazard of the uncured",
+                     densityuncured = "Density of the uncured", failuncured = "Distribution of the uncured",
+                     oddsuncured = "Odds survival of the uncured", loghazarduncured = "Log-hazard of the uncured",
+                     surv = "Survival probability", hazard = "Hazard", density = "Density", fail = "Distribution",
+                     loghazard = "Log-hazard", odds = "Odds", cumhaz = "Cumulative incidence")
     } else {
-      ci <- ifelse(fit$ci, "ci", "n")
+      ylab <- switch(type,
+                     linkS = "Linear predictor", probcure = "Probability of cure",
+                     survuncured = "Relative survival of the uncured",
+                     hazarduncured = "Excess hazard of the uncured",
+                     cumhazuncured = "Cumulative excess hazard of the uncured",
+                     densityuncured = "Excess density of the uncured",
+                     failuncured = "Net distribution of the uncured",
+                     oddsuncured = "Net odds survival of the uncured",
+                     loghazarduncured = "Log-excess hazard of the uncured",
+                     surv = "Relative survival", hazard = "Excess hazard", density = "Excess density",
+                     fail = "Net distribution", loghazard = "Log-excess hazard",
+                     odds = "Net odds", cumhaz = "Cumulative excess hazard")
     }
   }
 
   if(length(col) == 1 & !is.null(newdata)){
     col <- rep(col, nrow(newdata))
   }
+
   if(is.null(time)){
     if(is.null(xlim)){
-      xlim <- c(0, max(fit$times))
+      xlim <- c(1e-05, max(object$time))
       time <- seq(xlim[1], xlim[2], length.out = 100)
     }
   }else{
     xlim <- range(time)
   }
 
-  predict_rs <- predict(fit, newdata, time, type = type, var.type = ci)
-  nr.samples <- length(predict_rs)
-  if(type == "ehaz"){
-    ylim <- range(unlist(lapply(predict_rs, function(x) x[,-2])), na.rm = T, finite = T)
+  if(is.null(ci)){
+    if(add){
+      ci <- "n"
+    } else {
+      ci <- ifelse(object$ci, "ci", "n")
+    }
   }
 
+  pred <- predict(object, newdata, time, type = type,
+                  var.type = ci)
+
+  if(type == "hazard"){
+    ylim <- range(unlist(lapply(pred, function(x) x[,-2])), na.rm = T, finite = T)
+  }
+
+  nr.samples <- length(pred)
   for(i in 1:nr.samples){
     if(i == 1 & !add){
-      plot(Estimate ~ time, data = predict_rs[[i]], type = "l", ylim = ylim, xlim = xlim,
+      plot(Estimate ~ time, data = pred[[i]], type = "l", ylim = ylim, xlim = xlim,
            xlab = xlab, ylab = ylab, col = col[i], ...)
     }else{
-      lines(Estimate ~ time, data = predict_rs[[i]], type = "l", col = col[i], ...)
+      lines(Estimate ~ time, data = pred[[i]], type = "l", col = col[i], ...)
     }
     if(ci == "ci"){
-      lines(ci.upper ~ time, data = predict_rs[[i]], type = "l", col = col[i], lty = 2, ...)
-      lines(ci.lower ~ time, data = predict_rs[[i]], type = "l", col = col[i], lty = 2, ...)
+      lines(upper ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2, ...)
+      lines(lower ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2, ...)
     }
   }
-  if(non.parametric){
-    rsfit <- relsurv::rs.surv(Surv(FU, status) ~ 1 + ratetable(age = age, sex = sex, year = diag_date),
-                     data = fit$data, ratetable = survexp.dk, method = "ederer2")
-    rsfit$time <- rsfit$time / year
-    lines(rsfit$surv ~ rsfit$time, type = "s", col = col.non.para, ...)
-  }
-  if(include.knots){
-    abline(v = exp(fit$knots), lty = 2)
-  }
 }
+

@@ -16,11 +16,12 @@
 #' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
 #' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
 #' Default is \code{survexp.dk}
-#' @param expected Object of class \code{list} containing objects of class \code{survexp},
+#' @param exp.fun Object of class \code{list} containing objects of class \code{function},
 #' with the expected survival of each row in newdata. If not specified, the function computes the expected
 #' survival.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
+#' @param n Number of knots used for the Gauss-Legendre quadrature.
 #' @return An object of class \code{le} containing the life expectancy estimates
 #' of each individual in \code{newdata}.
 #' @details The function computes
@@ -236,10 +237,10 @@ calcExpMean <- function(exp.fun, time, tau, gaussxw){
 #   vals_pop / (rel_surv(time, pars) * exp_function(time, expected))
 # }
 
-exp_function <- function(t, expected){
-  s <- summary(expected, t)
-  names(s$surv) <- s$time
-  a <- s$surv[as.character(t)]
-  names(a) <- NULL
-  a
-}
+# exp_function <- function(t, expected){
+#   s <- summary(expected, t)
+#   names(s$surv) <- s$time
+#   a <- s$surv[as.character(t)]
+#   names(a) <- NULL
+#   a
+# }

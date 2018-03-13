@@ -8,7 +8,7 @@
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param max.time Upper boundary of the interval [0, \code{max.time}] in which to search for solution.
-#' @param last.point Constant at which the bound to tie probability is calculated. Default is 100.
+#' @param tau Constant at which the bound to tie probability is calculated. Default is 100.
 #' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
 #' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
 #' Default is \code{survexp.dk}
@@ -24,12 +24,12 @@
 #' @export
 
 calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, exp.fun = NULL, ci = TRUE,
-                                rmap, ratetable = survexp.dk, last.point = 100, reverse = FALSE){
+                                rmap, ratetable = survexp.dk, tau = 100, reverse = FALSE){
 
 
   if(is.null(exp.fun)){
     #The time points for the expected survival
-    times <- seq(0, last.point + 1, by = 0.1)
+    times <- seq(0, tau + 1, by = 0.1)
 
     #Extract expected survival function
     if(is.null(newdata)){
@@ -61,13 +61,13 @@ calc.Crude.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, ex
   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))
   ests <- lapply(1:n.obs, function(i){
     f <- function(time, q) calc.Crude(fit, time = time, type = "othertime",
-                                      ci = F, newdata = newdata[i,,drop = F], last.point = last.point,
+                                      ci = F, newdata = newdata[i,,drop = F], tau = tau,
                                       exp.fun = exp.fun[i], reverse = reverse, link = "identity")$prob[[1]]$prob - q
     uni <- rootSolve::uniroot.all(f, lower = 1e-05, upper = max.time, q = q)
     if(ci){
       gr <- grad(f, x = uni, q = 0)
       VAR <- calc.Crude(fit, time = uni, exp.fun = exp.fun[i], newdata = newdata[i,,drop = F],
-                        last.point = last.point, type = "othertime", link = "identity",
+                        tau = tau, type = "othertime", link = "identity",
                         reverse = reverse)$prob[[1]]$var
       VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)
       upper <- log(uni) + sqrt(VAR2) * qnorm(0.975)

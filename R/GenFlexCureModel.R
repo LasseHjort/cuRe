@@ -400,10 +400,10 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
 
     #Fit mixture or non-mixture cure model
     fit <- fit.cure.model(formula = formula.pi, data = data, bhazard = bhazard, covariance = F,
-                          formula.k1 = formula.k1, formula.k2 = ~ 1, type = type)
+                          formula.surv = list(formula.k1, ~ 1), type = type)
 
     #Scale by link function
-    pi_hat <- predict(fit, type = "curerate", newdata = data)[,1]
+    pi_hat <- do.call(rbind, predict(fit, type = "curerate", newdata = data))[,1]
 
     #Predict survival of the uncured
     lp <- exp(model.matrix(formula.k1, data = data) %*% fit$coefs[[2]])

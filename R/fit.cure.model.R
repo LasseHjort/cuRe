@@ -26,24 +26,49 @@
 #' @example inst/fit.cure.model.ex.R
 
 
-fit.cure.model <- function(formula, data, bhazard = NULL, formula.k1 = ~ 1, formula.k2 = NULL,
-                           formula.k3 = NULL, type = c("mixture", "nmixture"),
-                           dist = c("weibull", "exponential", "lognormal"),
+fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, type = c("mixture", "nmixture"),
+                           dist = c("weibull", "exponential", "lognormal", "weiwei", "weiexp"),
                            link = c("logit", "loglog", "identity", "probit"),
-                           covariance = TRUE,
-                           optim.args = NULL){
+                           covariance = TRUE, link.mix = c("logit", "loglog", "identity", "probit"),
+                           control = list(maxit = 10000), method = "Nelder-Mead", init = NULL){
 
   type <- match.arg(type)
   dist <- match.arg(dist)
   link <- match.arg(link)
+  link.mix <- match.arg(link.mix)
+
+  max.formulas <- switch(dist,
+                         weibull = 2,
+                         exponential = 1,
+                         lognormal = 2,
+                         weiwei = 5,
+                         weiexp = 4)
+
+  if(is.null(formula.surv)){
+    formula.surv <- rep(list(~1), max.formulas)
+  } else {
+    if(length(formula.surv) != max.formulas){
+      add.formulas <- rep(list(~1), max.formulas - length(formula.surv))
+      formula.surv <- c(formula.surv, add.formulas)
+    }
+  }
+
   #Delete missing observations and extract response data
-  formulas <- list(formula, formula.k1, formula.k2, formula.k3)
-  all.vars <- unique(unlist(lapply(formulas, all.vars)))
-  #ccs <- complete.cases(data[, all.vars])
-  #data <- data[ccs,]
-  Surv_object <- eval(formula[[2]], envir = data)
-  time <- Surv_object[,1]
-  event <- Surv_object[, 2]
+  all.formulas <- c(formula, formula.surv)
+  all.vars <- unique(unlist(lapply(all.formulas, all.vars)))
+  data.c <- data[complete.cases(data[, all.vars]),]
+
+  #Extract survival time and event variable
+  eventExpr <- rstpm2:::lhs(formula)[[length(rstpm2:::lhs(formula))]]
+  delayed <- length(rstpm2:::lhs(formula)) >= 4
+  timeExpr <- rstpm2:::lhs(formula)[[ifelse(delayed, 3, 2)]]
+  time <- eval(timeExpr, data, parent.frame())
+  event <- eval(eventExpr, data)
+  event <- if (length(unique(event)) == 1){
+    rep(TRUE, length(event))
+  } else {
+    event <- event > min(event)
+  }
 
   #Create background hazard
   if(is.null(bhazard)){
@@ -54,52 +79,49 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.k1 = ~ 1, form
     }
   }
 
-  #Check if formula is NULL
-  if(dist == "weibull" & is.null(formula.k2)){
-    stop("formula.k2 has to be specified for dist = weibull")
-  }
+  excess <- ifelse(any(bhazard != 0), T, F)
 
   #Compute design matrices
-  X.all <- lapply(formulas, get_design, data = data)
+  X.all <- lapply(all.formulas, get_design, data = data)
 
   #Extract link functions
-  link_fun <- get.link(link)
-  surv_fun <- get.surv(dist)
-  dens_fun <- get.dens(dist)
+  link.fun <- get.link(link)
+  surv.fun <- get.surv(dist, link.mix = get.link(link.mix))
+  dens.fun <- get.dens(dist, link.mix = get.link(link.mix))
 
   #Extract likelihood function
-  minuslog_likelihood <- switch(type,
-                                mixture = mixture_minuslog_likelihood,
-                                nmixture = nmixture_minuslog_likelihood)
+  minusloglik <- switch(type,
+                        mixture = mixture_minuslog_likelihood,
+                        nmixture = nmixture_minuslog_likelihood)
 
   #Prepare optimization arguments
-  likelihood.pars <- list(fn = minuslog_likelihood,
-                          time = time,
-                          event = event,
-                          Xs = X.all,
-                          link = link_fun,
-                          surv_fun = surv_fun,
-                          dens_fun = dens_fun,
-                          bhazard = bhazard)
+  args <- list(time = time,
+               event = event,
+               Xs = X.all,
+               link = link.fun,
+               surv.fun = surv.fun,
+               dens.fun = dens.fun,
+               bhazard = bhazard)
 
-  if(is.null(optim.args$control$maxit)){
-    optim.args$control <- list(maxit = 10000)
+  if(is.null(control$maxit)){
+    control$maxit <- list(maxit = 10000)
   }
 
+  n.param.formula <- sapply(X.all, ncol)
   #Get initial values
-  if(is.null(optim.args$par)){
-    types <- c("cure", "flexpara")
-    n.param.formula <- sapply(X.all, ncol)
+  if(is.null(init)){
     n.param <- sum(n.param.formula)
-    optim.args$par <- rep(0, n.param)
-    names(optim.args$par) <- unlist(lapply(X.all, colnames))
+    init <- rep(0, n.param)
+    names(init) <- unlist(lapply(X.all, colnames))
   }
 
-  optim.pars <- c(optim.args, likelihood.pars)
-
+  optim.args <- c(control = list(control), args)
+  optim.args$method <- method
+  optim.args$fn <- minusloglik
+  optim.args$par <- init
 
   #Run optimization
-  optim.out <- do.call(optim, optim.pars)
+  optim.out <- do.call(optim, optim.args)
 
   #Check for convergence
   if(optim.out$convergence != 0){
@@ -108,15 +130,9 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.k1 = ~ 1, form
 
   #Compute covariance
   if(covariance){
-    hes <- numDeriv::hessian(minuslog_likelihood,
-                                   optim.out$par,
-                                   time = time,
-                                   event = event,
-                                   X = X.all,
-                                   link = link_fun,
-                                   surv_fun = surv_fun,
-                                   dens_fun = dens_fun,
-                                   bhazard = bhazard)
+    args$x0 <- optim.out$par
+    args$f <- minusloglik
+    hes <- do.call(pracma::hessian, args)
     cov <- if (!inherits(vcov <- try(solve(hes)), "try-error"))  vcov
     if(!is.null(cov) && any(is.na(cov))){
       warning("Hessian is not invertible!")
@@ -125,18 +141,18 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.k1 = ~ 1, form
     cov <- NULL
   }
 
-  groups <- factor(rep(1:4, n.param.formula), 1:4, labels = c("gamma", "k1", "k2", "k3"))
+  groups <- factor(rep(1:(max.formulas + 1), n.param.formula), 1:(max.formulas + 1))
   coefs <- split(optim.out$par, f = groups)
 
   #Output list
-  L <- list(data = data, formulas = formulas,
+  L <- list(data = data, all.formulas = all.formulas,
             coefs = coefs, dist = dist, link = link,
             type = type, ci = covariance,
             ML = optim.out$value, covariance = cov,
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
-            surv_fun = surv_fun, dens_fun = dens_fun, optim.pars = optim.pars,
-            times = time)
+            surv.fun = surv.fun, dens.fun = dens.fun, optim.args = optim.args,
+            times = time, link.mix = link.mix, excess = excess)
   class(L) <- c("cm", "cuRe")
   L
 }

@@ -109,7 +109,7 @@ get.inv.link <- function(link){
 }
 
 # Function for extracting the specified survival function
-get.surv <- function(dist){
+get.surv <- function(dist, link.mix = function(x) log(x / (1 - x))){
 
   if(dist == "exponential"){
 
@@ -123,32 +123,92 @@ get.surv <- function(dist){
 
     return(function(x, lps) 1 - pnorm((log(x) - lps[[2]]) / exp(lps[[3]])))
 
+  }else if(dist == "weiwei"){
+
+    return(function(x, lps){
+      p <- link.mix(lps[[2]])
+      scale1 <- exp(lps[[3]])
+      shape1 <- exp(lps[[4]])
+      scale2 <- exp(lps[[5]])
+      shape2 <- exp(lps[[6]])
+      wei1 <- exp(-x ^ shape1 * scale1)
+      wei2 <- exp(-x ^ shape2 * scale2)
+      p * wei1 + (1 - p) * wei2
+    })
+
+  }else if(dist == "weiexp"){
+
+    return(function(x, lps){
+      p <- link.mix(lps[[2]])
+      scale1 <- exp(lps[[3]])
+      shape1 <- exp(lps[[4]])
+      scale2 <- exp(lps[[5]])
+      wei1 <- exp(-x ^ shape1 * scale1)
+      exp2 <- exp(-x * scale2)
+      p * wei1 + (1 - p) * exp2
+    })
+
   }else{
 
-    stop("Distribution should be either 'exponential', 'weibull', or 'lognormal'")
+    stop("Distribution should be either 'exponential', 'weibull', 'lognormal', 'weiwei', or 'weiexp'")
 
   }
 }
 
 # Function for extracting the specified density function
-get.dens <- function(dist){
+get.dens <- function(dist, link.mix = function(x) log(x / (1 - x))){
   if(dist == "exponential"){
+
     return(function(x, lps){
       scale <- exp(lps[[2]])
       scale * exp(-x * scale)
     })
+
   }else if(dist == "weibull"){
+
     return(function(x, lps){
       scale <- exp(lps[[2]])
       shape <- exp(lps[[3]])
       exp(-x ^ shape * scale) * shape * scale * x ^ (shape - 1)
     })
+
   }else if(dist == "lognormal"){
+
     return(function(x, lps){
       dnorm((log(x) - lps[[2]]) / exp(lps[[3]])) / (exp(lps[[3]]) * x)
     })
-  }else{
-    stop("Distribution should be either 'exponential', 'weibull', or 'lognormal'")
+
+  }else if(dist == "weiwei"){
+
+    return(function(x, lps){
+      scale1 <- exp(lps[[3]])
+      shape1 <- exp(lps[[4]])
+      scale2 <- exp(lps[[5]])
+      shape2 <- exp(lps[[6]])
+      p <- link.mix(lps[[2]])
+      f_1 <- exp(-x ^ shape1 * scale1) * shape1 * scale1 * x ^ (shape1 - 1)
+      f_2 <- exp(-x ^ shape2 * scale2) * shape2 * scale2 * x ^ (shape2 - 1)
+      p * f_1 + (1 - p) * f_2
+    })
+
+
+  }else if(dist == "weiexp"){
+
+    return(function(x, lps){
+      scale1 <- exp(lps[[3]])
+      shape1 <- exp(lps[[4]])
+      scale2 <- exp(lps[[5]])
+      p <- link.mix(lps[[2]])
+      f_1 <- exp(-x ^ shape1 * scale1) * shape1 * scale1 * x ^ (shape1 - 1)
+      f_2 <- exp(-x * scale2) * scale2
+      p * f_1 + (1 - p) * f_2
+    })
+
+
+  }else {
+
+    stop("Distribution should be either 'exponential', 'weibull', 'lognormal', 'weiwei', or 'weiexp'")
+
   }
 }
 
@@ -169,20 +229,20 @@ calc.lps <- function(Xs, param){
 
 ######Likelihood functions
 # Parametric Mixture cure model
-mixture_minuslog_likelihood <- function(param, time, event, Xs, link_fun,
-                                        surv_fun, dens_fun, bhazard){
+mixture_minuslog_likelihood <- function(param, time, event, Xs, link.fun,
+                                        surv.fun, dens.fun, bhazard){
 
   #Calculate linear predictors
   lps <- calc.lps(Xs, param)
 
   #Compute pi and the survival of the uncured
-  pi <- link_fun(lps[[1]])
-  surv <- surv_fun(time, lps)
+  pi <- link.fun(lps[[1]])
+  surv <- surv.fun(time, lps)
   surv.term <- log(pi + (1 - pi) * surv)
 
   #Calculate hazard term only for uncensored patients.
   events <- which(event == 1)
-  dens <- dens_fun(time[events], lapply(lps, function(lp) lp[events,]))
+  dens <- dens.fun(time[events], lapply(lps, function(lp) lp[events,]))
   pi.events <- pi[events]
   surv.events <- surv[events]
   haz.term <- log( bhazard[events] + dens * ( 1 - pi.events ) / ( pi.events + (1 - pi.events) * surv.events ))
@@ -192,20 +252,20 @@ mixture_minuslog_likelihood <- function(param, time, event, Xs, link_fun,
   -sum(surv.term)
 }
 
-nmixture_minuslog_likelihood <- function(param, time, event, Xs, link_fun,
-                                         surv_fun, dens_fun, bhazard){
+nmixture_minuslog_likelihood <- function(param, time, event, Xs, link.fun,
+                                         surv.fun, dens.fun, bhazard){
 
   #Calculate linear predictors
   lps <- calc.lps(Xs, param)
 
   #Compute pi and the survival of the uncured
-  pi <- link_fun(lps[[1]])
-  surv <- surv_fun(time, lps)
+  pi <- link.fun(lps[[1]])
+  surv <- surv.fun(time, lps)
   surv.term <- log(pi) - log(pi) * surv
 
   #Calculate hazard term only for uncensored patients.
   events <- which(event == 1)
-  dens <- dens_fun(time[events], lapply(lps, function(lp) lp[events,]))
+  dens <- dens.fun(time[events], lapply(lps, function(lp) lp[events,]))
   pi.events <- pi[events]
   haz.term <- log( bhazard[events] - log(pi.events) * dens)
   surv.term[events] <- surv.term[events] + haz.term
@@ -331,7 +391,7 @@ flexible_mixture_minuslog_likelihood <- function(param, time, event, X, b, db, b
 # }
 
 GenFlexMixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
-                                 link.type.cr, link.surv, kappa){
+                                link.type.cr, link.surv, kappa){
   #Get parameters
   gamma <- param[1:ncol(X.cr)]
   beta <- param[(ncol(X.cr) + 1):length(param)]
@@ -359,7 +419,7 @@ GenFlexMixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
 }
 
 GenFlexNmixMinLogLik <- function(param, event, X, XD, X.cr, bhazard,
-                                link.type.cr, link.surv, kappa){
+                                 link.type.cr, link.surv, kappa){
   #Get parameters
   gamma <- param[1:ncol(X.cr)]
   beta <- param[(ncol(X.cr) + 1):length(param)]
