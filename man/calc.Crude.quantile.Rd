@@ -2,11 +2,11 @@
 % Please edit documentation in R/calc.Crude.quantile.R
 \name{calc.Crude.quantile}
 \alias{calc.Crude.quantile}
-\title{Compute the time to statistical cure using a probability measure}
+\title{Compute the time to statistical cure using the conditional probability of cancer-related death}
 \usage{
-calc.Crude.quantile(fit, q = 0.95, newdata = NULL, max.time = 20,
-  expected = NULL, ci = TRUE, rmap, ratetable = survexp.dk,
-  last.point = 100, reverse = FALSE)
+calc.Crude.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
+  exp.fun = NULL, var.type = c("ci", "se", "n"), rmap,
+  ratetable = survexp.dk, tau = 100, reverse = TRUE)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
@@ -19,29 +19,40 @@ the model was fitted on.}
 
 \item{max.time}{Upper boundary of the interval [0, \code{max.time}] in which to search for solution.}
 
-\item{expected}{Object of class \code{list} containing objects of class \code{survexp},
-with the expected survival of each row in newdata. If not specified, the function computes the expected
-survival.}
+\item{exp.fun}{Object of class \code{list} containing functions for the expected survival
+of each row in \code{newdata}. If not specified, the function computes the expected
+survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.}
 
-\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are computed.}
+\item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
+"\code{se}" for standard errors, and "\code{n}" for neither.}
 
-\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
+\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 Detailed documentation on this argument can be found by \code{?survexp}.}
 
 \item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
 Default is \code{survexp.dk}}
 
-\item{last.point}{Constant at which the bound to tie probability is calculated. Default is 100.}
+\item{tau}{Constant at which the bound to tie probability is calculated. Default is 100.}
 
-\item{reverse}{Passed to the \code{calc.crude} function.}
-
-\item{type}{Type of life expectancy measure. Possible values are "ll" for the loss of lifetime
-and "mrl" for the mean residual lifetime.}
+\item{reverse}{Logical passed on to \code{calc.Crude}. If \code{TRUE} (default), 1 - probability is provided.
+Only applicable for \code{type = condother}.}
 }
 \value{
-The estimated cure points.
+The estimated cure point.
 }
 \description{
-The following function estimates the time to statistical cure using the
-probability of eventually dying from cancer.
+The following function estimates the time to statistical cure using the conditional
+probability of cancer-related death.
+}
+\examples{
+##Use data cleaned version of the colon cancer data from the rstpm2 package
+data("colonDC")
+
+##Extract general population hazards
+colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+                            data = colonDC, ratetable = survexp.dk)
+
+#Fit cure model and estimate cure point
+fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
+calc.Crude.quantile(fit, q = 0.05, rmap = list(age = agedays, sex = sex, year = dx))
 }

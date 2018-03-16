@@ -1,19 +1,22 @@
 #' Compute the time to statistical cure using the conditional probability of cure
 #'
 #' The following function estimates the time to statistical cure using the
-#' conditional probability of cure
+#' conditional probability of cure.
 #' @param fit Fitted model to do predictions from. Possible classes are
-#' \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
+#' \code{gfcm}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
 #' @param q Threshold to estimate statistical cure according to.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param max.time Upper boundary of the interval [0, \code{max.time}] in which to search for solution.
-#' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
-#' @param reverse Logical. Wether to use 1 - prob (default) or prob as measure.
-#' @return The estimated cure points.
+#' @param var.type Character. Possible values are "\code{ci}" (default) for confidence intervals,
+#' "\code{se}" for standard errors, and "\code{n}" for neither.
+#' @param reverse Logical. Whether to use 1 - prob (default) or prob as measure.
+#' @return The estimated cure point.
+#' @example inst/calc.cure.quantile.ex.R
 #' @export
 
-calc.cure.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, ci = TRUE, reverse = TRUE){
+calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var.type = c("ci", "se", "n"), reverse = TRUE){
+  var.type <- match.arg(var.type)
 
   if("gfcm" %in% class(fit)){
     pred <- function(time, newdata, var.type = "n"){
@@ -58,19 +61,20 @@ calc.cure.quantile <- function(fit, q = 0.95, newdata = NULL, max.time = 20, ci 
         ci.new <- T
       }
     }
-    if(ci){
+    if(var.type %in% c("ci", "se")){
       if(!ci.new){
         gr <- grad(f, x = uni, q = 0)
         VAR <- pred(time = uni, newdata = newdata[i,,drop = F], var.type = "se")$SE ^ 2
-        VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)
-        upper <- log(uni) + sqrt(VAR2) * qnorm(0.975)
-        lower <- log(uni) - sqrt(VAR2) * qnorm(0.975)
-        data.frame(Est = uni, var = VAR2 * uni ^ 2, lower.ci = exp(lower), upper.ci = exp(upper))
+        SE <- sqrt(gr ^ (-2) * VAR / (uni ^ 2))
+        upper <- log(uni) + SE * qnorm(0.975)
+        lower <- log(uni) - SE * qnorm(0.975)
+        df <- data.frame(Estimate = uni, SE = SE * uni, lower.ci = exp(lower), upper.ci = exp(upper))
       }else{
-        data.frame(Est = uni, var = NA, lower.ci = NA, upper.ci = NA)
+        df <- data.frame(Estimate = uni, var = NA, lower.ci = NA, upper.ci = NA)
       }
+      if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
     } else{
-      data.frame(Est = uni)
+      data.frame(Estimate = uni)
     }
   })
 

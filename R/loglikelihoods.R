@@ -1,14 +1,18 @@
 #' Extract general population hazard
 #'
-#' Yearly general population hazards matched on age, gender, and calendar year is extracted from a ratetable
+#' Yearly general population hazards matched on age, gender, and calendar year is extracted from a ratetable.
 #'
-#' @param time Either a numeric vector of follow-up times or a character indicating which variable is the follow-up time in the data
-#' @param age Either a numeric vector of age or a character indicating which variable is the age in the data
-#' @param sex A numeric vector including the time points for which to make predictions.
-#' @param date A character denoting the type of prediction. Possible values are \code{relsurv} (default), \code{curerate}, and \code{probcure} (see details)
-#' @param data The data from which to extract variables from. If \code{time}, \code{age}, \code{sex}, and \code{date} are not characters, leave this empty.
-#' @param ratetable Object of class \code{ratetable} to extract background hazards from. Defaults to survexp.dk
-#' @return An object of class \code{numeric} of yearly hazards.
+#' @param time Either a numeric vector of follow-up times or a character indicating the variable
+#' containing the follow-up times in the data.
+#' @param age Either a numeric vector of ages or a character indicating the variable containing the patient ages in the data.
+#' @param sex Either a character vector or factor with the sex of each patient
+#' or a character indicating the variable containing the patient sex in the data.
+#' @param year Either a vector of class \code{Date} with the calendar time points
+#' or a character indicating the variable containing the calendar times in the data.
+#' @param data The data from which to extract variables from.
+#' If \code{time}, \code{age}, \code{sex}, or \code{year} are not characters, this will not be used.
+#' @param ratetable Object of class \code{ratetable} to extract background hazards from. Defaults to \code{survexp.dk}.
+#' @return An object of class \code{numeric} containing the yearly expected hazards.
 #' @export
 #' @example inst/general.haz.ex.R
 

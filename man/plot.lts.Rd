@@ -4,7 +4,7 @@
 \alias{plot.lts}
 \title{Plot the long term survival}
 \usage{
-plot.lts(obj, ylim = NULL, xlim = NULL, ci = T, col = 1, ylab = NULL,
+plot.lts(obj, ylim = NULL, xlim = NULL, ci = F, col = 1, ylab = NULL,
   xlab = "Time", add = F, ...)
 }
 \arguments{
@@ -24,8 +24,8 @@ plot.lts(obj, ylim = NULL, xlim = NULL, ci = T, col = 1, ylab = NULL,
 
 \item{add}{Logical indicating whether to add to current plot window (default is FALSE).}
 
-\item{...}{Further argument passed to \code{plot}.}
+\item{...}{Further argument passed to \code{plot} and \code{lines}.}
 }
 \description{
-Plot function for the class \code{lts}
+Plot function for the class \code{lts}.
 }

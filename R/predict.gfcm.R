@@ -1,6 +1,6 @@
-#' Predict function for Flexible mixture cure model
+#' Predict function for flexible mixture cure model
 #'
-#' Function for doing predictions for class \code{gfcm}
+#' Function for doing predictions for class \code{gfcm}.
 #'
 #' @param fit Object of class \code{gfcm} to do predictions from.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
@@ -43,8 +43,9 @@ predict.gfcm <- function (object, newdata = NULL,
                                    "loghazarduncured", "hazard", "density", "fail",
                                    "loghazard", "odds", "cumhaz"),
                           indi = TRUE, time = NULL, var.type = c("ci", "se", "n"), pars = NULL,
-                          link = NULL, keep.attributes = FALSE, use.gr = FALSE, ...)
+                          link = NULL, keep.attributes = FALSE, ...)
 {
+  use.gr = FALSE
   type <- match.arg(type)
   args <- object$args
 

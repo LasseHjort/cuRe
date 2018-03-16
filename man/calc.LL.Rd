@@ -5,12 +5,12 @@
 \title{Loss of lifetime estimation}
 \usage{
 calc.LL(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
-  tau = 100, ci = T, expected = NULL, ratetable = survexp.dk, rmap,
-  pars = NULL, n = 100)
+  tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL,
+  ratetable = survexp.dk, rmap, pars = NULL, n = 100)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are
-\code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
+\code{gfcm}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
@@ -24,17 +24,20 @@ which gives the mean residual lifetime.}
 
 \item{tau}{The upper limit of the integral. Default is 100.}
 
-\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are computed.}
+\item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
+"\code{se}" for standard errors, and "\code{n}" for neither.}
 
-\item{expected}{Object of class \code{list} containing objects of class \code{survexp},
-with the expected survival of each row in newdata. If not specified, the function computes the expected
-survival.}
+\item{exp.fun}{Object of class \code{list} containing functions for the expected survival
+of each row in \code{newdata}. If not specified, the function computes the expected
+survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.}
 
 \item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
-Default is \code{survexp.dk}}
+Default is \code{survexp.dk}.}
 
-\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
+\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 Detailed documentation on this argument can be found by \code{?survexp}.}
+
+\item{n}{Number of knots used for the Gauss-Legendre quadrature.}
 }
 \value{
 An object of class \code{le} containing the life expectancy estimates
@@ -44,47 +47,50 @@ of each individual in \code{newdata}.
 Function for computing loss of lifetime function based on relative survival models.
 }
 \details{
-The function computes
-\deqn{L(t) = \frac{\int_0^\infty S^*(u)}{S^*(t)} - \frac{\int_0^\infty S(u)}{S(t)}}
-for a given t, where \eqn{S^*(t)} and \eqn{S(t)} is the survival function in the general
-population and the patient population, respectively. The integral is computed by Gauss-Legendre quadrature
+If \code{type = "ll"}, the function computes
+\deqn{\frac{\int_t^\infty S^*(u)}{S^*(t)} - \frac{\int_t^\infty S(u)}{S(t)}.}
+If \code{type = "mrl"}, the function computes
+\deqn{\frac{\int_t^\infty S(u)}{S(t)},}
+for a given t. The function \eqn{S^*(t)} is the general population survival function and \eqn{S(t)}
+is the patient survival function. The integral is computed by Gauss-Legendre quadrature
 and the point wise variance is estimated using the delta method and numerical differentiation.
-If \code{type = mrl}, only \eqn{\int_0^\infty S^*(u) / S^*(t)} is computed.
 }
 \examples{
-###Use data cleaned version of the colon cancer data from the rstpm2 package
+##Use data cleaned version of the colon cancer data from the rstpm2 package
 data("colonDC")
 
 ##Extract general population hazards
 colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
                             data = colonDC, ratetable = survexp.dk)
 
-##Fit flexible parametric relative survival model
-fit <- stpm2(Surv(FUyear, status2) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz)
+##Spline-base cure model
+#Fit cure model
+fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
 
-#Compute loss of lifetime from 0 to 20 years
-res <- calc.LL(fit, time = seq(0, 20, length.out = 100),
+#Compute and plot the loss of lifetime function
+res <- calc.LL(fit, time = seq(0, 20, length.out = 50),
                rmap = list(age = agedays, sex = sex, year = dx))
-
-#Plot the loss of lifetime
 plot(res)
 
-##Fit flexible parametric cure model
-fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 7, bhazard = "bhaz",
-                     ini.types = "cure")
-
-#Compute loss of lifetime from 0 to 20 years
-res.cure <- calc.LL(fit, time = seq(0, 20, length.out = 100),
-                    rmap = list(age = agedays, sex = sex, year = dx))
-
-#Plot the loss of lifetime
-plot(res, ci = F, ylim = c(0, max(res$Ests[[1]]$ll)))
-plot(res.cure, add = T, col = 2, ci = F)
+#Compute and plot the mean residual lifetime
+res <- calc.LL(fit, time = seq(0, 20, length.out = 50), type = "mrl",
+               rmap = list(age = agedays, sex = sex, year = dx))
+plot(res)
 
 
-#Compute mean residual lifetime
-res.cure <- calc.LL(fit, time = seq(0, 20, length.out = 100), type = "mrl",
-                    rmap = list(age = agedays, sex = sex, year = dx))
-plot(res.cure)
+#Simple parametric cure model
+#Fit cure model
+fit <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz",
+                      type = "mixture", dist = "weibull", link = "logit")
+
+#Compute and plot the loss of lifetime function
+res <- calc.LL(fit, time = seq(0, 20, length.out = 50),
+               rmap = list(age = agedays, sex = sex, year = dx))
+plot(res)
+
+#Compute and plot the mean residual lifetime
+res <- calc.LL(fit, time = seq(0, 20, length.out = 50), type = "mrl",
+               rmap = list(age = agedays, sex = sex, year = dx))
+plot(res)
 
 }

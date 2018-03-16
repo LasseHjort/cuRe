@@ -1,4 +1,3 @@
-
 #' Predict function for cure models
 #'
 #' This function is used to make predictions of the cure models.
@@ -6,13 +5,36 @@
 #' @param fit Object of class \code{cm} to do predictions from.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
 #' the model was fitted on.
+#' @param type Prediction type (see details). The default is \code{surv}.
 #' @param time Optional time points at which to compute predictions.
-#' @param type Type of prediction to do. Possible values are \code{relsurv} (default) for the relative survival,
-#' \code{curerate} for the cure rate, \code{ehaz} for the excess hazard, \code{probcure} for the
-#' conditional probability of being cured, and \code{survuncured} for the disease-specific survival of the uncured.
-#' @param ci Logical. If \code{TRUE}, confidence intervals are computed.
+#' This argument is not used if type is \code{curerate}.
+#' @param var.type Character. Possible values are "\code{ci}" (default) for confidence intervals,
+#' "\code{se}" for standard errors, and "\code{n}" for neither.
 #' @param pars Numerical vector containing the parameters values of the model.
-#' @return An object of class \code{matrix} including the predictions.
+#' In general, this argument can be ignored by the user.
+#' @param link Character, indicating the link function for the variance calculations.
+#' Possible values are "\code{log}", "\code{cloglog}", "\code{log2}", and "\code{I}".
+#' If \code{NULL} (default), the function will determine \code{link} from \code{type}.
+#' @param keep.attributes Logical. If \code{TRUE}, \code{newdata} will be added to the attributes of the output.
+#' @return A list containing the predictions of each individual in \code{newdata}.
+#' @details
+#' Possible values for argument \code{type} are:\cr
+#' \code{surv}: Survival function\cr
+#' \code{curerate}: The cure rate\cr
+#' \code{probcure}: The conditional probability of being cured\cr
+#' \code{survuncured}: The survival of the uncured\cr
+#' \code{hazarduncured}: The hazard function of the uncured\cr
+#' \code{cumhazuncured}: The cumulative hazard of the uncured\cr
+#' \code{densityuncured}: The density function of the uncured\cr
+#' \code{failuncured}: The distribution function of the uncured, i.e., 1 - \code{survuncured}\cr
+#' \code{oddsuncured}: Odds of the uncured, i.e., (1 - \code{survuncured}) / \code{survuncured}\cr
+#' \code{loghazarduncured}: The log-hazard of the uncured\cr
+#' \code{hazard}: The hazard function\cr
+#' \code{density}: The density function\cr
+#' \code{fail}: The distribution function\cr
+#' \code{loghazard}: The log-hazard function\cr
+#' \code{odds}: The odds, i.e., (1 - \code{surv}) / \code{surv}\cr
+#' \code{cumhaz}: The cumulative hazard function
 #' @export
 #'
 predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
@@ -140,11 +162,11 @@ local.cm <- function(fit, type = "surv", var.link = function(x) x,
   H <- -log(S)
   est <- switch(type, linkS = lps, linkpi = lps[[1]], curerate = pi,
                 probcure = pi / S, survuncured = Su,
-                hazarduncured = Su * fu, cumhazuncured = Hu,
+                hazarduncured = fu / Su, cumhazuncured = Hu,
                 densityuncured = fu, failuncured = 1 - Su,
-                oddsuncured = (1 - Su)/Su, loghazarduncured = log(Su * fu),
-                surv = S, hazard = S * f, density = f, fail = 1 - S,
-                loghazard = log(S * f), odds = (1 - S) / S, cumhaz = H)
+                oddsuncured = (1 - Su)/Su, loghazarduncured = log(fu / Su),
+                surv = S, hazard = f / S, density = f, fail = 1 - S,
+                loghazard = log(f / S), odds = (1 - S) / S, cumhaz = H)
 
   est <- var.link(est)
   return(est)

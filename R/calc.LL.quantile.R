@@ -1,31 +1,37 @@
 #' Compute the time to statistical cure using the loss of lifetime function
+#'
+#' The following function estimates the time to statistical cure using the
+#' loss of lifetime function.
 #' @param fit Fitted model to do predictions from. Possible classes are
-#' \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
+#' \code{gfcm}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
 #' @param q Threshold to estimate statistical cure according to.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param max.time Upper boundary of the interval [0, \code{max.time}] in which to search for solution.
 #' @param tau The upper limit of the integral. Default is 100.
-#' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
+#' @param var.type Character. Possible values are "\code{ci}" (default) for confidence intervals,
+#' "\code{se}" for standard errors, and "\code{n}" for neither.
 #' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
 #' Default is \code{survexp.dk}
-#' @param expected Object of class \code{list} containing objects of class \code{survexp},
-#' with the expected survival of each row in newdata. If not specified, the function computes the expected
-#' survival.
-#' @param rmap List to be passed to \code{survexp} from the \code{survival} package.
+#' @param exp.fun Object of class \code{list} containing functions for the expected survival
+#' of each row in \code{newdata}. If not specified, the function computes the expected
+#' survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.
+#' @param rmap List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param type Type of life expectancy measure. Possible values are "ll" for the loss of lifetime
 #' and "mrl" for the mean residual lifetime.
-#' @return The estimated cure points.
+#' @return The estimated cure point.
 #' @import rootSolve
+#' @example inst/calc.LL.quantile.ex.R
 #' @export
 
 
 
-calc.LL.quantile <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRUE,
+calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type = c("ci", "se", "n"),
                              exp.fun = NULL, rmap = NULL, ratetable = survexp.dk,
                              tau = 100, type = "ll"){
 
+  var.type <- match.arg(var.type)
   if(is.null(exp.fun)){
     #The time points for the expected survival
     times <- seq(0, tau + 1, by = 0.1)
@@ -58,81 +64,38 @@ calc.LL.quantile <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRU
 
   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))
   ests <- lapply(1:n.obs, function(i){
-    f <- function(time, q) calc.LL(fit, time = time, ci = F, exp.fun = exp.fun[i],
-                                   newdata = newdata[i,,drop = F], tau = tau)$Ests[[1]][, type] - q
-    uni <- rootSolve::uniroot.all(f, lower = 0, upper = max.time, q = q)
-    if(ci){
-      gr <- grad(f, x = uni, q = 0)
-      VAR <- calc.LL(fit, time = uni, exp.fun = exp.fun[i],
-                     newdata = newdata[i,, drop = F], tau = tau)$Ests[[1]]$Var
-      VAR2 <- gr ^ (-2) * VAR / (uni ^ 2)
-      upper <- log(uni) + sqrt(VAR2) * qnorm(0.975)
-      lower <- log(uni) - sqrt(VAR2) * qnorm(0.975)
-      data.frame(Est = uni, var = VAR2 * uni ^ 2, lower.ci = exp(lower), upper.ci = exp(upper))
-    } else {
-      data.frame(Est = uni)
+    ci.new <- F
+    f <- function(time, q) calc.LL(fit, time = time, var.type = "n", exp.fun = exp.fun[i],
+                                   newdata = newdata[i,,drop = F], tau = tau)[[1]]$Estimate - q
+    lower <- 0
+    if(f(lower, q = q) > 0 & f(max.time, q = q) < 0){
+      uni <- rootSolve::uniroot.all(f, lower = lower, upper = max.time, q = q)
+    }else{
+      if(f(lower, q = q) <= 0){
+        uni <- 0
+        ci.new <- T
+      } else if(f(max.time, q = q) >= 0){
+        uni <- NA
+        ci.new <- T
+      }
+    }
+    if(var.type %in% c("ci", "se")){
+      if(!ci.new){
+        gr <- grad(f, x = uni, q = 0)
+        VAR <- calc.LL(fit, time = uni, exp.fun = exp.fun[i], newdata = newdata[i,,drop = F],
+                          tau = tau, var.type = "se")[[1]]$SE ^ 2
+        SE <- sqrt(gr ^ (-2) * VAR / (uni ^ 2))
+        upper <- log(uni) + SE * qnorm(0.975)
+        lower <- log(uni) - SE * qnorm(0.975)
+        df <- data.frame(Estimate = uni, SE = SE * uni, lower.ci = exp(lower), upper.ci = exp(upper))
+      } else {
+        df <- data.frame(Estimate = uni, SE = NA, lower.ci = NA, upper.ci = NA)
+      }
+      if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
+    } else{
+      data.frame(Estimate = uni)
     }
   })
   do.call(rbind, ests)
 }
 
-
-
-
-# quantile.calc.LL2 <- function(fit, q = 2, newdata = NULL, max.time = 20, ci = TRUE,
-#                               expected = NULL, rmap, ratetable = survexp.dk,
-#                               tau = 100, type = "ll"){
-#
-#   if(is.null(expected)){
-#     #The time points for the expected survival
-#     times <- seq(0, tau + 1, by = 0.05)
-#
-#     #Extract expected survival function
-#     if(is.null(newdata)){
-#       if(any(class(fit) %in% c("stpm2", "pstpm2"))){
-#         data <- fit@data
-#         newdata <- data.frame(arbritary_var = 0)
-#         coefs <- fit@coef
-#         covar <- fit@vcov
-#       }else{
-#         data <- fit$data
-#         coefs <- c(fit$coefs, fit$coefs.spline)
-#         covar <- fit$covariance
-#       }
-#       expected <- list(do.call("survexp",
-#                                list(formula = ~ 1, rmap = substitute(rmap),
-#                                     data = data, ratetable = ratetable,
-#                                     scale = ayear, times = times * ayear)))
-#     }else{
-#       expected <- lapply(1:nrow(newdata), function(x){
-#         do.call("survexp",
-#                 list(formula = ~ 1, rmap = substitute(rmap),
-#                      data = newdata[x, ], ratetable = ratetable,
-#                      scale = ayear, times = times * ayear))
-#       })
-#     }
-#   }
-#
-#   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))
-#   ests <- lapply(1:n.obs, function(i){
-#
-#     g <- function(pars, q){
-#       f <- function(time) calc.LL(fit = fit, time = time, ci = F, expected = expected[i],
-#                                   newdata = newdata[i,, drop = F], pars = pars)$Ests[[1]][, type] - q
-#       rootSolve::uniroot.all(f, lower = 0, upper = max.time)
-#     }
-#
-#     uni <- g(pars = NULL, q = q)
-#     if(ci){
-#       gr <- grad(g, x = coefs, q = q)
-#       VAR <- gr %*% covar %*% gr
-#       upper <- uni + sqrt(VAR) * qnorm(0.975)
-#       lower <- uni - sqrt(VAR) * qnorm(0.975)
-#       data.frame(Est = uni, var = VAR, lower.ci = lower, upper.ci = upper)
-#     } else {
-#       data.frame(Est = uni)
-#     }
-#   })
-#   do.call(rbind, ests)
-# }
-#

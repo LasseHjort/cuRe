@@ -4,8 +4,9 @@
 \alias{lts}
 \title{Long term survival predictions}
 \usage{
-lts(fit, newdata = NULL, time = NULL, ci = T, expected = NULL,
-  ratetable = survexp.dk, rmap = rmap)
+lts(fit, type = c("surv", "hazard", "cumhaz", "loghaz"), newdata = NULL,
+  time = NULL, var.type = c("ci", "se", "n"), exp.fun = NULL,
+  ratetable = survexp.dk, rmap)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{fcm}, \code{gfcm}, \code{stpm2},
@@ -17,15 +18,17 @@ the model was fitted on.}
 \item{time}{Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
 and the maximum follow-up time is selected.}
 
-\item{ci}{Logical indicating whether confidence intervals should be computed.}
+\item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
+"\code{se}" for standard errors, and "\code{n}" for neither.}
 
-\item{expected}{Object of class \code{list} containing objects of class \code{survexp}
-denoting the expected survival of each row in newdata. If not specified, the function computes the expected
-survival.}
+\item{exp.fun}{Object of class \code{list} containing functions for the expected survival
+of each row in \code{newdata}. If not specified, the function computes the expected
+survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.}
 
-\item{ratetable}{Object of class \code{ratetable} to compute the general population survival from.}
+\item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
+Default is \code{survexp.dk}.}
 
-\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
+\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 Detailed documentation on this argument can be found by \code{?survexp}.}
 }
 \value{
@@ -33,7 +36,7 @@ A object of class \code{lts} containing the loss of lifetime estiamtes
 of each individual in \code{newdata}.
 }
 \description{
-Function for computing loss of lifetime estimates from an estimated relative survival model
+Function for computing survival estimates using a relative survival model and the expected background survival.
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
@@ -44,26 +47,13 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
                             data = colonDC, ratetable = survexp.dk)
 
 ##Fit flexible parametric relative survival model
-fit <- stpm2(Surv(FUyear, status2) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz)
+fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz)
 
 ##Compute survival probabilities from 0 to 20 years
-pred <- predict.lts(fit, time = seq(0, 20, length.out = 100),
-                    rmap = list(age = agedays, sex = sex, year = dx))
+pred <- lts(fit, rmap = list(age = agedays, sex = sex, year = dx))
 
 ##Plot the survival function
 plot(pred)
-
-##Fit flexible parametric cure model
-fit <- FlexMixtureCureModel(Surv(FUyear, status2) ~ 1, data = colonDC, n.knots = 7, bhazard = "bhaz",
-                            ini.types = "cure")
-
-##Compute survival probabilities from 0 to 20 years
-pred.cure <- predict.lts(fit, time = seq(0, 20, length.out = 100),
-                         rmap = list(age = agedays, sex = sex, year = dx))
-
-##Plot the loss of lifetime
-plot(pred, ci = F)
-plot(pred.cure, add = T, col = 2, ci = F)
 
 
 }

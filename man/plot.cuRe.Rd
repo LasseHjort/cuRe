@@ -4,21 +4,17 @@
 \alias{plot.cuRe}
 \title{Plot function for Flexible mixture cure model}
 \usage{
-plot.cuRe(fit, newdata = NULL, type = c("relsurv", "ehaz", "probcure",
-  "survuncured"), time = NULL, xlim = NULL, ylim = c(0, 1),
-  xlab = "Time", ylab = NULL, col = 1, ci = NULL, non.parametric = F,
-  col.non.para = 2, include.knots = F, add = F, ...)
+plot.cuRe(object, newdata = NULL, type = c("surv", "probcure",
+  "survuncured", "hazarduncured", "cumhazuncured", "densityuncured",
+  "failuncured", "oddsuncured", "loghazarduncured", "hazard", "density", "fail",
+  "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL, ylim = c(0,
+  1), xlab = "Time", ylab = NULL, col = 1, ci = T, add = F)
 }
 \arguments{
-\item{fit}{Object of class \code{cuRe}.}
-
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
 
-\item{type}{Character. Defines the function to plot.
-Possible values are \code{relsurv} (default) for the relative survival, \code{ehaz} for the excess hazard,
-\code{probcure} for the conditional probability of being cured, and \code{survuncured}
-for the survival of the uncured patients.}
+\item{type}{Character. Defines the desired scale to plot. See ?predict.gfcm to see explaination of possible values.}
 
 \item{time}{Optional time points at which to compute predictions.
 This argument is not used if type is \code{curerate}.}
@@ -27,28 +23,20 @@ This argument is not used if type is \code{curerate}.}
 
 \item{ylim}{Limits of the y-axis.}
 
+\item{xlab}{Label of the x-axis. Default is "Time".}
+
+\item{ylab}{Label of the y-axis. If \code{NULL}, the function uses its default y-labels
+depending on \code{fit$type} and \code{fit$excess}.}
+
 \item{col}{Colour of each line.}
 
-\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are added.}
+\item{ci}{Logical. If \code{TRUE}, confidence intervals are added to the plot.}
 
-\item{non.parametric}{Logical. If \code{TRUE}, a non-parametic
-estimate (Ederer II method) is added to the plot (default is FALSE).}
+\item{add}{Loglca. If \code{TRUE} the curve is added to the existing plot.
+#' @return A plot containing the predictions of each observation in \code{newdata}.}
 
-\item{col.non.para}{Colour of the non-parametric estimate.}
-
-\item{include.knots}{Logical. If \code{TRUE} vertical lines are added at
-each knot of the baseline spline function (default is \code{FALSE}).}
-
-\item{xlabel}{Label of the x-axis. Default is "Time".}
-
-\item{ylabel}{Label of the y-axis. Default is "Relative survival" if \code{type = relsurv},
-"Excess hazard" if \code{type = ehaz},
-"Conditional probability of cure" if \code{type = probcure},
-"Disease-specific survival of the uncured" if \code{type = survuncured}.}
-}
-\value{
-A plot containing the predictions of each observation in \code{newdata}.
+\item{fit}{Object of class \code{cuRe}.}
 }
 \description{
-Plot function associated with the class \code{fmcm}
+Plot function associated with the classes \code{gfcm} and \code{cm}
 }

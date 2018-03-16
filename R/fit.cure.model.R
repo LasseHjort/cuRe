@@ -2,26 +2,40 @@
 #'
 #' This function is used to fit parametric cure models on the relative survival.
 #'
-#' @param formula Formula for modelling the the cure fraction Reponse has to be of the form \code{Surv(time, status)}.
-#' @param data Data frame in which to interpret the variables names in \code{formula},
-#' \code{formula.k1}, \code{formula.k2}, and \code{formula.k3}.
+#' @param formula Formula for modelling the cure proportion. Reponse has to be of the form \code{Surv(time, status)}.
+#' @param data Data frame in which to interpret the variable names in \code{formula} and \code{formula.surv}.
 #' @param bhazard Background hazard.
-#' @param formula.k1 Formula for the first linear predictor of the parametric distribution (see details).
-#' @param formula.k2 Formula for the second linear predictor of the parametric distribution (see details).
-#' @param formula.k3 Formula for the third linear predictor of the parametric distribution (see details).
+#' @param formula.surv List of formulas for each parameter in the parametric distribution (see details).
 #' @param type A character indicating the type of cure model.
 #' Possible values are \code{mixture} (default) and \code{nmixture}.
-#' @param dist The parametric distribution of the disease-specific survival function. Possible values are
-#' \code{weibull} (default), \code{exponential}, and \code{lognormal}.
-#' @param link Specifies the link function of the cure fraction.
-#' Possible values are \code{logit} (default), \code{identity}, and \code{loglog}.
+#' @param dist The parametric distribution of the survival of the uncured.
+#' @param link Character. Specifies the link function of the cure proportion.
+#' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
+#' @param link.mix Character. Specifies the link function for the mixture parameter in a
+#' weibull-weibull mixture model and weibull-exponential model. Only used when \code{dist = "weiwei"} and \code{dist = "weiexp"}.
+#' @param control List of control parameters passed to \code{optim}.
+#' @param method Optimization method passed to \code{optim}.
 #' @param init Initial values for the maximum likelihood optimization.
 #' If not provided, the optimization will start in 0.
-#' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
-#' @param optim.args List with additional arguments passed to \code{optim}.
-#' @return An object of class \code{CureModel}.
-#' @details The arguments for modelling the parameters of the cure model have different meanings dependent on the chosen distribution. \cr
-#' For the exponential distribution, k1 denotes the rate, for the weibull model, k1 denotes the scale parameter and k2 denotes the shape parameter, sfor the log normal distribution k1 denotes the mu and sigma.
+#' @return An object of class \code{cm} containing the parameters of the cure model.
+#' @details The function fits the model,
+#' \deqn{S(t) = \pi + (1 - \pi) S_u(t).}
+#' The \code{formula.surv} argument is used to model \eqn{S_u(t)}. It is a \code{list} of formulas with as many entries as there are
+#' parameters in the chosen parametric distribution. If not specified, all formulas are assumed to be \code{~1}.
+#' The ith formula, i.e., \code{formula.surv[[i]]} refers \eqn{\theta_i} in the below survival functions.\cr\cr
+#' Exponential model:
+#' \deqn{S_u(t) = \exp\left(-t \theta_1\right).}
+#' Weibull model:
+#' \deqn{S_u(t) = \exp\left(-\theta_1 t^{\theta_2}\right).}
+#' Log-normal model:
+#' \deqn{S_u(t) = 1 - \Phi\left(\frac{\log(t) - \theta_1}{\theta_2}\right)}
+#' Weibull-exponential mixture model:
+#' \deqn{S_u(t) = \theta_1\exp\left(-\theta_2 t^{\theta_3}\right) + (1 - \theta_1)\exp\left(-\theta_4 t\right).}
+#' Weibull-Weibull mixture model:
+#' \deqn{S_u(t) = \theta_1\exp\left(-\theta_2 t^{\theta_3}\right) + (1 - \theta_1)\exp\left(-\theta_4 t^{\theta_5}\right).}
+#' In the the mixture models, the link function for the mixture component is controlled by \code{link.mix}.
+#' The remaining parameters are modelled using an exponential link function except \eqn{\theta_1} in the log-normal model,
+#' which is modeled using the identity.
 #' @export
 #' @example inst/fit.cure.model.ex.R
 

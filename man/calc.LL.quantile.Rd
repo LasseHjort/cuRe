@@ -4,13 +4,13 @@
 \alias{calc.LL.quantile}
 \title{Compute the time to statistical cure using the loss of lifetime function}
 \usage{
-calc.LL.quantile(fit, q = 2, newdata = NULL, max.time = 20, ci = TRUE,
-  expected = NULL, rmap = NULL, ratetable = survexp.dk, tau = 100,
-  type = "ll")
+calc.LL.quantile(fit, q = 1, newdata = NULL, max.time = 20,
+  var.type = c("ci", "se", "n"), exp.fun = NULL, rmap = NULL,
+  ratetable = survexp.dk, tau = 100, type = "ll")
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
-\code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
+\code{gfcm}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
 
 \item{q}{Threshold to estimate statistical cure according to.}
 
@@ -19,13 +19,14 @@ the model was fitted on.}
 
 \item{max.time}{Upper boundary of the interval [0, \code{max.time}] in which to search for solution.}
 
-\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are computed.}
+\item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
+"\code{se}" for standard errors, and "\code{n}" for neither.}
 
-\item{expected}{Object of class \code{list} containing objects of class \code{survexp},
-with the expected survival of each row in newdata. If not specified, the function computes the expected
-survival.}
+\item{exp.fun}{Object of class \code{list} containing functions for the expected survival
+of each row in \code{newdata}. If not specified, the function computes the expected
+survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.}
 
-\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package.
+\item{rmap}{List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 Detailed documentation on this argument can be found by \code{?survexp}.}
 
 \item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
@@ -37,8 +38,21 @@ Default is \code{survexp.dk}}
 and "mrl" for the mean residual lifetime.}
 }
 \value{
-The estimated cure points.
+The estimated cure point.
 }
 \description{
-Compute the time to statistical cure using the loss of lifetime function
+The following function estimates the time to statistical cure using the
+loss of lifetime function.
+}
+\examples{
+##Use data cleaned version of the colon cancer data from the rstpm2 package
+data("colonDC")
+
+##Extract general population hazards
+colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+                            data = colonDC, ratetable = survexp.dk)
+
+#Fit cure model and estimate cure point
+fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
+calc.LL.quantile(fit, q = 1, rmap = list(age = agedays, sex = sex, year = dx))
 }

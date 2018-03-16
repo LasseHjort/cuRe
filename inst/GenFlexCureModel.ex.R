@@ -16,7 +16,7 @@ plot(fit, type = "hazard")
 plot(fit, type = "survuncured")
 plot(fit, type = "probcure")
 
-##Predict cure rate
+##Predict cure proportion
 predict(fit, type = "curerate")
 
 
@@ -27,7 +27,7 @@ fit <- GenFlexCureModel(Surv(FUyear, status) ~ 1, data = colonDC, df = 4,
 ##Plot relative survival
 plot(fit)
 
-##Predict cure rate
+##Predict cure proportion
 predict(fit, type = "curerate")
 
 ###With covariates
@@ -50,12 +50,18 @@ predict(fit, type = "curerate", data.frame(sex = factor("female", levels = c("ma
 
 
 ##Fit mixture cure model with time-varying covariates
-fit <- GenFlexCureModel(Surv(FUyear, status) ~ age, data = colonDC, df = 4, bhazard = "bhaz",
-                        cr.formula = ~ age, tvc = list(age = 2))
+colonDC$gender <- as.numeric(colonDC$sex) - 1
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ gender, data = colonDC, df = 4, bhazard = "bhaz",
+                        cr.formula = ~ gender, tvc = list(gender = 2))
 
 ##Plot model
-plot(fit, newdata = data.frame(age = 70))
-plot(fit, newdata = data.frame(age = 60), add = T, col = 2)
+plot(fit, newdata = data.frame(gender = 0))
+plot(fit, newdata = data.frame(gender = 1), add = T, col = 2)
 
-plot(fit, type = "hazard", newdata = data.frame(age = 70), ci = "n")
-plot(fit, type = "hazard", newdata = data.frame(age = 60), add = T, col = 2, ci = "n")
+plot(fit, type = "hazard", newdata = data.frame(gender = 0), ci = "n")
+plot(fit, type = "hazard", newdata = data.frame(gender = 1), add = T, col = 2, ci = "n")
+
+#Predict cure proportions for a male and female patients
+predict(fit, type = "curerate", newdata = data.frame(gender = 0))
+predict(fit, type = "curerate", newdata = data.frame(gender = 1))
+

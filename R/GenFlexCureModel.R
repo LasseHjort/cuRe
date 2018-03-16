@@ -2,51 +2,54 @@
 #'
 #' The following function fits a generalized mixture or non-mixture cure model
 #' using a link function for the cure rate and for the survival of the uncured, i.e.,
-#' \deqn{R(t|z) = \pi(z) + (1 - \pi(z)) S_u(t|z)},
+#' \deqn{S(t|z) = \pi(z) + [1 - \pi(z)] S_u(t|z),}
 #' where
-#' \deqn{g_1[S_u(t|z)] = \eta_1(z) and g_2(\pi(z)) = \eta_2(z)}.
-#' This function deviates from \code{FlexCureModel} in its use of formulas,
-#' which allows the use of more smoothers than the restricted cubic splines from the \code{flexsurv} package.
+#' \deqn{g_1[S_u(t|z)] = \eta_1(t, z)\qquad and \qquad g_2[\pi(z)] = \eta_2(z).}
+#' The function implements a range of link functions for both \eqn{g_1} and \eqn{g_2} and allows
+#' the linear predictors to be specified in any way.
 #'
 #' @param formula Formula for modelling the survival of the uncured. A linear term for time-varying coefficients is required here.
 #' Reponse has to be of the form \code{Surv(time, status)}.
-#' @param data Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}.
+#' @param data Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}, and \code{cr.formula}.
 #' @param smooth.formula Formula for describing the time-effect of the survival of the uncured (default is \code{NULL}).
 #' @param smooth.args List. Optional arguments to the time-effect of the survival of the uncured (default is \code{NULL}).
 #' @param df Integer. Degrees of freedom (default is 3) for the time-effect of the survival of the uncured.
 # @param logH.args
 # @param logH.formula blabal
-#' @param tvc Name list of integers. Specifies the degrees of freedom for a time-varying covariate effect.
-#' For instance, \code{tvc = list(a = 3)} creates a time-varying spline-effect of the covariate a with 3 degrees of freedom.
+#' @param tvc Named list of integers. Specifies the degrees of freedom for a time-varying covariate effect.
+#' For instance, \code{tvc = list(a = 3)} creates a time-varying spline-effect of the covariate "a" with 3 degrees of freedom using
+#' the the \code{rstpm2::nsx} function.
 #' @param tvc.formula Formula for the time-varying covariate effects.
 #' For time-varying effects, a linear term of the covariate has to be included in \code{formula}.
-#' @param cr.formula Formula for the cure rate.
+#' @param cr.formula Formula for the cure proportion.
 #' The left hand side of the formula is not used and should therefore not be specified.
 #' @param bhazard Background hazard.
 #' @param type A character indicating the type of cure model.
 #' Possible values are \code{mixture} (default) and \code{nmixture}.
 #' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
 #' @param verbose Logical. If \code{TRUE} status messages of the function is outputted.
-#' @param link.type.cr Character giving the link function selected for the cure rate.
+#' @param link.type.cr Character providing the link function for the cure proportion.
 #' Possible values are \code{logit} (default), \code{loglog}, \code{identity}, and \code{probit}.
-#' @param link.type Character giving the link function selected for the survival of the uncured.
-#' Possible values are \code{PH} (default), \code{PO}, \code{probit}, \code{AH}, and \code{AO}.
+#' @param link.type Character providing the link function for the survival of the uncured.
+#' Possible values are \code{PH} (default), \code{PO}, and \code{probit}.
 #' @param init Providing initial values for the optimization procedure.
 #' If not specified, the function will create initial values internally.
-#' @param timeVar Character giving the name of the variable specifying the time component of the \code{Surv} object.
-#' @param control Named list with additional arguments passed to \code{optim}.
-#' @param method Character passed to \code{optim} indicating the optimization method to use.
+#' @param timeVar Optional character giving the name of the variable specifying the time component of the \code{Surv} object.
+#' Should currently not be used.
+#' @param control Named list with control arguments passed to \code{optim}.
+#' @param method Character passed to \code{optim} indicating the method for optimization.
 #' See \code{?optim} for details.
 #' @param constraint Logical. Indicates whether non-negativity constraints should be forced upon
 #' the hazard of the uncured patients
-#' @param ini.types Character vector denoting the executed schemes for computing initial values.
-#' @param cure Logical. Indicates whether a cure model specification is needed for the survival of the uncured.
-#' This is usually \code{FALSE} (default).
+#' @param ini.types Character vector denoting the executed schemes for computing initial values (see details).
+# @param cure Logical. Indicates whether a cure model specification is needed for the survival of the uncured.
+# This is usually \code{FALSE} (default).
 #' @return An object of class \code{gfcm}.
-#' @details This functions generalizes the \code{FlexCureModel} function using formulas.
-#' The default smoother is natural cubic splines established by the \code{rstpm2::nsx} function.
+#' @details The default smoother is natural cubic splines established by the \code{rstpm2::nsx} function.
 #' Functions such as \code{ns}, \code{bs} are readily available for usage. Also the \code{basis} function of \code{flexsurv} works.
-#' The function also allows for the use of any smoother from the \code{mgvc} package.
+# The function also allows for the use of any smoother from the \code{mgvc} package.
+#' Initial values are calculated by two procedures and the model is fitted under each set of initial values.
+#' The model producding the highest likelihood is selected.
 #' @export
 #' @import survival
 #' @import rstpm2
@@ -59,18 +62,19 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
                              tvc.formula = NULL, bhazard = NULL, cr.formula = ~ 1,
                              type = "mixture",
                              link.type.cr = c("logit", "loglog", "identity", "probit"),
-                             link.type = c("PH", "PO", "probit", "AH", "AO"),
+                             link.type = c("PH", "PO", "probit"),
                              init = NULL, timeVar = "",
                              covariance = T, verbose = T,
                              control = list(maxit = 10000), method = "Nelder-Mead",
                              constraint = TRUE,
-                             ini.types = c("cure", "flexpara"), cure = FALSE){
+                             ini.types = c("cure", "flexpara")){
 
   if(!type %in% c("mixture", "nmixture"))
     stop("Wrong specication of argument 'type', must be either 'mixture' or 'nmixture'")
 
   logH.args <- NULL
   logH.formula <- NULL
+  cure <- FALSE
 
   link.type <- match.arg(link.type)
   link.surv <- switch(link.type, PH = rstpm2:::link.PH, PO = rstpm2:::link.PO, probit = rstpm2:::link.probit,

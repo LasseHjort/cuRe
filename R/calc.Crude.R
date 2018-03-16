@@ -3,51 +3,53 @@
 #' Function for computing crude event probabilties based on relative survival models.
 #'
 #' @param object Fitted model to do predictions from. Possible classes are
-#' \code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
+#' \code{gfcm}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param type Probability to compute. Possible values are \code{cancer} (default),
-#' \code{other}, and \code{othertime} (see details).
+#' \code{other}, and \code{condother} (see details).
 #' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
 #' and \code{tau} is selected.
 #' @param tau Upper bound of the cancer related death integral (see details).
-#' The argument is only used for \code{type = othertime}. Default is 100.
-#' @param ci Logical. If \code{TRUE} (default), confidence intervals are computed.
+#' The argument is only used for \code{type = condother}. Default is 100.
+#' @param var.type Character. Possible values are "\code{ci}" (default) for confidence intervals,
+#' "\code{se}" for standard errors, and "\code{n}" for neither.
 #' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
 #' Default is \code{survexp.dk}.
-#' @param expected Object of class \code{list} containing objects of class \code{survexp},
-#' with the expected survival of each row in \code{newdata}. If not specified, the function computes the expected
-#' survival.
-#' @param rmap List to be passed to \code{survexp} from the \code{survival} package if \code{expected = NULL}.
+#' @param exp.fun Object of class \code{list} containing functions for the expected survival
+#' of each row in \code{newdata}. If not specified, the function computes the expected
+#' survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.
+#' @param rmap List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param reverse Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
-#' Only applicable for \code{type = othertime}.
+#' Only applicable for \code{type = condother}.
 #' @param Link Link function for computing variance in order to bound confidence intervals. Default is \code{loglog}.
 #' @param n Number of knots used for the Gauss-Legendre quadrature.
-#' @return An object of class \code{crude} containing the crude probability estimates
+#' @return A list containing the crude probability estimates
 #' of each individual in \code{newdata}.
 #' @details The function estimates crude probabilities by using the relative survival, expected survival,
-#' and the cause-specific hazard functions.
-#' The crude cumulative incidence of cancer related death (\code{cancer}) is
+#' and the cause-specific hazard function.
+#' The crude cumulative incidence of cancer related death (\code{type = "cancer"}) is
 #' \deqn{P(T \leq t, D = cancer) = \int_0^t S^*(u) R(u) \lambda(u)du.}
-#' The crude cumulative incidence of death from other causes (\code{other})is
+#' The crude cumulative incidence of death from other causes (\code{type = "other"}) is
 #' \deqn{P(T \leq t, D = other) = \int_0^t S^*(u) R(u) h^*(u)du.}
-#' The conditional probability of eventually dying from other causes than cancer (\code{othertime})
+#' The conditional probability of eventually dying from other causes than cancer (\code{type = "condother"}) is
 #' \deqn{P(D = other| T > t) = \frac{P(D = cancer) - P(T \leq t, D = cancer)}{P(T > t)}.}
 #' The proportion of patients bound to die from the disease (P(D = cancer))
-#' can be computed by using \code{cancer} and choosing a sufficiently large time point (default is 100).
+#' can be computed by using \code{type = "cancer"} and choosing a sufficiently large time point (e.g., 100 years).
 #' @references Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
 #' for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
 #' @export
 #' @example inst/calc.Crude.ex.R
 #' @import statmod
 
-calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othertime"),
+calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "condother"),
                        time = NULL, tau = 100, reverse = FALSE,
-                       ci = T, exp.fun = NULL, ratetable = survexp.dk, rmap,
+                       var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk, rmap,
                        link = "loglog", n = 100){
 
   type <- match.arg(type)
+  var.type <- match.arg(var.type)
 
   #Time points at which to evaluate integral
   if(is.null(time)){
@@ -135,13 +137,6 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
     cov <- object$covariance
   }
 
-  # expected_haz <- lapply(1:length(expected), function(i){
-  #   D <- data.frame(Cum_haz = c(0, -log(summary(expected[[i]])$surv)), Time = c(-0.1, expected[[i]]$time))
-  #   sm_fit <- loess(Cum_haz ~ Time, data = D, span = 0.1)
-  #   cum_haz_smooth <- function(t) predict(sm_fit, newdata = data.frame(Time = t))
-  #   function(t, pars) numDeriv::grad(func = cum_haz_smooth, t)
-  # })
-
   expected_haz <- lapply(1:length(exp.fun), function(i){
     cum_haz_smooth <- function(t) -log(exp.fun[[i]](t))
     function(t, pars) numDeriv::grad(func = cum_haz_smooth, t)
@@ -151,12 +146,12 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
   probfun <- switch(type,
                     cancer = prob_cuminc,
                     other = prob_cuminc,
-                    othertime = cprob_time)
+                    condother = cprob_time)
 
   cs_haz <- switch(type,
                    cancer = excess_haz,
                    other = expected_haz,
-                   othertime = excess_haz)
+                   condother = excess_haz)
 
   gaussxw <- statmod::gauss.quad(n)
 
@@ -165,88 +160,33 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "othe
                     exp.fun = exp.fun[[i]], reverse = reverse,
                     pars = model.params, tau = tau, link = link,
                     gaussxw = gaussxw)
-    res <- data.frame(prob = prob)
-    if(ci){
+    res <- data.frame(Estimate = prob)
+    if(var.type %in% c("ci", "se")){
       prob_gr <- numDeriv::jacobian(probfun, x = model.params, time = time,
                                     rel_surv = rel_surv[[i]], cs_haz = cs_haz[[i]],
                                     exp.fun =  exp.fun[[i]], tau = tau,
                                     link = link, reverse = reverse, gaussxw = gaussxw)
-      res$var <- apply(prob_gr, 1, function(x) x %*% cov %*% x)
-      ci1 <- get.link(link)(res$prob - qnorm(0.975) * sqrt(res$var))
-      ci2 <- get.link(link)(res$prob + qnorm(0.975) * sqrt(res$var))
-      res$lower.ci <- pmin(ci1, ci2)
-      res$upper.ci <- pmax(ci1, ci2)
+      res$SE <- sqrt(apply(prob_gr, 1, function(x) x %*% cov %*% x))
+      if(var.type == "ci"){
+        ci1 <- get.link(link)(res$Estimate - qnorm(0.975) * res$SE)
+        ci2 <- get.link(link)(res$Estimate + qnorm(0.975) * res$SE)
+        res <- subset(res, select = -SE)
+        res$lower.ci <- pmin(ci1, ci2)
+        res$upper.ci <- pmax(ci1, ci2)
+      }
     }
-    res$prob <- get.link(link)(res$prob)
+    res$Estimate <- get.link(link)(res$Estimate)
     if(type %in% c("cancer", "other")){
-      res[time == 0,] <- 1
+      res[time == 0,] <- 0
     }
     res
   })
 
-  probs <- list(prob = probs, time = time, ci = ci, type = type, reverse = reverse)
+  attributes(probs) <- list(time = time, type = type, reverse = reverse)
   class(probs) <- "crude"
   probs
 }
 
-
-# #Integration function using the trapez method
-# int.trapez <- function(func, time, pars, n = 10000){
-#   eps <- .Machine$double.eps
-#   t_new <- sort(unique(c(seq(eps, max(time), length.out = n), time)))
-#   t_new <- t_new[t_new != 0]
-#   df_time <- diff(t_new)
-#   surv_eval <- func(t_new, pars)
-#   surv_diff <- diff(surv_eval)
-#   inner <- abs(surv_diff) / 2 + pmin(surv_eval[-length(surv_eval)], surv_eval[-1])
-#   vals_pop <- cumsum(c(0, inner * df_time))
-#   if(any(time == 0)) t_new[1] <- 0
-#   vals_pop[t_new %in% time]
-# }
-
-# #Integration function using the rectangular method
-# int.square <- function(func, time, pars, n = 100000){
-#   t_new <- unique(sort(c(seq(0, max(time), length.out = n), time)))
-#   df_time <- diff(t_new)
-#   mid_points <- t_new[-length(t_new)] + diff(t_new) / 2
-#   vals_pop <- c(0, cumsum(func(mid_points, pars) * df_time))
-#   vals_pop[t_new %in% time]
-# }
-#
-# prob_cancer <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, tau, link, reverse, n, gaussxw){
-#   if(all(time == 0)){
-#     return(rep(0, length(time)))
-#   }else{
-#     dens <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-#     prob <- int.square(dens, time = time, pars = pars, n = n)
-#     if(reverse) prob <- 1 - prob
-#     get.inv.link(link)(prob)
-#   }
-# }
-#
-# prob_other <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, tau, link, reverse, n, gaussxw){
-#   if(all(time == 0)){
-#     return(rep(0, length(time)))
-#   }else{
-#     dens <- function(t, pars) rel_surv(t, pars) * expected_haz(t) * exp_function(t, expected)
-#     prob <- int.square(dens, time = time, pars = pars, n = n)
-#     if(reverse) prob <- 1 - prob
-#     get.inv.link(link)(prob)
-#   }
-# }
-#
-# prob_other_time <- function(time, rel_surv, excess_haz, expected_haz, expected, pars, tau, link, reverse, n, gaussxw){
-#   dens1 <- function(t, pars) rel_surv(t, pars) * excess_haz(t, pars) * exp_function(t, expected)
-#   int_1 <- int.square(dens1, time = time, pars = pars, n = n)
-#   btd <- int.square(dens1, time = tau, pars = pars, n = n)
-#   wh <- time == 0
-#   prob_t <- rep(NA, length(time))
-#   prob_t[!wh] <- rel_surv(time[!wh], pars) * exp_function(time[!wh], expected)
-#   prob_t[wh] <- 1
-#   prob <- 1 - (btd - int_1) / prob_t
-#   if(reverse) prob <- 1 - prob
-#   get.inv.link(link)(prob)
-# }
 
 prob_cuminc <- function(time, rel_surv, cs_haz, exp.fun, pars,
                         tau, link, reverse, gaussxw){
@@ -283,7 +223,11 @@ cprob_time <- function(time, rel_surv, cs_haz, exp.fun, pars, tau,
     eval_haz <- cs_haz(points, pars)
     eval[i] <- sum(wt * (eval_gen * eval_rel * eval_haz))
   }
-  eval_surv_t <- rel_surv(time, pars) * exp.fun(time)
+  eval_surv_t <- rep(NA, length(time))
+  eval_surv_t[time == 0] <- 1
+  if(any(time != 0)){
+    eval_surv_t[time != 0] <- rel_surv(time[time != 0], pars) * exp.fun(time[time != 0])
+  }
   prob <- scale * eval / eval_surv_t
   if(!reverse) prob <- 1 - prob
   get.inv.link(link)(prob)

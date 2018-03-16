@@ -10,11 +10,11 @@ plot.le(obj, ylim = NULL, xlim = NULL, ci = T, col = 1, ylab = NULL,
 \arguments{
 \item{obj}{Object of class \code{le}.}
 
-\item{ylim}{Limit of the y-axis. If empty, these are chosen occording to the extremes in \code{obj}.}
+\item{ylim}{Limit of the y-axis.}
 
-\item{xlim}{Limit of x-axis. If empty, these are chosen according to the time extremes of \code{obj}.}
+\item{xlim}{Limit of x-axis.}
 
-\item{ci}{Logical indicating wether confidence intervals should be included in the plot (default is TRUE).}
+\item{ci}{Logical. If \code{TRUE}, confidence intervals are added to the plot.}
 
 \item{col}{Numeric or character indicating the colours of the curves.}
 
@@ -22,9 +22,9 @@ plot.le(obj, ylim = NULL, xlim = NULL, ci = T, col = 1, ylab = NULL,
 
 \item{xlab}{Label to be written on the x-axis.}
 
-\item{add}{Logical indicating whether to add to current plot window (default is FALSE).}
+\item{add}{Logical. If \code{TRUE}, the curve is added to the current plot window.}
 
-\item{...}{Further argument passed to \code{plot}.}
+\item{...}{Further argument passed to \code{plot} and \code{lines}.}
 }
 \description{
 Plot function for the class \code{le}

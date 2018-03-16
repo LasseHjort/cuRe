@@ -4,8 +4,11 @@
 \alias{predict.cm}
 \title{Predict function for cure models}
 \usage{
-predict.cm(fit, newdata = NULL, type = c("relsurv", "curerate", "ehaz",
-  "probcure", "survuncured"), time = NULL, ci = T, pars = NULL)
+predict.cm(fit, newdata = NULL, type = c("surv", "curerate", "probcure",
+  "survuncured", "hazarduncured", "cumhazuncured", "densityuncured",
+  "failuncured", "oddsuncured", "loghazarduncured", "hazard", "density", "fail",
+  "loghazard", "odds", "cumhaz"), time = NULL, var.type = c("ci", "se",
+  "n"), pars = NULL, link = NULL, keep.attributes = F)
 }
 \arguments{
 \item{fit}{Object of class \code{cm} to do predictions from.}
@@ -13,19 +16,45 @@ predict.cm(fit, newdata = NULL, type = c("relsurv", "curerate", "ehaz",
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the data which
 the model was fitted on.}
 
-\item{type}{Type of prediction to do. Possible values are \code{relsurv} (default) for the relative survival,
-\code{curerate} for the cure rate, \code{ehaz} for the excess hazard, \code{probcure} for the
-conditional probability of being cured, and \code{survuncured} for the disease-specific survival of the uncured.}
+\item{type}{Prediction type (see details). The default is \code{surv}.}
 
-\item{time}{Optional time points at which to compute predictions.}
+\item{time}{Optional time points at which to compute predictions.
+This argument is not used if type is \code{curerate}.}
 
-\item{ci}{Logical. If \code{TRUE}, confidence intervals are computed.}
+\item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
+"\code{se}" for standard errors, and "\code{n}" for neither.}
 
-\item{pars}{Numerical vector containing the parameters values of the model.}
+\item{pars}{Numerical vector containing the parameters values of the model.
+In general, this argument can be ignored by the user.}
+
+\item{link}{Character, indicating the link function for the variance calculations.
+Possible values are "\code{log}", "\code{cloglog}", "\code{log2}", and "\code{I}".
+If \code{NULL} (default), the function will determine \code{link} from \code{type}.}
+
+\item{keep.attributes}{Logical. If \code{TRUE}, \code{newdata} will be added to the attributes of the output.}
 }
 \value{
-An object of class \code{matrix} including the predictions.
+A list containing the predictions of each individual in \code{newdata}.
 }
 \description{
 This function is used to make predictions of the cure models.
+}
+\details{
+Possible values for argument \code{type} are:\cr
+\code{surv}: Survival function\cr
+\code{curerate}: The cure rate\cr
+\code{probcure}: The conditional probability of being cured\cr
+\code{survuncured}: The survival of the uncured\cr
+\code{hazarduncured}: The hazard function of the uncured\cr
+\code{cumhazuncured}: The cumulative hazard of the uncured\cr
+\code{densityuncured}: The density function of the uncured\cr
+\code{failuncured}: The distribution function of the uncured, i.e., 1 - \code{survuncured}\cr
+\code{oddsuncured}: Odds of the uncured, i.e., (1 - \code{survuncured}) / \code{survuncured}\cr
+\code{loghazarduncured}: The log-hazard of the uncured\cr
+\code{hazard}: The hazard function\cr
+\code{density}: The density function\cr
+\code{fail}: The distribution function\cr
+\code{loghazard}: The log-hazard function\cr
+\code{odds}: The odds, i.e., (1 - \code{surv}) / \code{surv}\cr
+\code{cumhaz}: The cumulative hazard function
 }

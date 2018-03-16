@@ -7,16 +7,16 @@
 GenFlexCureModel(formula, data, smooth.formula = NULL, smooth.args = NULL,
   df = 3, tvc = NULL, tvc.formula = NULL, bhazard = NULL,
   cr.formula = ~1, type = "mixture", link.type.cr = c("logit", "loglog",
-  "identity", "probit"), link.type = c("PH", "PO", "probit", "AH", "AO"),
-  init = NULL, timeVar = "", covariance = T, verbose = T,
-  control = list(maxit = 10000), method = "Nelder-Mead",
-  constraint = TRUE, ini.types = c("cure", "flexpara"), cure = FALSE)
+  "identity", "probit"), link.type = c("PH", "PO", "probit"), init = NULL,
+  timeVar = "", covariance = T, verbose = T, control = list(maxit =
+  10000), method = "Nelder-Mead", constraint = TRUE, ini.types = c("cure",
+  "flexpara"))
 }
 \arguments{
 \item{formula}{Formula for modelling the survival of the uncured. A linear term for time-varying coefficients is required here.
 Reponse has to be of the form \code{Surv(time, status)}.}
 
-\item{data}{Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}.}
+\item{data}{Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}, and \code{cr.formula}.}
 
 \item{smooth.formula}{Formula for describing the time-effect of the survival of the uncured (default is \code{NULL}).}
 
@@ -24,47 +24,46 @@ Reponse has to be of the form \code{Surv(time, status)}.}
 
 \item{df}{Integer. Degrees of freedom (default is 3) for the time-effect of the survival of the uncured.}
 
-\item{tvc}{Name list of integers. Specifies the degrees of freedom for a time-varying covariate effect.
-For instance, \code{tvc = list(a = 3)} creates a time-varying spline-effect of the covariate a with 3 degrees of freedom.}
+\item{tvc}{Named list of integers. Specifies the degrees of freedom for a time-varying covariate effect.
+For instance, \code{tvc = list(a = 3)} creates a time-varying spline-effect of the covariate "a" with 3 degrees of freedom using
+the the \code{rstpm2::nsx} function.}
 
 \item{tvc.formula}{Formula for the time-varying covariate effects.
 For time-varying effects, a linear term of the covariate has to be included in \code{formula}.}
 
 \item{bhazard}{Background hazard.}
 
-\item{cr.formula}{Formula for the cure rate.
+\item{cr.formula}{Formula for the cure proportion.
 The left hand side of the formula is not used and should therefore not be specified.}
 
 \item{type}{A character indicating the type of cure model.
 Possible values are \code{mixture} (default) and \code{nmixture}.}
 
-\item{link.type.cr}{Character giving the link function selected for the cure rate.
+\item{link.type.cr}{Character providing the link function for the cure proportion.
 Possible values are \code{logit} (default), \code{loglog}, \code{identity}, and \code{probit}.}
 
-\item{link.type}{Character giving the link function selected for the survival of the uncured.
-Possible values are \code{PH} (default), \code{PO}, \code{probit}, \code{AH}, and \code{AO}.}
+\item{link.type}{Character providing the link function for the survival of the uncured.
+Possible values are \code{PH} (default), \code{PO}, and \code{probit}.}
 
 \item{init}{Providing initial values for the optimization procedure.
 If not specified, the function will create initial values internally.}
 
-\item{timeVar}{Character giving the name of the variable specifying the time component of the \code{Surv} object.}
+\item{timeVar}{Optional character giving the name of the variable specifying the time component of the \code{Surv} object.
+Should currently not be used.}
 
 \item{covariance}{Logical. If \code{TRUE} (default), the covariance matrix is computed.}
 
 \item{verbose}{Logical. If \code{TRUE} status messages of the function is outputted.}
 
-\item{control}{Named list with additional arguments passed to \code{optim}.}
+\item{control}{Named list with control arguments passed to \code{optim}.}
 
-\item{method}{Character passed to \code{optim} indicating the optimization method to use.
+\item{method}{Character passed to \code{optim} indicating the method for optimization.
 See \code{?optim} for details.}
 
 \item{constraint}{Logical. Indicates whether non-negativity constraints should be forced upon
 the hazard of the uncured patients}
 
-\item{ini.types}{Character vector denoting the executed schemes for computing initial values.}
-
-\item{cure}{Logical. Indicates whether a cure model specification is needed for the survival of the uncured.
-This is usually \code{FALSE} (default).}
+\item{ini.types}{Character vector denoting the executed schemes for computing initial values (see details).}
 }
 \value{
 An object of class \code{gfcm}.
@@ -72,17 +71,17 @@ An object of class \code{gfcm}.
 \description{
 The following function fits a generalized mixture or non-mixture cure model
 using a link function for the cure rate and for the survival of the uncured, i.e.,
-\deqn{R(t|z) = \pi(z) + (1 - \pi(z)) S_u(t|z)},
+\deqn{S(t|z) = \pi(z) + [1 - \pi(z)] S_u(t|z),}
 where
-\deqn{g_1[S_u(t|z)] = \eta_1(z) and g_2(\pi(z)) = \eta_2(z)}.
-This function deviates from \code{FlexCureModel} in its use of formulas,
-which allows the use of more smoothers than the restricted cubic splines from the \code{flexsurv} package.
+\deqn{g_1[S_u(t|z)] = \eta_1(t, z)\qquad and \qquad g_2[\pi(z)] = \eta_2(z).}
+The function implements a range of link functions for both \eqn{g_1} and \eqn{g_2} and allows
+the linear predictors to be specified in any way.
 }
 \details{
-This functions generalizes the \code{FlexCureModel} function using formulas.
 The default smoother is natural cubic splines established by the \code{rstpm2::nsx} function.
 Functions such as \code{ns}, \code{bs} are readily available for usage. Also the \code{basis} function of \code{flexsurv} works.
-The function also allows for the use of any smoother from the \code{mgvc} package.
+Initial values are calculated by two procedures and the model is fitted under each set of initial values.
+The model producding the highest likelihood is selected.
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
@@ -103,7 +102,7 @@ plot(fit, type = "hazard")
 plot(fit, type = "survuncured")
 plot(fit, type = "probcure")
 
-##Predict cure rate
+##Predict cure proportion
 predict(fit, type = "curerate")
 
 
@@ -114,7 +113,7 @@ fit <- GenFlexCureModel(Surv(FUyear, status) ~ 1, data = colonDC, df = 4,
 ##Plot relative survival
 plot(fit)
 
-##Predict cure rate
+##Predict cure proportion
 predict(fit, type = "curerate")
 
 ###With covariates
@@ -137,13 +136,19 @@ predict(fit, type = "curerate", data.frame(sex = factor("female", levels = c("ma
 
 
 ##Fit mixture cure model with time-varying covariates
-fit <- GenFlexCureModel(Surv(FUyear, status) ~ age, data = colonDC, df = 4, bhazard = "bhaz",
-                        cr.formula = ~ age, tvc = list(age = 2))
+colonDC$gender <- as.numeric(colonDC$sex) - 1
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ gender, data = colonDC, df = 4, bhazard = "bhaz",
+                        cr.formula = ~ gender, tvc = list(gender = 2))
 
 ##Plot model
-plot(fit, newdata = data.frame(age = 70))
-plot(fit, newdata = data.frame(age = 60), add = T, col = 2)
+plot(fit, newdata = data.frame(gender = 0))
+plot(fit, newdata = data.frame(gender = 1), add = T, col = 2)
 
-plot(fit, type = "hazard", newdata = data.frame(age = 70), ci = "n")
-plot(fit, type = "hazard", newdata = data.frame(age = 60), add = T, col = 2, ci = "n")
+plot(fit, type = "hazard", newdata = data.frame(gender = 0), ci = "n")
+plot(fit, type = "hazard", newdata = data.frame(gender = 1), add = T, col = 2, ci = "n")
+
+#Predict cure proportions for a male and female patients
+predict(fit, type = "curerate", newdata = data.frame(gender = 0))
+predict(fit, type = "curerate", newdata = data.frame(gender = 1))
+
 }

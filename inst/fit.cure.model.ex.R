@@ -8,31 +8,37 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
 
 ###Without covariates
 ##Fit weibull mixture cure model
-fit <- fit.cure.model(Surv(FUyear, status2) ~ 1, data = colonDC, bhazard = "bhaz",
-                      formula.k1 = ~ 1, formula.k2 = ~ 1,
-                      type = "mixture", dist = "weibull", link = "logit")
+fit.wei <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz",
+                          type = "mixture", dist = "weibull", link = "logit")
 
-##Plot model
-plot(fit)
-plot(fit, time = seq(0, 40, length.out = 100))
-plot(fit, type = "ehaz")
-plot(fit, type = "survuncured")
-plot(fit, type = "probcure")
+##Plot various summaries of the model
+plot(fit.wei)
+plot(fit.wei, time = seq(0, 40, length.out = 100))
+plot(fit.wei, type = "hazard")
+plot(fit.wei, type = "survuncured")
+plot(fit.wei, type = "probcure")
 
+#Fit a weibull-weibull mixture cure model
+fit.weiwei <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz",
+                          type = "mixture", dist = "weiwei", link = "logit")
+
+#Compare to the weibull model
+plot(fit.wei, var.type = "n")
+plot(fit.weiwei, add = T, col = 2, var.type = "n")
 
 ###With covariates
 ##Fit weibull mixture cure model
-fit <- fit.cure.model(Surv(FUyear, status2) ~ age, data = colonDC, bhazard = "bhaz",
-                      formula.k1 = ~ age, formula.k2 = ~ 1,
+fit <- fit.cure.model(Surv(FUyear, status) ~ age, data = colonDC, bhazard = "bhaz",
+                      formula.surv = list(~ age, ~1),
                       type = "mixture", dist = "weibull", link = "logit")
 
 ##Plot model
-plot(fit, newdata = data.frame(age = 50),
-     time = seq(0, 15, length.out = 100), ci = F)
 plot(fit, newdata = data.frame(age = 60),
-     time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T)
+     time = seq(0, 15, length.out = 100), var.type = "n")
+plot(fit, newdata = data.frame(age = 50),
+     time = seq(0, 15, length.out = 100), var.type = "n", add = TRUE, col = 2)
 
-plot(fit, newdata = data.frame(age = 50),
-     time = seq(0, 15, length.out = 100), ci = F, type = "ehaz")
 plot(fit, newdata = data.frame(age = 60),
-     time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T, type = "ehaz")
+     time = seq(0, 15, length.out = 100), var.type = "n", type = "hazard")
+plot(fit, newdata = data.frame(age = 50),
+     time = seq(0, 15, length.out = 100), var.type = "n", type = "hazard", add = T, col = 2)

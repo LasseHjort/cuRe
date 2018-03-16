@@ -4,50 +4,66 @@
 \alias{fit.cure.model}
 \title{Parametric cure model}
 \usage{
-fit.cure.model(formula, data, bhazard = NULL, formula.k1 = ~1,
-  formula.k2 = NULL, formula.k3 = NULL, type = c("mixture", "nmixture"),
-  dist = c("weibull", "exponential", "lognormal"), link = c("logit",
-  "loglog", "identity", "probit"), covariance = TRUE, optim.args = NULL)
+fit.cure.model(formula, data, bhazard = NULL, formula.surv = NULL,
+  type = c("mixture", "nmixture"), dist = c("weibull", "exponential",
+  "lognormal", "weiwei", "weiexp"), link = c("logit", "loglog", "identity",
+  "probit"), covariance = TRUE, link.mix = c("logit", "loglog", "identity",
+  "probit"), control = list(maxit = 10000), method = "Nelder-Mead",
+  init = NULL)
 }
 \arguments{
-\item{formula}{Formula for modelling the the cure fraction Reponse has to be of the form \code{Surv(time, status)}.}
+\item{formula}{Formula for modelling the cure proportion. Reponse has to be of the form \code{Surv(time, status)}.}
 
-\item{data}{Data frame in which to interpret the variables names in \code{formula},
-\code{formula.k1}, \code{formula.k2}, and \code{formula.k3}.}
+\item{data}{Data frame in which to interpret the variable names in \code{formula} and \code{formula.surv}.}
 
 \item{bhazard}{Background hazard.}
 
-\item{formula.k1}{Formula for the first linear predictor of the parametric distribution (see details).}
-
-\item{formula.k2}{Formula for the second linear predictor of the parametric distribution (see details).}
-
-\item{formula.k3}{Formula for the third linear predictor of the parametric distribution (see details).}
+\item{formula.surv}{List of formulas for each parameter in the parametric distribution (see details).}
 
 \item{type}{A character indicating the type of cure model.
 Possible values are \code{mixture} (default) and \code{nmixture}.}
 
-\item{dist}{The parametric distribution of the disease-specific survival function. Possible values are
-\code{weibull} (default), \code{exponential}, and \code{lognormal}.}
+\item{dist}{The parametric distribution of the survival of the uncured.}
 
-\item{link}{Specifies the link function of the cure fraction.
-Possible values are \code{logit} (default), \code{identity}, and \code{loglog}.}
+\item{link}{Character. Specifies the link function of the cure proportion.}
 
 \item{covariance}{Logical. If \code{TRUE} (default), the covariance matrix is computed.}
 
-\item{optim.args}{List with additional arguments passed to \code{optim}.}
+\item{link.mix}{Character. Specifies the link function for the mixture parameter in a
+weibull-weibull mixture model and weibull-exponential model. Only used when \code{dist = "weiwei"} and \code{dist = "weiexp"}.}
+
+\item{control}{List of control parameters passed to \code{optim}.}
+
+\item{method}{Optimization method passed to \code{optim}.}
 
 \item{init}{Initial values for the maximum likelihood optimization.
 If not provided, the optimization will start in 0.}
 }
 \value{
-An object of class \code{CureModel}.
+An object of class \code{cm} containing the parameters of the cure model.
 }
 \description{
 This function is used to fit parametric cure models on the relative survival.
 }
 \details{
-The arguments for modelling the parameters of the cure model have different meanings dependent on the chosen distribution. \cr
-For the exponential distribution, k1 denotes the rate, for the weibull model, k1 denotes the scale parameter and k2 denotes the shape parameter, sfor the log normal distribution k1 denotes the mu and sigma.
+The function fits the model,
+\deqn{S(t) = \pi + (1 - \pi) S_u(t).}
+The \code{formula.surv} argument is used to model \eqn{S_u(t)}. It is a \code{list} of formulas with as many entries as there are
+parameters in the chosen parametric distribution. If not specified, all formulas are assumed to be \code{~1}.
+The ith formula, i.e., \code{formula.surv[[i]]} refers \eqn{\theta_i} in the below survival functions.\cr\cr
+Exponential model:
+\deqn{S_u(t) = \exp\left(-t \theta_1\right).}
+Weibull model:
+\deqn{S_u(t) = \exp\left(-\theta_1 t^{\theta_2}\right).}
+Log-normal model:
+\deqn{S_u(t) = 1 - \Phi\left(\frac{\log(t) - \theta_1}{\theta_2}\right)}
+Weibull-exponential mixture model:
+\deqn{S_u(t) = \theta_1\exp\left(-\theta_2 t^{\theta_3}\right) + (1 - \theta_1)\exp\left(-\theta_4 t\right).}
+Weibull-Weibull mixture model:
+\deqn{S_u(t) = \theta_1\exp\left(-\theta_2 t^{\theta_3}\right) + (1 - \theta_1)\exp\left(-\theta_4 t^{\theta_5}\right).}
+In the the mixture models, the link function for the mixture component is controlled by \code{link.mix}.
+The remaining parameters are modelled using an exponential link function except \eqn{\theta_1} in the log-normal model,
+which is modeled using the identity.
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
@@ -60,32 +76,38 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
 
 ###Without covariates
 ##Fit weibull mixture cure model
-fit <- fit.cure.model(Surv(FUyear, status2) ~ 1, data = colonDC, bhazard = "bhaz",
-                      formula.k1 = ~ 1, formula.k2 = ~ 1,
-                      type = "mixture", dist = "weibull", link = "logit")
+fit.wei <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz",
+                          type = "mixture", dist = "weibull", link = "logit")
 
-##Plot model
-plot(fit)
-plot(fit, time = seq(0, 40, length.out = 100))
-plot(fit, type = "ehaz")
-plot(fit, type = "survuncured")
-plot(fit, type = "probcure")
+##Plot various summaries of the model
+plot(fit.wei)
+plot(fit.wei, time = seq(0, 40, length.out = 100))
+plot(fit.wei, type = "hazard")
+plot(fit.wei, type = "survuncured")
+plot(fit.wei, type = "probcure")
 
+#Fit a weibull-weibull mixture cure model
+fit.weiwei <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz",
+                          type = "mixture", dist = "weiwei", link = "logit")
+
+#Compare to the weibull model
+plot(fit.wei, var.type = "n")
+plot(fit.weiwei, add = T, col = 2, var.type = "n")
 
 ###With covariates
 ##Fit weibull mixture cure model
-fit <- fit.cure.model(Surv(FUyear, status2) ~ age, data = colonDC, bhazard = "bhaz",
-                      formula.k1 = ~ age, formula.k2 = ~ 1,
+fit <- fit.cure.model(Surv(FUyear, status) ~ age, data = colonDC, bhazard = "bhaz",
+                      formula.surv = list(~ age, ~1),
                       type = "mixture", dist = "weibull", link = "logit")
 
 ##Plot model
-plot(fit, newdata = data.frame(age = 50),
-     time = seq(0, 15, length.out = 100), ci = F)
 plot(fit, newdata = data.frame(age = 60),
-     time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T)
+     time = seq(0, 15, length.out = 100), var.type = "n")
+plot(fit, newdata = data.frame(age = 50),
+     time = seq(0, 15, length.out = 100), var.type = "n", add = TRUE, col = 2)
 
-plot(fit, newdata = data.frame(age = 50),
-     time = seq(0, 15, length.out = 100), ci = F, type = "ehaz")
 plot(fit, newdata = data.frame(age = 60),
-     time = seq(0, 15, length.out = 100), col = 2, ci = F, add = T, type = "ehaz")
+     time = seq(0, 15, length.out = 100), var.type = "n", type = "hazard")
+plot(fit, newdata = data.frame(age = 50),
+     time = seq(0, 15, length.out = 100), var.type = "n", type = "hazard", add = T, col = 2)
 }

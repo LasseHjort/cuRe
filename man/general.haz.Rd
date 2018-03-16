@@ -7,23 +7,27 @@
 general.haz(time, age, sex, year, data = NULL, ratetable = survexp.dk)
 }
 \arguments{
-\item{time}{Either a numeric vector of follow-up times or a character indicating which variable is the follow-up time in the data}
+\item{time}{Either a numeric vector of follow-up times or a character indicating the variable
+containing the follow-up times in the data.}
 
-\item{age}{Either a numeric vector of age or a character indicating which variable is the age in the data}
+\item{age}{Either a numeric vector of ages or a character indicating the variable containing the patient ages in the data.}
 
-\item{sex}{A numeric vector including the time points for which to make predictions.}
+\item{sex}{Either a character vector or factor with the sex of each patient
+or a character indicating the variable containing the patient sex in the data.}
 
-\item{data}{The data from which to extract variables from. If \code{time}, \code{age}, \code{sex}, and \code{date} are not characters, leave this empty.}
+\item{year}{Either a vector of class \code{Date} with the calendar time points
+or a character indicating the variable containing the calendar times in the data.}
 
-\item{ratetable}{Object of class \code{ratetable} to extract background hazards from. Defaults to survexp.dk}
+\item{data}{The data from which to extract variables from.
+If \code{time}, \code{age}, \code{sex}, or \code{year} are not characters, this will not be used.}
 
-\item{date}{A character denoting the type of prediction. Possible values are \code{relsurv} (default), \code{curerate}, and \code{probcure} (see details)}
+\item{ratetable}{Object of class \code{ratetable} to extract background hazards from. Defaults to \code{survexp.dk}.}
 }
 \value{
-An object of class \code{numeric} of yearly hazards.
+An object of class \code{numeric} containing the yearly expected hazards.
 }
 \description{
-Yearly general population hazards matched on age, gender, and calendar year is extracted from a ratetable
+Yearly general population hazards matched on age, gender, and calendar year is extracted from a ratetable.
 }
 \examples{
 bhaz1 <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
