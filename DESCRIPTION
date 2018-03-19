@@ -6,7 +6,8 @@ Date: 2017-12-01
 Authors@R: person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "lahja@dcm.aau.dk")
 Author: Lasse Hjort Jakobsen
 Maintainer: Lasse Hjort Jakobsen <lahja@dcm.aau.dk>
-Description: The package contains functions for estimating generalized parametric mixture and non-mixture cure models, loss of lifetime, and mean residual lifetime, crude event probabilities.
+Description: The package contains functions for estimating generalized parametric mixture and non-mixture cure models, 
+loss of lifetime, and mean residual lifetime, and crude event probabilities.
 URL: http://github.com/LasseHjort/cuRe
 BugReports: http://github.com/LasseHjort/cuRe/issues
 License: GPL (>=2)
