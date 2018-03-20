@@ -182,7 +182,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "cond
     res
   })
 
-  attributes(probs) <- list(time = time, type = type, reverse = reverse)
+  attributes(probs) <- list(time = time, type = type, reverse = reverse, ci = var.type == "ci")
   class(probs) <- "crude"
   probs
 }

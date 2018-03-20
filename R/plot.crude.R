@@ -15,31 +15,33 @@
 
 plot.crude <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T,
                        col = 1, ylab = NULL, xlab = "Time", add = F, ...){
+
+  attr <- attributes(obj)
   if(is.null(ylab)){
-    ylab <- switch(obj$type, cancer = "Cumulative incidence of cancer related death",
+    ylab <- switch(attr$type, cancer = "Cumulative incidence of cancer related death",
                    other = "Cumulative incidence of death from other causes than cancer",
                    condother = "Probability of eventually dying from other causes than cancer")
-    if(obj$reverse) ylab <- "Probability of eventually dying from cancer"
+    if(attr$reverse) ylab <- "Probability of eventually dying from cancer"
   }
-  if(is.null(xlim)) xlim <- range(obj$time)
+  if(is.null(xlim)) xlim <- range(attr$time)
 
   if(length(col) == 1){
-    col <- rep(col, length(obj$prob))
+    col <- rep(col, length(obj))
   }
-  if(ci & !obj$ci){
+  if(ci & !attr$ci){
     ci <- FALSE
   }
 
-  for(i in 1:length(obj$prob)){
+  for(i in 1:length(obj)){
     if(i == 1 & !add){
-      plot(prob ~ obj$time, data = obj$prob[[i]], ylim = ylim, xlim = xlim,
+      plot(Estimate ~ attr$time, data = obj[[i]], ylim = ylim, xlim = xlim,
            type = "l", col = col[i], ylab = ylab, xlab = xlab, ...)
     }else{
-      lines(prob ~ obj$time, data = obj$prob[[i]], col = col[i], ...)
+      lines(Estimate ~ attr$time, data = obj[[i]], col = col[i], ...)
     }
     if(ci){
-      lines(lower.ci ~ obj$time, data = obj$prob[[i]], lty = 2, col = col[i], ...)
-      lines(upper.ci ~ obj$time, data = obj$prob[[i]], lty = 2, col = col[i], ...)
+      lines(lower.ci ~ attr$time, data = obj[[i]], lty = 2, col = col[i], ...)
+      lines(upper.ci ~ attr$time, data = obj[[i]], lty = 2, col = col[i], ...)
     }
   }
 }

@@ -32,7 +32,7 @@ plot.le <- function(obj, ylim = NULL, xlim = NULL, ci = T, col = 1,
     if(ci){
       ylim <- range(unlist(lapply(obj, function(x) x[, c("lower.ci", "upper.ci")])))
     }else{
-      ylim <- range(unlist(lapply(obj, function(x) x[, obj$type])))
+      ylim <- range(unlist(lapply(obj, function(x) x[, "Estimate"])))
     }
   }
   for(i in 1:length(obj)){

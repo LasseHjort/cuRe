@@ -87,7 +87,7 @@ plot.cuRe <- function(object, newdata = NULL, type = c("surv", "probcure", "surv
     }else{
       lines(Estimate ~ time, data = pred[[i]], type = "l", col = col[i])
     }
-    if(var.type == "ci"){
+    if(ci){
       lines(upper ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2)
       lines(lower ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2)
     }

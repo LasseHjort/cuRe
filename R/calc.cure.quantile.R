@@ -26,7 +26,7 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
   } else if ("cm" %in% class(fit)){
     pred <- function(time, newdata, var.type = "n"){
       predict(fit, time = time, type = "probcure", newdata = newdata[i,,drop = F],
-              var.type = var.type, link = "identity")[[1]]
+              var.type = var.type, link = "I")[[1]]
     }
   } else if("stpm2" %in% class(fit)){
     pred <- function(time, newdata, var.type = "n"){
