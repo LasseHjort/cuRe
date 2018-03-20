@@ -59,7 +59,14 @@ predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcu
     #colnames(newdata) <- "(Intercept)"
   }
 
-  if(is.null(time)) time <- 0
+  #if(is.null(time)) time <- 0
+  if (is.null(time)) {
+    dtimes <- fit$data[[fit$timeVar]][fit$event]
+    time <- seq(min(dtimes), max(dtimes), length.out = 300)[-1]
+  }
+  if(type == "curerate"){
+    time <- 1
+  }
 
   all.formulas <- lapply(fit$all.formulas, function(x){
     rstpm2:::lhs(x) <- NULL

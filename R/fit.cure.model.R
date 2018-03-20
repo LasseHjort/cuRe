@@ -76,6 +76,8 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
   eventExpr <- rstpm2:::lhs(formula)[[length(rstpm2:::lhs(formula))]]
   delayed <- length(rstpm2:::lhs(formula)) >= 4
   timeExpr <- rstpm2:::lhs(formula)[[ifelse(delayed, 3, 2)]]
+  timeVar <- all.vars(timeExpr)
+
   time <- eval(timeExpr, data, parent.frame())
   event <- eval(eventExpr, data)
   event <- if (length(unique(event)) == 1){
@@ -166,7 +168,7 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
             surv.fun = surv.fun, dens.fun = dens.fun, optim.args = optim.args,
-            times = time, link.mix = link.mix, excess = excess)
+            times = time, event = event, timeVar = timeVar, link.mix = link.mix, excess = excess)
   class(L) <- c("cm", "cuRe")
   L
 }

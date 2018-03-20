@@ -81,7 +81,8 @@ predict.gfcm <- function (object, newdata = NULL,
 
   if (is.null(time)) {
     if(indi){
-      time <- seq(1e-05, max(object$time), length.out = 100)
+      dtimes <- object$data[[object$timeVar]][object$event]
+      time <- seq(min(dtimes), max(dtimes), length.out = 300)[-1]
     }else{
       time <- eval(object$timeExpr, newdata, parent.frame())
     }
@@ -254,85 +255,3 @@ local <- function(object, newdata, type = "surv", var.link = function(x) x,
   return(est)
 }
 
-
-
-
-#' @export
-plot.gfcm <- function(object, newdata = NULL, type = c("surv", "probcure", "survuncured", "hazarduncured",
-                                                       "cumhazuncured", "densityuncured", "failuncured",
-                                                       "oddsuncured", "loghazarduncured", "hazard",
-                                                       "density", "fail", "loghazard", "odds", "cumhaz"),
-                      time = NULL, xlim = NULL, ylim = c(0, 1),
-                      xlab = "Time", ylab = NULL, col = 1, ci = NULL,
-                      add = F, ...){
-
-  type <- match.arg(type)
-
-  if(is.null(ylab)){
-    if(!object$excess){
-      ylab <- switch(type,
-                     linkS = "Linear predictor", probcure = "Probability of cure",
-                     survuncured = "Survival of the uncured", hazarduncured = "Hazard of the uncured",
-                     cumhazuncured = "Cumulative hazard of the uncured",
-                     densityuncured = "Density of the uncured", failuncured = "Distribution of the uncured",
-                     oddsuncured = "Odds survival of the uncured", loghazarduncured = "Log-hazard of the uncured",
-                     surv = "Survival probability", hazard = "Hazard", density = "Density", fail = "Distribution",
-                     loghazard = "Log-hazard", odds = "Odds", cumhaz = "Cumulative incidence")
-    } else {
-      ylab <- switch(type,
-                     linkS = "Linear predictor", probcure = "Probability of cure",
-                     survuncured = "Relative survival of the uncured",
-                     hazarduncured = "Excess hazard of the uncured",
-                     cumhazuncured = "Cumulative excess hazard of the uncured",
-                     densityuncured = "Excess density of the uncured",
-                     failuncured = "Net distribution of the uncured",
-                     oddsuncured = "Net odds survival of the uncured",
-                     loghazarduncured = "Log-excess hazard of the uncured",
-                     surv = "Relative survival", hazard = "Excess hazard", density = "Excess density",
-                     fail = "Net distribution", loghazard = "Log-excess hazard",
-                     odds = "Net odds", cumhaz = "Cumulative excess hazard")
-    }
-  }
-
-  if(length(col) == 1 & !is.null(newdata)){
-    col <- rep(col, nrow(newdata))
-  }
-
-  if(is.null(time)){
-    if(is.null(xlim)){
-      xlim <- c(1e-05, max(object$time))
-      time <- seq(xlim[1], xlim[2], length.out = 100)
-    }
-  }else{
-    xlim <- range(time)
-  }
-
-  if(is.null(ci)){
-    if(add){
-      ci <- "n"
-    } else {
-      ci <- ifelse(object$ci, "ci", "n")
-    }
-  }
-
-  pred <- predict(object, newdata, time, type = type,
-                  var.type = ci, indi = TRUE)
-
-  if(type == "hazard"){
-    ylim <- range(unlist(lapply(pred, function(x) x[,-2])), na.rm = T, finite = T)
-  }
-
-  nr.samples <- length(pred)
-  for(i in 1:nr.samples){
-    if(i == 1 & !add){
-      plot(Estimate ~ time, data = pred[[i]], type = "l", ylim = ylim, xlim = xlim,
-           xlab = xlab, ylab = ylab, col = col[i], ...)
-    }else{
-      lines(Estimate ~ time, data = pred[[i]], type = "l", col = col[i], ...)
-    }
-    if(ci == "ci"){
-      lines(upper ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2, ...)
-      lines(lower ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2, ...)
-    }
-  }
-}

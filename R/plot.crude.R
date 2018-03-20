@@ -18,10 +18,10 @@ plot.crude <- function(obj, ylim = c(0, 1), xlim = NULL, ci = T,
 
   attr <- attributes(obj)
   if(is.null(ylab)){
-    ylab <- switch(attr$type, cancer = "Cumulative incidence of cancer related death",
-                   other = "Cumulative incidence of death from other causes than cancer",
-                   condother = "Probability of eventually dying from other causes than cancer")
-    if(attr$reverse) ylab <- "Probability of eventually dying from cancer"
+    ylab <- switch(attr$type, cancer = "Cumulative incidence of disease-related death",
+                   other = "Cumulative incidence of non-disease-related death",
+                   condother = "Probability of non-disease-related death")
+    if(attr$reverse) ylab <- "Probability of disease-related death"
   }
   if(is.null(xlim)) xlim <- range(attr$time)
 

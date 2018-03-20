@@ -72,7 +72,7 @@ plot.cuRe <- function(object, newdata = NULL, type = c("surv", "probcure", "surv
     ci <- F
   }
 
-  pred <- predict(object, newdata, time, type = type,
+  pred <- predict(object, newdata = newdata, time = time, type = type,
                   var.type = if(ci) "ci" else "n")
 
   if(type == "hazard"){

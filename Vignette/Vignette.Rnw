@@ -33,13 +33,15 @@
 \title{An introduction to the \textbf{cuRe} package}
 \author{Lasse Hjort Jakobsen}
 \date{}
-\affil{Aalborg University}
+\affil{Department of Clinical Medicine, Aalborg University}
 
 \maketitle
 
+\tableofcontents
+
 %Start content
 
-\section{Bibliography}
+\section{Key references}
 
 \begin{itemize}[leftmargin=*]
 \item[] \bibentry{Lambert2007}
@@ -80,18 +82,16 @@
 \end{itemize}
 
 \section{Quick start}
-The \verb|cuRe| package has two main functions for estimating parameteric cure models on the relative survival scale, namely \verb|FlexCureModel| and \verb|fit.cure.model|. In addition, functionalities for providing crude mortality measures are also included.
+The \verb|cuRe| package has two main functions for estimating parameteric cure models on the relative survival scale, namely \verb|GenFlexCureModel| and \verb|fit.cure.model|. In addition, functionalities for providing loss of lifetime estimates and crude mortality measures are also included.
 
-Load the \verb|cuRe| package and included dataset, \verb|colonDC| on 15564 colon cancer patients. The name \verb|colonDC|, indicates that the \verb|colon| dataset of the \verb|rstpm2| package is used after some "data cleaning".
+For this vignette, we consider the \verb|colonDC| dataset, which contain records on 15564 colon cancer patients. The name \verb|colonDC|, indicates that the \verb|colon| dataset of the \verb|rstpm2| package is used after some "data cleaning".
 <<message=F, warning=F>>=
 library(cuRe)
 data("colonDC")
-s <- sample(nrow(colonDC), 500)
-colonDC <- colonDC[s,]
 head(colonDC)
 @
 
-Extract general population hazard at the observed follow-up times.
+By using the function \verb|general.haz| the general population hazard at the observed follow-up times is extracted from the provided ratetable (in this case \verb|survexp.dk|).
 <<>>=
 colonDC$bhaz <- general.haz(time = "FU", sex = "sex",
                             age = "agedays", year = "dx",
@@ -99,17 +99,16 @@ colonDC$bhaz <- general.haz(time = "FU", sex = "sex",
                             ratetable = survexp.dk)
 @
 
-Fit flexible cure model.
+Next, we fit a generalized flexible cure model. By default, a proportional hazard model is assumed for the survival of the uncured and logit link function is assumed for the cure proportion.
 <<>>=
-fit <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC,
-                     bhazard = "bhaz", n.knots = 5)
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz", df = 4)
 @
 
-Plot the relative survival, the exess hazard, and the survival of the uncured patients.
+Using \verb|plot|, we may obtain the relative survival, the exess hazard, and the relative survival of the uncured patients.
 <<fig.height = 3.3, fig.width = 10, fig.align = "center">>=
 par(mfrow = c(1,3))
 plot(fit)
-plot(fit, type = "ehaz")
+plot(fit, type = "hazard")
 plot(fit, type = "survuncured")
 @
 
@@ -118,14 +117,13 @@ plot(fit, type = "survuncured")
 par(mfrow = c(1,1))
 @
 
-Compute the loss of lifetime and the conditional probability of eventually dying from other causes than cancer given survival until time $t$.
+Using the \verb|calc.LL| and \verb|calc.Crude| functions, we may obtain loss of lifetime estimates and the conditional probability of cancer-related death given survival until time $t$ (including pointwise confidence intervals).
 <<fig.height = 5, fig.width = 10, fig.align = "center">>=
-ll <- calc.LL(fit, time = seq(0, 15, length.out = 100),
-               rmap = list(age = agedays, sex = sex, year = dx))
+ll <- calc.LL(fit, time = seq(0, 15, length.out = 50),
+              rmap = list(age = agedays, sex = sex, year = dx))
 
-prob <- calc.Crude(fit, time = seq(0, 15, length.out = 100),
-                   type = "othertime",
-                   rmap = list(age = agedays, sex = sex, year = dx), n = 5000)
+prob <- calc.Crude(fit, time = seq(0, 15, length.out = 50), type = "condother",
+                   rmap = list(age = agedays, sex = sex, year = dx), reverse = T)
 
 par(mfrow = c(1,2))
 plot(ll)
@@ -143,14 +141,14 @@ The relative survival given as,
 \begin{equation}
 R(t) = \frac{S(t)}{S^*(t)}
 \end{equation}
-are commonly used to describe the net disease-specific survival in a patient population. Here $S(\cdot)$ and $S^*(\cdot)$ are the all-cause and general population survival functions, respectively. The term "net" refers to the interpretation of the disease-specific survival which is the survival of the patients in a world where it is impossible to die from other causes than the disease. Non-parametric estimators of the relative survival curve have been available for many years.
+are commonly used to describe the net disease-specific survival in a patient population. Here $S(\cdot)$ and $S^*(\cdot)$ are the all-cause and general population survival functions, respectively. The term "net" refers to the interpretation of the disease-specific survival which is the survival of the patients in a world where it is impossible to die from other causes than the disease. Non-parametric estimators of the relative survival function have been available for many years.
 
-The \verb|relsurv| package contains functions for modelling the relative survival non-parametricaly. For instance the immediate relative survival of the colon cancer patients may be computed usig the function \verb|rs.surv| in the following way.
+The \verb|relsurv| package contains functions for modelling the relative survival non-parametricaly. For instance, the immediate relative survival of the colon cancer patients may be computed using the function \verb|rs.surv| in the following way.
 <<message = F, warning = F, out.width = "70%", fig.align = "center">>=
 library(relsurv)
-fit <- rs.surv(Surv(FU, status2) ~ 1 + ratetable(age = agedays,
-                                                 sex = sex,
-                                                 year = dx),
+fit <- rs.surv(Surv(FU, status) ~ 1 + ratetable(age = agedays,
+                                                sex = sex,
+                                                year = dx),
                data = colonDC,
                ratetable = survexp.dk,
                method = "ederer2")
@@ -172,11 +170,10 @@ where $\tilde F(t)$ is a proper distribution function, which does not have the s
 
 In the \verb|cuRe| package, the \verb|fit.cure.model| function allows estimation of standard parametric mixture and non-mixture cure models. Using the colon cancer data, we fit a mixture cure model with a Weibull distribution modelling the disease-specific survival of the uncured and a logistic model for the cure fraction. Both include a linear age-effect.
 <<>>=
-fit.cm <- fit.cure.model(Surv(FUyear, status2) ~ age,
+fit.cm <- fit.cure.model(Surv(FUyear, status) ~ age,
                          data = colonDC,
                          bhazard = "bhaz",
-                         formula.k1 = ~ age,
-                         formula.k2 = ~ 1)
+                         formula.surv = list(~ age, ~ 1))
 
 predict(fit.cm, newdata = data.frame(age = c(50, 60, 70)),
         type = "curerate")
@@ -189,9 +186,8 @@ plot(fit.cm, newdata = data.frame(age = c(50, 60, 70)), col = 1:3)
 
 Now, replace the Weibull distribution with a log-normal distribution, which does not provide a proportional hazards model for the survival of the uncured.
 <<>>=
-fit.cm.ln <- fit.cure.model(Surv(FUyear, status2) ~ age, data = colonDC,
-                         bhazard = "bhaz", formula.k1 = ~ age,
-                         formula.k2 = ~ 1,
+fit.cm.ln <- fit.cure.model(Surv(FUyear, status) ~ age, data = colonDC,
+                         bhazard = "bhaz", formula.surv = list(~ age, ~ 1),
                          dist = "lognormal")
 
 predict(fit.cm.ln, newdata = data.frame(age = c(50, 60, 70)), type = "curerate")
@@ -209,13 +205,13 @@ Plot the 5-year relative survival against diagnostic age.
 <<out.width = "70%", fig.align = "center">>=
 ages <- 30:85
 rs5 <- predict(fit.cm, time = 5, newdata = data.frame(age = ages))
-rs5 <- sapply(rs5$res, function(x) x$Est)
+rs5 <- do.call(rbind, rs5)
 
 rs5.ln <- predict(fit.cm.ln, time = 5, newdata = data.frame(age = ages))
-rs5.ln <- sapply(rs5.ln$res, function(x) x$Est)
+rs5.ln <- do.call(rbind, rs5.ln)
 
-plot(rs5 ~ ages, type = "l", ylim = c(0, 1), ylab = "5 year relative survival")
-lines(rs5.ln ~ ages, col = 2)
+plot(rs5$Estimate ~ ages, type = "l", ylim = c(0, 1), ylab = "5 year relative survival")
+lines(rs5.ln$Estimate ~ ages, col = 2)
 @
 
 
@@ -226,7 +222,7 @@ lts.wei <- lts(fit.cm,
                                     year = 2010,
                                     age_days = c(50, 60, 70) * 365.24),
                time = seq(0, 20, length.out = 100),
-               rmap = list(age = age_days), ci = F)
+               rmap = list(age = age_days))
 
 plot(lts.wei, ci = F)
 
@@ -235,7 +231,7 @@ lts.ln <- lts(fit.cm.ln,
                                    year = 2010,
                                    age_days = c(50, 60, 70) * 365.24),
               time = seq(0, 20, length.out = 100),
-              rmap = list(age = age_days), ci = F)
+              rmap = list(age = age_days))
 
 plot(lts.ln, ci = F, add = T, col = 2)
 @
@@ -276,9 +272,8 @@ S_u(t|\bm z) = \exp{-\exp{s_0(x;\bm\gamma_0) + \bm z^T\bm\beta + \sum_{i = 1}^p 
 
 Fit the flexible parametric model using the \verb|FlexCureModel| function.
 <<out.width = "70%", fig.align = "center">>=
-fit.flex <- FlexCureModel(Surv(FUyear, status2) ~ age,
-                           data = colonDC, n.knots = 5,
-                           bhazard = "bhaz", smooth.formula = ~ age)
+fit.flex <- GenFlexCureModel(Surv(FUyear, status) ~ age, data = colonDC,
+                             df = 4, bhazard = "bhaz", cr.formula = ~ age)
 
 predict(fit.flex, newdata = data.frame(age = c(50, 60, 70)),
         type = "curerate")
@@ -288,14 +283,16 @@ plot(fit.flex, newdata = data.frame(age = c(50, 60, 70)))
 
 Fit the flexible parametric model with a time-varying age-effect using the \verb|n.knots.time| argument.
 <<out.width = "70%", fig.align = "center">>=
-fit.flex.time <- FlexCureModel(Surv(FUyear, status2) ~ age,
-                           data = colonDC, n.knots = 5,
-                           bhazard = "bhaz", n.knots.time = list(age = 3))
+fit.flex.time <- GenFlexCureModel(Surv(FUyear, status) ~ age, data = colonDC, df = 4,
+                           bhazard = "bhaz", tvc = list(age = 3), cr.formula = ~ age)
 
-plot(fit.flex, newdata = data.frame(age = c(50, 60, 70)),
-     col = 1, ci = F)
+plot(fit.flex, newdata = data.frame(age = c(50, 60, 70)), ci = F)
 plot(fit.flex.time, newdata = data.frame(age = c(50, 60, 70)),
      col = 2, ci = F, add = T)
+
+predict(fit.flex.time, newdata = data.frame(age = c(50, 60, 70)), type = "curerate")
+predict(fit.cm, newdata = data.frame(age = c(50, 60, 70)), type = "curerate")
+predict(fit.flex, newdata = data.frame(age = c(50, 60, 70)), type = "curerate")
 @
 
 Plot the survival of the uncured from the Weibull cure model, the flexible cure model, and the flexible cure model with a time-varying effect age effect.
@@ -312,8 +309,15 @@ Compute the cure fraction for a sequence of diagnostic ages.
 <<fig.align = "center", out.width = "70%">>=
 pred_cure <- predict(fit.flex.time, type = "curerate",
                      newdata = data.frame(age = ages))
-plot(pi ~ ages, data = pred_cure, type = "l", ylim = c(0, 1),
-     ylab = "Cure rate", xlab = "Diagnostic age")
+
+pred_cure <- do.call(rbind, pred_cure)
+
+plot(pred_cure$Estimate ~ ages, type = "l", ylim = c(0, 1),
+     ylab = "Cure rate", xlab = "Age at diagnosis")
+
+#Add confidence intervals
+lines(pred_cure$lower ~ ages, lty = 2)
+lines(pred_cure$upper ~ ages, lty = 2)
 @
 
 \section{Loss of lifetime estimation}
@@ -335,7 +339,7 @@ ll <- calc.LL(fit.flex,
                                    year = 2010,
                                    age_days = c(50, 60, 70) * 365.24),
               time = seq(0, 20, length.out = 100),
-              ci = F, rmap = list(age = age_days))
+              rmap = list(age = age_days), var.type = "n")
 
 ll.time <- calc.LL(fit.flex.time,
                    newdata = data.frame(age = c(50, 60, 70),
@@ -343,7 +347,7 @@ ll.time <- calc.LL(fit.flex.time,
                                         year = 2010,
                                         age_days = c(50, 60, 70) * 365.24),
                    time = seq(0, 20, length.out = 100),
-                   ci = F, rmap = list(age = age_days))
+                   rmap = list(age = age_days), var.type = "n")
 
 plot(ll, ci = F)
 plot(ll.time, ci = F, col = 2, add = T)
@@ -352,9 +356,8 @@ A small difference is observed between the loss of lifetime computed using a tim
 
 The loss of lifetime function also works with the functionalities of the \verb|rstpm2| package \citep{rstpm2}. Consider the following penalized generalized relative survival model with age as time-varying covariate.
 <<>>=
-fit.pen <- pstpm2(Surv(FUyear, status2) ~ 1, data = colonDC,
-                  bhazard = colonDC$bhaz,
-                  smooth.formula=~s(log(FUyear)) + s(log(FUyear), by=age))
+fit.stpm2 <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = colonDC$bhaz, df = 4,
+                   tvc = list(age = 3), cure = TRUE)
 @
 
 Now, compute the loss of lifetime and compare the flexible parametric cure model, also with a time varying age effect.
@@ -366,17 +369,17 @@ ll.time <- calc.LL(fit.flex.time,
                                         year = 2010,
                                         age_days = c(50, 60, 70) * 365.24),
                    time = seq(0, 20, length.out = 100),
-                   ci = F, rmap = list(age = age_days))
+                   rmap = list(age = age_days), var.type = "n")
 
-ll.pen.time <- calc.LL(fit.pen,
-                       newdata = data.frame(age = c(50, 60, 70),
-                                            sex = "male",
-                                            year = 2010,
-                                            age_days = c(50, 60, 70) * 365.24),
-                       time = seq(0, 20, length.out = 100),
-                       ci = F, rmap = list(age = age_days))
+ll.stpm2.time <- calc.LL(fit.stpm2,
+                         newdata = data.frame(age = c(50, 60, 70),
+                                              sex = "male",
+                                              year = 2010,
+                                              age_days = c(50, 60, 70) * 365.24),
+                         time = seq(0, 20, length.out = 100),
+                         rmap = list(age = age_days), var.type = "n")
 
-plot(ll.pen.time, ci = F, col = 1)
+plot(ll.stpm2.time, ci = F, col = 1)
 plot(ll.time, ci = F, add = T, col = 2)
 @
 Also here, a small difference is observed between the loss of lifetime estimates, the largest seen among the 50-year-old patient.
@@ -406,31 +409,22 @@ Using \eqref{eq:crudecure} and \eqref{eq:crudecure}, dynamic probability of deat
 For illustration, we fit a null model, i.e., without any covariates using the \verb|FlexCureModel| function. The crude probabilities are estimated through the \verb|calc.Crude| function. The function has an argument \verb|type| which denotes which type of crude probability to compute; \verb|type = "cancer"| (default) computes \eqref{eq:crudecure}, \verb|type = "other"| computes \eqref{eq:crudecure} with $\lambda(t)$ replaced by $h^*(t)$, and \verb|type = "othertime"| computed \eqref{eq:crudecuretime}. If \verb|reverse = TRUE|, $1 - \p{D = \text{other}| T > t} = \p{D = \text{cancer}| T > t}$ is computed.
 
 <<fig.height = 10, fig.width = 10, fig.align = "center">>=
-fit.null <- FlexCureModel(Surv(FUyear, status2) ~ 1, data = colonDC,
-                          bhazard = "bhaz", n.knots = 5)
 
-newdata <- data.frame(age = 60, sex = "male", year = 2010,
-                      age_days = 50 * 365.24)
+fit.null <- GenFlexCureModel(Surv(FUyear, status) ~ 1, data = colonDC, df = 3, bhazard = "bhaz")
 
-crude.null.cancer <- calc.Crude(fit.flex.time, newdata = newdata,
-                                time = seq(0, 20, length.out = 100),
-                                ci = T, rmap = list(age = age_days), n = 5000)
+time.points <- seq(0, 20, length.out = 50)
 
-crude.null.other <- calc.Crude(fit.flex.time, newdata = newdata,
-                               type = "other",
-                               time = seq(0, 20, length.out = 100),
-                               ci = T, rmap = list(age = age_days), n = 5000)
+crude.null.cancer <- calc.Crude(fit.null, time = time.points,
+                                var.type = "ci", rmap = list(age = agedays, year = dx))
 
-crude.null.prob <- calc.Crude(fit.flex.time, newdata = newdata,
-                              type = "othertime",
-                              time = seq(0, 20, length.out = 100),
-                              ci = T, rmap = list(age = age_days), n = 5000)
+crude.null.other <- calc.Crude(fit.null, type = "other", time = time.points, var.type = "ci",
+                               rmap = list(age = agedays, year = dx))
 
-crude.null.prob.reverse <- calc.Crude(fit.flex.time, newdata = newdata,
-                                      type = "othertime",
-                                      time = seq(0, 20, length.out = 100),
-                                      reverse = T,
-                                      ci = T, rmap = list(age = age_days), n = 5000)
+crude.null.prob <- calc.Crude(fit.null, type = "condother", time = time.points,
+                              var.type = "ci", rmap = list(age = agedays, year = dx))
+
+crude.null.prob.reverse <- calc.Crude(fit.null, type = "condother", time = time.points,
+                                      reverse = T, var.type = "ci", rmap = list(age = agedays, year = dx))
 
 
 par(mfrow = c(2,2))
@@ -440,26 +434,27 @@ plot(crude.null.prob)
 plot(crude.null.prob.reverse)
 @
 
+<<echo = FALSE>>=
+par(mfrow = c(1, 1))
+@
+
 Using the previously fitted models with a time-varying age effect, we compute the crude probability of cancer related death.
 <<fig.align = "center", out.width = "70%">>=
-crude.time <- calc.Crude(fit.flex.time, type = "othertime",
-                         newdata = data.frame(age = c(50, 60, 70),
-                                              sex = "male",
-                                              year = 2010,
-                                              age_days = c(50, 60, 70) * 365.24),
-                         time = seq(0, 20, length.out = 100), reverse = T,
-                         ci = F, rmap = list(age = age_days), n = 5000)
+newdata <- data.frame(age = c(50, 60, 70),
+                      sex = "male",
+                      year = 2010,
+                      age_days = c(50, 60, 70) * 365.24)
 
-crude.pen.time <- calc.Crude(fit.pen, type = "othertime",
-                             newdata = data.frame(age = c(50, 60, 70),
-                                                  sex = "male",
-                                                  year = 2010,
-                                                  age_days = c(50, 60, 70) * 365.24),
-                             time = seq(0, 20, length.out = 100), reverse = T,
-                             ci = F, rmap = list(age = age_days), n = 5000)
+crude.time <- calc.Crude(fit.flex.time, type = "condother", newdata = newdata,
+                         time = time.points, reverse = T,
+                         var.type = "n", rmap = list(age = age_days))
 
-plot(crude.time, ci = F, col = 1)
-plot(crude.pen.time, ci = F, add = T, col = 2)
+crude.pen.time <- calc.Crude(fit.stpm2, type = "condother", newdata = newdata,
+                             time = time.points, reverse = T,
+                             var.type = "n", rmap = list(age = age_days))
+
+plot(crude.time)
+plot(crude.pen.time, add = T, col = 2)
 @
 
 

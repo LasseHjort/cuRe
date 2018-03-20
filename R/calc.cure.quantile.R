@@ -70,7 +70,7 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
         lower <- log(uni) - SE * qnorm(0.975)
         df <- data.frame(Estimate = uni, SE = SE * uni, lower.ci = exp(lower), upper.ci = exp(upper))
       }else{
-        df <- data.frame(Estimate = uni, var = NA, lower.ci = NA, upper.ci = NA)
+        df <- data.frame(Estimate = uni, SE = NA, lower.ci = NA, upper.ci = NA)
       }
       if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
     } else{
