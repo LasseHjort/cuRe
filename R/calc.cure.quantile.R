@@ -15,7 +15,7 @@
 #' @example inst/calc.cure.quantile.ex.R
 #' @export
 
-calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var.type = c("ci", "se", "n"), reverse = TRUE){
+calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var.type = c("ci", "n"), reverse = TRUE){
   var.type <- match.arg(var.type)
 
   if("gfcm" %in% class(fit)){
@@ -72,7 +72,8 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
       }else{
         df <- data.frame(Estimate = uni, SE = NA, lower.ci = NA, upper.ci = NA)
       }
-      if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
+      #if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
+      df
     } else{
       data.frame(Estimate = uni)
     }

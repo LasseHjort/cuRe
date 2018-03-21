@@ -24,7 +24,7 @@
 #' @example inst/calc.Crude.quantile.ex.R
 #' @export
 
-calc.Crude.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, exp.fun = NULL, var.type = c("ci", "se", "n"),
+calc.Crude.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, exp.fun = NULL, var.type = c("ci", "n"),
                                 rmap, ratetable = survexp.dk, tau = 100, reverse = TRUE){
   var.type <- match.arg(var.type)
 
@@ -90,7 +90,8 @@ calc.Crude.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, ex
       } else {
         df <- data.frame(Estimate = uni, SE = NA, lower.ci = NA, upper.ci = NA)
       }
-      if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
+      #if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
+      df
     } else{
       data.frame(Estimate = uni)
     }

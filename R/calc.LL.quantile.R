@@ -27,7 +27,7 @@
 
 
 
-calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type = c("ci", "se", "n"),
+calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type = c("ci", "n"),
                              exp.fun = NULL, rmap = NULL, ratetable = survexp.dk,
                              tau = 100, type = "ll"){
 
@@ -91,7 +91,8 @@ calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type
       } else {
         df <- data.frame(Estimate = uni, SE = NA, lower.ci = NA, upper.ci = NA)
       }
-      if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
+      #if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
+      df
     } else{
       data.frame(Estimate = uni)
     }

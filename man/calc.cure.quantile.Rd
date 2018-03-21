@@ -5,7 +5,7 @@
 \title{Compute the time to statistical cure using the conditional probability of cure}
 \usage{
 calc.cure.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
-  var.type = c("ci", "se", "n"), reverse = TRUE)
+  var.type = c("ci", "n"), reverse = TRUE)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are

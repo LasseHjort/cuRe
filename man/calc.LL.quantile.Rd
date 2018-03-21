@@ -5,7 +5,7 @@
 \title{Compute the time to statistical cure using the loss of lifetime function}
 \usage{
 calc.LL.quantile(fit, q = 1, newdata = NULL, max.time = 20,
-  var.type = c("ci", "se", "n"), exp.fun = NULL, rmap = NULL,
+  var.type = c("ci", "n"), exp.fun = NULL, rmap = NULL,
   ratetable = survexp.dk, tau = 100, type = "ll")
 }
 \arguments{

@@ -5,8 +5,8 @@
 \title{Compute the time to statistical cure using the conditional probability of cancer-related death}
 \usage{
 calc.Crude.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
-  exp.fun = NULL, var.type = c("ci", "se", "n"), rmap,
-  ratetable = survexp.dk, tau = 100, reverse = TRUE)
+  exp.fun = NULL, var.type = c("ci", "n"), rmap, ratetable = survexp.dk,
+  tau = 100, reverse = TRUE)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
