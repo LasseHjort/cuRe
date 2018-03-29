@@ -36,6 +36,9 @@
 #' If not specified, the function will create initial values internally.
 #' @param timeVar Optional character giving the name of the variable specifying the time component of the \code{Surv} object.
 #' Should currently not be used.
+#' @param time0Var Optional character giving the name of the variable specifying the time start time component used for delayed entry.
+#' @param baseoff Logical. If \code{TRUE}, the time-effect is modelled only using \code{tvc.formula} rather
+#' than merging with \code{smooth.formula}.
 #' @param control Named list with control arguments passed to \code{optim}.
 #' @param method Character passed to \code{optim} indicating the method for optimization.
 #' See \code{?optim} for details.
@@ -63,7 +66,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
                              type = "mixture",
                              link.type.cr = c("logit", "loglog", "identity", "probit"),
                              link.type = c("PH", "PO", "probit"),
-                             init = NULL, timeVar = "",
+                             init = NULL, baseoff = FALSE, timeVar = "", time0Var = "",
                              covariance = T, verbose = T,
                              control = list(maxit = 10000), method = "Nelder-Mead",
                              constraint = TRUE,
@@ -102,6 +105,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   if (timeVar == "")
     timeVar <- all.vars(timeExpr)
 
+  ## set up the formulae
   if (is.null(logH.formula) && is.null(logH.args)) {
     logH.args$df <- df
     if (cure)
@@ -126,6 +130,9 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   if (!is.null(tvc.formula)) {
     rstpm2:::rhs(logH.formula) <- rstpm2:::rhs(logH.formula) %call+% (rstpm2:::rhs(tvc.formula))
   }
+
+  if (baseoff)
+    rstpm2:::rhs(logH.formula) <- rstpm2:::rhs(tvc.formula)
 
   full.formula <- formula
   rstpm2:::rhs(full.formula) <- rstpm2:::rhs(formula) %call+% rstpm2:::rhs(logH.formula)
@@ -222,20 +229,25 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
     rstpm2:::lpmatrix.lm(fit, dataset)
   }
 
+  ## initialise values specific to either delayed entry or interval-censored
+  ind0 <- FALSE
+  map0 <- 0L
+  which0 <- 0
+  #wt0 <- 0
+  ttype <- 0
   transX <- function(X, data) X
   transXD <- function(XD) XD
-
 
   if (!interval) {
     X <- rstpm2:::lpmatrix.lm(lm.obj, data)
     if (link.type == "AH") {
       datat0 <- data
       datat0[[timeVar]] <- 0
-      index0 <- which.dim(X - lpmatrix.lm(lm.obj, datat0))
+      index0 <- which.dim(X - rstpm2:::lpmatrix.lm(lm.obj, datat0))
       transX <- function(X, data) {
         datat0 <- data
         datat0[[timeVar]] <- 0
-        Xt0 <- lpmatrix.lm(lm.obj, datat0)
+        Xt0 <- rstpm2:::lpmatrix.lm(lm.obj, datat0)
         (X - Xt0)[, index0, drop = FALSE]
       }
       transXD <- function(XD) XD[, index0, drop = FALSE]
@@ -257,16 +269,16 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
       which0[!ind0] <- NaN
       data0 <- data[ind0, , drop = FALSE]
       data0[[timeVar]] <- data0[[time0Var]]
-      X0 <- transX(lpmatrix.lm(lm.obj, data0), data0)
-      wt0 <- wt[ind0]
+      X0 <- transX(rstpm2:::lpmatrix.lm(lm.obj, data0), data0)
+      #wt0 <- wt[ind0]
       rm(data0)
     }
   } else {
     ttype <- eventInstance[, 3]
-    X1 <- transX(lpmatrix.lm(lm.obj, data), data)
+    X1 <- transX(rstpm2:::lpmatrix.lm(lm.obj, data), data)
     data0 <- data
     data0[[timeVar]] <- data0[[time0Var]]
-    X <- transX(lpmatrix.lm(lm.obj, data0), data0)
+    X <- transX(rstpm2:::lpmatrix.lm(lm.obj, data0), data0)
     XD <- grad(lpfunc, 0, lm.obj, data0, timeVar)
     XD <- transXD(matrix(XD, nrow = nrow(X)))
     X0 <- matrix(0, nrow(X), ncol(X))
@@ -277,11 +289,12 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
 
   if(is.null(init)){
     if(verbose) cat("Finding initial values... ")
+    #ini.types <- if(delayed) ini.types[2] else ini.types
     init <- vector("list", length(ini.types))
     for(i in 1:length(init)){
       args <- list(formula = formula, data = data, smooth.formula = smooth.formula,
                    logH.formula = logH.formula, tvc.formula = tvc.formula, cr.formula = cr.formula,
-                   full.formula = full.formula, X = X, X.cr = X.cr,
+                   full.formula = full.formula, X = X, X0 = X0, X.cr = X.cr, delayed = delayed,
                    bhazard = bhazard, type = type, link.type.cr = link.type.cr,
                    link.surv = link.surv, time = time, timeExpr = as.character(timeExpr),
                    lm.obj = lm.obj, method = ini.types[i])
@@ -292,13 +305,23 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   }
 
 
-  #Extract minus log likelihood function
+  # #Extract minus log likelihood function
+  # if(delayed) {
+  #   minusloglik <- switch(type,
+  #                         mixture = GenFlexMixMinLogLikDelayed,
+  #                         nmixture = GenFlexNmixMinLogLikDelayed)
+  # } else {
+  #   minusloglik <- switch(type,
+  #                         mixture = GenFlexMixMinLogLik,
+  #                         nmixture = GenFlexNmixMinLogLik)
+  # }
+
   minusloglik <- switch(type,
-                        mixture = GenFlexMixMinLogLik,
-                        nmixture = GenFlexNmixMinLogLik)
+                        mixture = GenFlexMixMinLogLikDelayed,
+                        nmixture = GenFlexNmixMinLogLikDelayed)
 
   #Prepare optimization arguments
-  args <- list(event = event, X = X, XD = XD, X.cr = X.cr,
+  args <- list(event = event, X = X, XD = XD, X.cr = X.cr, X0 = X0, ind0 = ind0,
                bhazard = bhazard, link.type.cr = link.type.cr,
                link.surv = link.surv, kappa = 0)
 
@@ -355,7 +378,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
     args$f <- minusloglik
     hes <- do.call(pracma::hessian, args)
     cov <- if (!inherits(vcov <- try(solve(hes)), "try-error"))  vcov
-  # cov <- solve(hes)
+    # cov <- solve(hes)
     if(!is.null(cov) && any(is.na(cov))){
       warning("Hessian is not invertible!")
     }
@@ -380,8 +403,8 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
 
 
 #Function for computing initial values
-get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, cr.formula, full.formula,
-                     bhazard, type, link.type.cr, link.surv, timeExpr, time, lm.obj, X, X.cr, method){
+get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, cr.formula, full.formula, delayed,
+                     bhazard, type, link.type.cr, link.surv, timeExpr, time, lm.obj, X, X0, X.cr, method){
 
   if(!method %in% c("cure", "flexpara")){
     stop("Argument method should be either 'cure' or 'flexpara'")

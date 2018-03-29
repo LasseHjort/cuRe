@@ -8,9 +8,9 @@ GenFlexCureModel(formula, data, smooth.formula = NULL, smooth.args = NULL,
   df = 3, tvc = NULL, tvc.formula = NULL, bhazard = NULL,
   cr.formula = ~1, type = "mixture", link.type.cr = c("logit", "loglog",
   "identity", "probit"), link.type = c("PH", "PO", "probit"), init = NULL,
-  timeVar = "", covariance = T, verbose = T, control = list(maxit =
-  10000), method = "Nelder-Mead", constraint = TRUE, ini.types = c("cure",
-  "flexpara"))
+  baseoff = FALSE, timeVar = "", time0Var = "", covariance = T,
+  verbose = T, control = list(maxit = 10000), method = "Nelder-Mead",
+  constraint = TRUE, ini.types = c("cure", "flexpara"))
 }
 \arguments{
 \item{formula}{Formula for modelling the survival of the uncured. A linear term for time-varying coefficients is required here.
@@ -48,8 +48,13 @@ Possible values are \code{PH} (default), \code{PO}, and \code{probit}.}
 \item{init}{Providing initial values for the optimization procedure.
 If not specified, the function will create initial values internally.}
 
+\item{baseoff}{Logical. If \code{TRUE}, the time-effect is modelled only using \code{tvc.formula} rather
+than merging with \code{smooth.formula}.}
+
 \item{timeVar}{Optional character giving the name of the variable specifying the time component of the \code{Surv} object.
 Should currently not be used.}
+
+\item{time0Var}{Optional character giving the name of the variable specifying the time start time component used for delayed entry.}
 
 \item{covariance}{Logical. If \code{TRUE} (default), the covariance matrix is computed.}
 

@@ -77,8 +77,17 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
   delayed <- length(rstpm2:::lhs(formula)) >= 4
   timeExpr <- rstpm2:::lhs(formula)[[ifelse(delayed, 3, 2)]]
   timeVar <- all.vars(timeExpr)
-
   time <- eval(timeExpr, data, parent.frame())
+
+  time0Expr <- NULL # initialise
+  if (delayed) {
+    time0Expr <- lhs(formula)[[2]]
+    time0Var <- all.vars(time0Expr)
+    time0 <- eval(time0Expr, data, parent.frame())
+  } else {
+    time0 <- rep(0, nrow(data))
+  }
+
   event <- eval(eventExpr, data)
   event <- if (length(unique(event)) == 1){
     rep(TRUE, length(event))
@@ -106,12 +115,23 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
   dens.fun <- get.dens(dist, link.mix = get.link(link.mix))
 
   #Extract likelihood function
+  # if(delayed){
+  #   minusloglik <- switch(type,
+  #                         mixture = mixture_minuslog_likelihoodDelayed,
+  #                         nmixture = nmixture_minuslog_likelihoodDelayed)
+  # } else {
+  #   minusloglik <- switch(type,
+  #                         mixture = mixture_minuslog_likelihood,
+  #                         nmixture = nmixture_minuslog_likelihood)
+  # }
+
   minusloglik <- switch(type,
-                        mixture = mixture_minuslog_likelihood,
-                        nmixture = nmixture_minuslog_likelihood)
+                        mixture = mixture_minuslog_likelihoodDelayed,
+                        nmixture = nmixture_minuslog_likelihoodDelayed)
 
   #Prepare optimization arguments
   args <- list(time = time,
+               time0 = time0,
                event = event,
                Xs = X.all,
                link = link.fun,
@@ -168,10 +188,11 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
             surv.fun = surv.fun, dens.fun = dens.fun, optim.args = optim.args,
-            times = time, event = event, timeVar = timeVar, link.mix = link.mix, excess = excess)
+            time = time, event = event, timeVar = timeVar, link.mix = link.mix, excess = excess)
   class(L) <- c("cm", "cuRe")
   L
 }
+
 
 get_design <- function(formula, data){
   if(!is.null(formula))
