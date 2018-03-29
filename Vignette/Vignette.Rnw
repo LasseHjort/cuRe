@@ -40,8 +40,8 @@
 \tableofcontents
 
 %Start content
-
-\section{Key references}
+\section{Overview}
+\subsection{Key references}
 
 \begin{itemize}[leftmargin=*]
 \item[] \bibentry{Lambert2007}
@@ -81,7 +81,7 @@
 \end{itemize}
 \end{itemize}
 
-\section{Quick start}
+\subsection{Quick start}
 The \verb|cuRe| package has two main functions for estimating parameteric cure models on the relative survival scale, namely \verb|GenFlexCureModel| and \verb|fit.cure.model|. In addition, functionalities for providing loss of lifetime estimates and crude mortality measures are also included.
 
 For this vignette, we consider the \verb|colonDC| dataset, which contain records on 15564 colon cancer patients. The name \verb|colonDC|, indicates that the \verb|colon| dataset of the \verb|rstpm2| package is used after some "data cleaning".
@@ -135,9 +135,9 @@ par(mfrow = c(1,1))
 @
 
 
-\section{Parametric cure models}
+\section{Relative survival models}
 
-The relative survival given as,
+The relative survival is commonly used to quantify the net survival, i.e., the survival of the patients in the hypothetical scenario, where deaths from other causes than the disease cannot occur.
 \begin{equation}
 R(t) = \frac{S(t)}{S^*(t)}
 \end{equation}
@@ -154,6 +154,10 @@ fit <- rs.surv(Surv(FU, status) ~ 1 + ratetable(age = agedays,
                method = "ederer2")
 plot(fit)
 @
+
+
+
+\section{Parametric cure models}
 
 During the last 15 years, parametric relative survival cure models have been developed upon to yield new survival information, particularly for cancers where the patient survival approaches that of the general population. The point at which this occurs is termed the cure point and patients surviving beyond the cure point are termed \textit{statistically cured}. The goal of cure models is to estimate the probability of being statistically cured, the survival of those patients, who are not statistically cured, and the conditional probability of being statistically cured given survival until a certain time point.
 

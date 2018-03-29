@@ -29,7 +29,7 @@
 
 calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type = c("ci", "n"),
                              exp.fun = NULL, rmap = NULL, ratetable = survexp.dk,
-                             tau = 100, type = "ll"){
+                             tau = 100, type = "ll", scale = ayear){
 
   var.type <- match.arg(var.type)
   if(is.null(exp.fun)){
@@ -47,13 +47,13 @@ calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type
       expected <- list(do.call("survexp",
                                list(formula = ~ 1, rmap = substitute(rmap),
                                     data = data, ratetable = ratetable,
-                                    scale = ayear, times = times * ayear)))
+                                    scale = scale, times = times * scale)))
     }else{
       expected <- lapply(1:nrow(newdata), function(x){
         do.call("survexp",
                 list(formula = ~ 1, rmap = substitute(rmap),
                      data = newdata[x, ], ratetable = ratetable,
-                     scale = ayear, times = times * ayear))
+                     scale = scale, times = times * scale))
       })
     }
     exp.fun <- lapply(1:length(expected), function(i){

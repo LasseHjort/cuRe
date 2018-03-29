@@ -25,7 +25,7 @@
 #' @export
 
 calc.Crude.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, exp.fun = NULL, var.type = c("ci", "n"),
-                                rmap, ratetable = survexp.dk, tau = 100, reverse = TRUE){
+                                rmap, ratetable = survexp.dk, tau = 100, reverse = TRUE, scale = ayear){
   var.type <- match.arg(var.type)
 
   if(is.null(exp.fun)){
@@ -43,13 +43,13 @@ calc.Crude.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, ex
       expected <- list(do.call("survexp",
                                list(formula = ~ 1, rmap = substitute(rmap),
                                     data = data, ratetable = ratetable,
-                                    scale = ayear, times = times * ayear)))
+                                    scale = scale, times = times * scale)))
     }else{
       expected <- lapply(1:nrow(newdata), function(x){
         do.call("survexp",
                 list(formula = ~ 1, rmap = substitute(rmap),
                      data = newdata[x, ], ratetable = ratetable,
-                     scale = ayear, times = times * ayear))
+                     scale = scale, times = times * scale))
       })
     }
     exp.fun <- lapply(1:length(expected), function(i){

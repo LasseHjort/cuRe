@@ -38,7 +38,7 @@
 
 calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
                     tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk,
-                    rmap, pars = NULL, n = 100){
+                    rmap, pars = NULL, n = 100, scale = ayear){
   type <- match.arg(type)
   if(!type %in% c("ll", "mrl"))
     stop("Argument 'type' is wrongly specified, must be either 'll' and 'mrl'")
@@ -76,14 +76,14 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
       expected <- list(do.call("survexp",
                                list(formula = ~ 1, rmap = substitute(rmap),
                                     data = data, ratetable = ratetable,
-                                    scale = ayear, times = times * ayear)))
+                                    scale = scale, times = times * scale)))
     }else{
       expected <- vector("list", nrow(newdata))
       for(i in 1:length(expected)){
         expected[[i]] <- do.call("survexp",
                                  list(formula = ~ 1, rmap = substitute(rmap),
                                       data = newdata[i, ], ratetable = ratetable,
-                                      scale = ayear, times = times * ayear))
+                                      scale = scale, times = times * scale))
       }
     }
     exp.fun <- lapply(1:length(expected), function(i){
@@ -91,9 +91,6 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
       function(time) predict(smooth.obj, x = time)$y
     })
   }
-
-  # expected <- list(survexp(~ 1, rmap = list(age = agedays, sex = sex, year = dx),
-  #                     data = data, ratetable = survexp.dk, scale = ayear, times = times * ayear))
 
 
   #Extract relative survival function

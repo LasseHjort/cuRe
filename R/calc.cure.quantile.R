@@ -30,7 +30,7 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
     }
   } else if("stpm2" %in% class(fit)){
     pred <- function(time, newdata, var.type = "n"){
-      times <- c(time, max(fit@data[[fit@timeVar]]))
+      times <- c(time, max(fit@data[[fit@timeVar]]))###Change this
       p <- predict.stpm2(fit, newdata = data.frame(FU_years = times), type = "probcure",
                          exposed = function(x) x[which.max(x$FU_years),, drop = F],
                          se.fit = ifelse(var.type == "n", FALSE, TRUE), link = "I")

@@ -44,7 +44,7 @@
 #' @import statmod
 
 calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "condother"),
-                       time = NULL, tau = 100, reverse = FALSE,
+                       time = NULL, tau = 100, reverse = FALSE, scale = ayear,
                        var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk, rmap,
                        link = "loglog", n = 100){
 
@@ -71,14 +71,14 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "cond
       expected <- list(do.call("survexp",
                                list(formula = ~ 1, rmap = substitute(rmap),
                                     data = data, ratetable = ratetable,
-                                    scale = ayear, times = times * ayear)))
+                                    scale = scale, times = times * scale)))
     }else{
       expected <- vector("list", nrow(newdata))
       for(i in 1:length(expected)){
         expected[[i]] <- do.call("survexp",
                                  list(formula = ~ 1, rmap = substitute(rmap),
                                       data = newdata[i, ], ratetable = ratetable,
-                                      scale = ayear, times = times * ayear))
+                                      scale = scale, times = times * scale))
       }
     }
     exp.fun <- lapply(1:length(expected), function(i){
