@@ -22,6 +22,8 @@
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param n Number of knots used for the Gauss-Legendre quadrature.
+#' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+#' That is, the time scale is assumed to be in years.
 #' @return An object of class \code{le} containing the life expectancy estimates
 #' of each individual in \code{newdata}.
 #' @details If \code{type = "ll"}, the function computes

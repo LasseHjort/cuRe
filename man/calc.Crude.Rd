@@ -5,9 +5,9 @@
 \title{Crude event probabilities}
 \usage{
 calc.Crude(object, newdata = NULL, type = c("cancer", "other", "condother"),
-  time = NULL, tau = 100, reverse = FALSE, var.type = c("ci", "se",
-  "n"), exp.fun = NULL, ratetable = survexp.dk, rmap, link = "loglog",
-  n = 100)
+  time = NULL, tau = 100, reverse = FALSE, scale = ayear,
+  var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk,
+  rmap, link = "loglog", n = 100)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are
@@ -27,6 +27,9 @@ The argument is only used for \code{type = condother}. Default is 100.}
 
 \item{reverse}{Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
 Only applicable for \code{type = condother}.}
+
+\item{scale}{Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+That is, the time scale is assumed to be in years.}
 
 \item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
 "\code{se}" for standard errors, and "\code{n}" for neither.}

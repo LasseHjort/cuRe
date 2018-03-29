@@ -23,6 +23,8 @@
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param reverse Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
 #' Only applicable for \code{type = condother}.
+#' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+#' That is, the time scale is assumed to be in years.
 #' @param Link Link function for computing variance in order to bound confidence intervals. Default is \code{loglog}.
 #' @param n Number of knots used for the Gauss-Legendre quadrature.
 #' @return A list containing the crude probability estimates

@@ -6,7 +6,7 @@
 \usage{
 calc.Crude.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
   exp.fun = NULL, var.type = c("ci", "n"), rmap, ratetable = survexp.dk,
-  tau = 100, reverse = TRUE)
+  tau = 100, reverse = TRUE, scale = ayear)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
@@ -36,6 +36,9 @@ Default is \code{survexp.dk}}
 
 \item{reverse}{Logical passed on to \code{calc.Crude}. If \code{TRUE} (default), 1 - probability is provided.
 Only applicable for \code{type = condother}.}
+
+\item{scale}{Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+That is, the time scale is assumed to be in years.}
 }
 \value{
 The estimated cure point.

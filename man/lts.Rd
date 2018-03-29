@@ -6,7 +6,7 @@
 \usage{
 lts(fit, type = c("surv", "hazard", "cumhaz", "loghaz"), newdata = NULL,
   time = NULL, var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = survexp.dk, rmap)
+  ratetable = survexp.dk, rmap, scale = 365.24)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{fcm}, \code{gfcm}, \code{stpm2},
@@ -30,6 +30,9 @@ Default is \code{survexp.dk}.}
 
 \item{rmap}{List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 Detailed documentation on this argument can be found by \code{?survexp}.}
+
+\item{scale}{Numeric. Passes to the \code{survival::survexp} function and defaults to 365.24.
+That is, the time scale is assumed to be in years.}
 }
 \value{
 A object of class \code{lts} containing the loss of lifetime estiamtes

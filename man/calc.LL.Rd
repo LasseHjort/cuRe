@@ -6,7 +6,7 @@
 \usage{
 calc.LL(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
   tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = survexp.dk, rmap, pars = NULL, n = 100)
+  ratetable = survexp.dk, rmap, pars = NULL, n = 100, scale = ayear)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are
@@ -38,6 +38,9 @@ Default is \code{survexp.dk}.}
 Detailed documentation on this argument can be found by \code{?survexp}.}
 
 \item{n}{Number of knots used for the Gauss-Legendre quadrature.}
+
+\item{scale}{Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+That is, the time scale is assumed to be in years.}
 }
 \value{
 An object of class \code{le} containing the life expectancy estimates

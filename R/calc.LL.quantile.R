@@ -20,6 +20,8 @@
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param type Type of life expectancy measure. Possible values are "ll" for the loss of lifetime
 #' and "mrl" for the mean residual lifetime.
+#' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+#' That is, the time scale is assumed to be in years.
 #' @return The estimated cure point.
 #' @import rootSolve
 #' @example inst/calc.LL.quantile.ex.R

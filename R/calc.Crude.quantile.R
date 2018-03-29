@@ -20,6 +20,8 @@
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param reverse Logical passed on to \code{calc.Crude}. If \code{TRUE} (default), 1 - probability is provided.
 #' Only applicable for \code{type = condother}.
+#' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+#' That is, the time scale is assumed to be in years.
 #' @return The estimated cure point.
 #' @example inst/calc.Crude.quantile.ex.R
 #' @export

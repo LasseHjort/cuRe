@@ -17,6 +17,8 @@
 #' survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
+#' @param scale Numeric. Passes to the \code{survival::survexp} function and defaults to 365.24.
+#' That is, the time scale is assumed to be in years.
 #' @return A object of class \code{lts} containing the loss of lifetime estiamtes
 #' of each individual in \code{newdata}.
 #' @export
@@ -25,7 +27,7 @@
 
 lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz"),
                 newdata = NULL, time = NULL, var.type = c("ci", "se", "n"),
-                exp.fun = NULL, ratetable = survexp.dk, rmap){
+                exp.fun = NULL, ratetable = survexp.dk, rmap, scale = 365.24){
 
   var.type <- match.arg(var.type)
   type <- match.arg(type)
@@ -54,14 +56,14 @@ lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz"),
       expected <- list(do.call("survexp",
                                list(formula = ~ 1, rmap = substitute(rmap),
                                     data = data, ratetable = ratetable,
-                                    scale = ayear, times = times * ayear)))
+                                    scale = scale, times = times * scale)))
     }else{
       expected <- vector("list", nrow(newdata))
       for(i in 1:length(expected)){
         expected[[i]] <- do.call("survexp",
                                  list(formula = ~ 1, rmap = substitute(rmap),
                                       data = newdata[i, ], ratetable = ratetable,
-                                      scale = ayear, times = times * ayear))
+                                      scale = scale, times = times * scale))
       }
     }
     exp.fun <- lapply(1:length(expected), function(i){

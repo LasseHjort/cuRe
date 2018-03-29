@@ -6,7 +6,7 @@
 \usage{
 calc.LL.quantile(fit, q = 1, newdata = NULL, max.time = 20,
   var.type = c("ci", "n"), exp.fun = NULL, rmap = NULL,
-  ratetable = survexp.dk, tau = 100, type = "ll")
+  ratetable = survexp.dk, tau = 100, type = "ll", scale = ayear)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
@@ -36,6 +36,9 @@ Default is \code{survexp.dk}}
 
 \item{type}{Type of life expectancy measure. Possible values are "ll" for the loss of lifetime
 and "mrl" for the mean residual lifetime.}
+
+\item{scale}{Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+That is, the time scale is assumed to be in years.}
 }
 \value{
 The estimated cure point.
