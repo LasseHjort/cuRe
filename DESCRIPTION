@@ -1,6 +1,6 @@
 Package: cuRe
 Type: Package
-Title: Generalized parametric cure models and loss of lifetime
+Title: An R-package for parametric cure model estimation
 Version: 0.1.0
 Date: 2017-12-01
 Authors@R: person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "lahja@dcm.aau.dk")
