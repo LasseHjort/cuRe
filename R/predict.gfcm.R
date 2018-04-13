@@ -235,9 +235,9 @@ local <- function(object, newdata, type = "surv", var.link = function(x) x,
   Su <- link.surv$ilink(eta)
   hazu <- link.surv$h(eta, etaD)
   Hu = link.surv$H(eta)
-  S <- if(object$type == "mixture") pi + (1 - pi) * Su else pi ^ (1 - Su)
+  S <- object$cure.type$surv(pi, Su)
   dSu <- link.surv$gradS(eta, etaD)
-  haz <- - (1 - pi) * dSu / S
+  haz <- object$cure.type$haz(pi, dSu, S)
   if (!object$excess && any(h < 0))
     warning(sprintf("Predicted hazards less than zero (n=%i).",
                     sum(h < 0)))

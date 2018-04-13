@@ -43,7 +43,7 @@
 #' @param method Character passed to \code{optim} indicating the method for optimization.
 #' See \code{?optim} for details.
 #' @param constraint Logical. Indicates whether non-negativity constraints should be forced upon
-#' the hazard of the uncured patients
+#' the hazard of the uncured patients (see details).
 #' @param ini.types Character vector denoting the executed schemes for computing initial values (see details).
 # @param cure Logical. Indicates whether a cure model specification is needed for the survival of the uncured.
 # This is usually \code{FALSE} (default).
@@ -316,14 +316,20 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   #                         nmixture = GenFlexNmixMinLogLik)
   # }
 
-  minusloglik <- switch(type,
-                        mixture = GenFlexMixMinLogLikDelayed,
-                        nmixture = GenFlexNmixMinLogLikDelayed)
+
+  cure.type <- switch(type,
+                      mixture = mix,
+                      nmixture = nmix)
+
+  #minusloglik <- switch(type,
+  #                      mixture = GenFlexMixMinLogLikDelayed,
+  #                      nmixture = GenFlexNmixMinLogLikDelayed)
+  minusloglik <- GenFlexMinLogLikDelayed
 
   #Prepare optimization arguments
   args <- list(event = event, X = X, XD = XD, X.cr = X.cr, X0 = X0, ind0 = ind0,
                bhazard = bhazard, link.type.cr = link.type.cr,
-               link.surv = link.surv, kappa = 0)
+               link.surv = link.surv, kappa = 0, constraint = FALSE, cure.type = cure.type)
 
   if(is.null(control$maxit)){
     control$maxit <- 10000
@@ -340,9 +346,11 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   if(verbose) cat("Completed!\nFitting the model... ")
 
   optim.args <- c(control = list(control), args)
-  optim.args$kappa <- if(constraint) 1 else 0
+  optim.args$kappa <- 1
   optim.args$fn <- minusloglik
   optim.args$method <- method
+  optim.args$constraint <- constraint
+  optim.args$cure.type <- cure.type
   res_list <- vector("list", length(init[run.these]))
   for(i in 1:length(res_list)){
     neghaz <- T
@@ -353,11 +361,21 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
       beta <- res.optim$par[(ncol(X.cr) + 1):length(res.optim$par)]
       eta <- X %*% beta
       etaD <- XD %*% beta
-      hazsu <- link.surv$h(eta, etaD)
-      neghaz <- any(hazsu < 0)
-      optim.args$kappa <- optim.args$kappa * 10
+      if(constraint){
+        haz.const <- link.surv$h(eta, etaD)
+      } else {
+        gamma <- res.optim$par[1:ncol(X.cr)]
+        eta.pi <- X.cr %*% gamma
+        pi <- get.link(link.type.cr)(eta.pi)
+        surv <- link.surv$ilink(eta)
+        rsurv <- survhaz.fun$surv(pi, surv)
+        ehaz <- survhaz.fun$haz(pi, link.surv$gradS(eta, etaD), rsurv)
+        haz.const <- bhazard + ehaz
+      }
+      neghaz <- any(haz.const < 0)
+      optim.args$kappa <- optim.args$kappa ^ 2
     }
-    optim.args$kappa <- if(constraint) 1 else 0
+    optim.args$kappa <- 1
     res_list[[i]] <- res.optim
   }
 
@@ -376,6 +394,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
     args$kappa <- 0
     args$x0 <- res$par
     args$f <- minusloglik
+    args$constraint <- FALSE
     hes <- do.call(pracma::hessian, args)
     cov <- if (!inherits(vcov <- try(solve(hes)), "try-error"))  vcov
     # cov <- solve(hes)
@@ -395,7 +414,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
             type = type, NegMaxLiks = MLs, optim.pars = optim.args[c("control", "fn")],
             args = args, timeExpr = timeExpr, lm.obj = lm.obj, link.type.cr = link.type.cr,
             link.surv = link.surv, excess = excess, timeVar = timeVar, transX = transX, transXD = transXD,
-            time = time, event = event, eventExpr = eventExpr)
+            time = time, event = event, eventExpr = eventExpr, cure.type = cure.type)
 
   class(L) <- c("gfcm", "cuRe")
   L

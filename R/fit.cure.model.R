@@ -87,6 +87,7 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
   } else {
     time0 <- rep(0, nrow(data))
   }
+  ind0 <- time0 > 0
 
   event <- eval(eventExpr, data)
   event <- if (length(unique(event)) == 1){
@@ -125,19 +126,26 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
   #                         nmixture = nmixture_minuslog_likelihood)
   # }
 
-  minusloglik <- switch(type,
-                        mixture = mixture_minuslog_likelihoodDelayed,
-                        nmixture = nmixture_minuslog_likelihoodDelayed)
+  cure.type <- switch(type,
+                      mixture = mix,
+                      nmixture = nmix)
+
+  minusloglik <- minuslog_likelihoodDelayed
+  #minusloglik <- switch(type,
+  #                      mixture = mixture_minuslog_likelihoodDelayed,
+  #                      nmixture = nmixture_minuslog_likelihoodDelayed)
 
   #Prepare optimization arguments
   args <- list(time = time,
                time0 = time0,
                event = event,
                Xs = X.all,
+               ind0 = ind0,
                link = link.fun,
                surv.fun = surv.fun,
                dens.fun = dens.fun,
-               bhazard = bhazard)
+               bhazard = bhazard,
+               cure.type = cure.type)
 
   if(is.null(control$maxit)){
     control$maxit <- list(maxit = 10000)
@@ -188,7 +196,8 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
             surv.fun = surv.fun, dens.fun = dens.fun, optim.args = optim.args,
-            time = time, event = event, timeVar = timeVar, link.mix = link.mix, excess = excess)
+            time = time, event = event, timeVar = timeVar, link.mix = link.mix,
+            excess = excess, cure.type = cure.type, args = args)
   class(L) <- c("cm", "cuRe")
   L
 }

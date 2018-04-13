@@ -164,8 +164,8 @@ local.cm <- function(fit, type = "surv", var.link = function(x) x,
   Su <- fit$surv.fun(x = time, lps = lps)
   fu <- fit$dens.fun(x = time, lps = lps)
   Hu <- -log(Su)
-  S <- if(fit$type == "mixture") pi + (1 - pi) * Su else pi ^ (1 - Su)
-  f <- if(fit$type == "mixture") (1 - pi) * fu else - log(pi) * fu * S
+  S <- fit$cure.type$surv(pi, Su)
+  f <- fit$cure.type$dens(pi, -fu, S)
   H <- -log(S)
   est <- switch(type, linkS = lps, linkpi = lps[[1]], curerate = pi,
                 probcure = pi / S, survuncured = Su,

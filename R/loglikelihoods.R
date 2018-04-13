@@ -54,54 +54,43 @@ general.haz <- function(time, age, sex, year, data = NULL, ratetable = survexp.d
 }
 
 
-# general.haz2 <- function(time, age, sex, year, data = NULL, ratetable = survexp.dk, scale = ayear){
-#   if(is.character(time)){
-#     time <- data[, time]
-#   }
-#   if(is.character(age)){
-#     age <- data[, age]
-#   }
-#   if(is.character(sex)){
-#     sex <- data[, sex]
-#   }
-#   if(is.character(year)){
-#     year <- data[, year]
-#   }
-#
-#   dimid <- attr(ratetable, "dimid")
-#   od <- sapply(c("age", "sex", "year"), function(x) which(dimid == x))
-#   n <- length(time)
-#
-#   haz <- rep(NA, n)
-#   sex_new <- as.character(sex)
-#   age_new <- pmin(round((age + time) / ayear), 99)
-#   year_eval <- format(year + time, "%Y")
-#   ryear <- range(as.numeric(dimnames(ratetable)[[od["year"]]]))
-#   year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
-#   year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
-#
-#
-#   D <- data.frame(age = age_new, sex = sex_new, year = year_eval, stringsAsFactors = F)
-#   D <- D[, od]
-#
-#   #D2 <- D
-#   #D2$sex <- ifelse(D2$sex == "male", 1, 2)
-#   #D2$year <- as.numeric(D2$year)
-#   #a <- match.ratetable(as.matrix(D2), ratetable)
-#
-#   dim_names <- dimnames(ratetable)
-#   J <- data.frame(rates = c(ratetable), rep(as.numeric(dim_names[[1]]), length(dim_names[[2]]) * length(dim_names[[3]])),
-#                   rep(as.numeric(dim_names[[2]]), length(dim_names[[1]]) * length(dim_names[[3]])),
-#                   rep(dim_names[[3]], each = length(dim_names[[1]]) *  length(dim_names[[2]])))
-#
-#   names(J)[-1] <- dimid
-#
-#   #head(J)
-#
-#   #ratetable["38", "1835",]
-#
-#   merge(D, J)$rates * scale
-# }
+general.haz2 <- function(time, rmap, data = NULL, ratetable = survexp.dk, scale = ayear){
+  dimid <- attr(ratetable, "dimid")
+  vars <-
+
+  od <- sapply(c("age", "sex", "year"), function(x) which(dimid == x))
+  n <- length(time)
+
+  haz <- rep(NA, n)
+  sex_new <- as.character(sex)
+  age_new <- pmin(round((age + time) / ayear), 99)
+  year_eval <- format(year + time, "%Y")
+  ryear <- range(as.numeric(dimnames(ratetable)[[od["year"]]]))
+  year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
+  year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
+
+
+  D <- data.frame(age = age_new, sex = sex_new, year = year_eval, stringsAsFactors = F)
+  D <- D[, od]
+
+  #D2 <- D
+  #D2$sex <- ifelse(D2$sex == "male", 1, 2)
+  #D2$year <- as.numeric(D2$year)
+  #a <- match.ratetable(as.matrix(D2), ratetable)
+
+  dim_names <- dimnames(ratetable)
+  J <- data.frame(rates = c(ratetable), rep(as.numeric(dim_names[[1]]), length(dim_names[[2]]) * length(dim_names[[3]])),
+                  rep(as.numeric(dim_names[[2]]), length(dim_names[[1]]) * length(dim_names[[3]])),
+                  rep(dim_names[[3]], each = length(dim_names[[1]]) *  length(dim_names[[2]])))
+
+  names(J)[-1] <- dimid
+
+  #head(J)
+
+  #ratetable["38", "1835",]
+
+  merge(D, J)$rates * scale
+}
 
 
 #Global variable indicating the duration of a year
@@ -283,58 +272,88 @@ calc.lps <- function(Xs, param){
 
 
 ######Likelihood functions
+minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, ind0, link.fun,
+                                       surv.fun, dens.fun, bhazard, cure.type){
+
+  #Calculate linear predictors
+  lps <- calc.lps(Xs, param)
+
+  #Compute pi and the survival of the uncured
+  pi <- link.fun(lps[[1]])
+  surv <- surv.fun(time, lps)
+  rsurv <- cure.type$surv(pi, surv)
+  likterms <- log(rsurv)
+  surv0 <- surv.fun(time0, lps)
+  rsurv0 <- cure.type$surv(pi, surv0)
+  likterms[ind0] <- likterms[ind0] - log(rsurv0[ind0])
+
+  #Calculate hazard term only for uncensored patients.
+  #Add the hazard term only for events
+  dens <- dens.fun(time, lps)
+  #pi.events <- pi[events]
+  #surv.events <- surv[events]
+  ehaz <- cure.type$haz(pi[event], -dens[event], rsurv[event])
+  haz <- bhazard[event] + ehaz
+  likterms[event] <- likterms[event] + log(haz)
+
+  #Output the negative log likelihood
+  -sum(likterms)
+}
+
+
+
 # Likelihood for mixture cure models
-mixture_minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, link.fun,
-                                        surv.fun, dens.fun, bhazard){
-
-  #Calculate linear predictors
-  lps <- calc.lps(Xs, param)
-
-  #Compute pi and the survival of the uncured
-  pi <- link.fun(lps[[1]])
-  surv <- surv.fun(time, lps)
-  surv.term <- log(pi + (1 - pi) * surv)
-  surv0 <- surv.fun(time0, lps)
-  surv.term0 <- log(pi + (1 - pi) * surv0)
-  surv.term <- surv.term - surv.term0
-
-  #Calculate hazard term only for uncensored patients.
-  events <- which(event == 1)
-  dens <- dens.fun(time[events], lapply(lps, function(lp) lp[events,]))
-  pi.events <- pi[events]
-  surv.events <- surv[events]
-  haz.term <- log( bhazard[events] + dens * ( 1 - pi.events ) / ( pi.events + (1 - pi.events) * surv.events ))
-  surv.term[events] <- surv.term[events] + haz.term
-
-  #Output the negative log likelihood
-  -sum(surv.term)
-}
-
-# Likelihood for non-mixture cure models
-nmixture_minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, link.fun,
-                                         surv.fun, dens.fun, bhazard){
-
-  #Calculate linear predictors
-  lps <- calc.lps(Xs, param)
-
-  #Compute pi and the survival of the uncured
-  pi <- link.fun(lps[[1]])
-  surv <- surv.fun(time, lps)
-  surv.term <- log(pi) - log(pi) * surv
-  surv0 <- surv.fun(time0, lps)
-  surv.term0 <- log(pi) - log(pi) * surv0
-  surv.term <- surv.term - surv.term0
-
-  #Calculate hazard term only for uncensored patients.
-  events <- which(event == 1)
-  dens <- dens.fun(time[events], lapply(lps, function(lp) lp[events,]))
-  pi.events <- pi[events]
-  haz.term <- log( bhazard[events] - log(pi.events) * dens)
-  surv.term[events] <- surv.term[events] + haz.term
-
-  #Output the negative log likelihood
-  -sum(surv.term)
-}
+# mixture_minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, link.fun,
+#                                                surv.fun, dens.fun, bhazard){
+#
+#   #Calculate linear predictors
+#   lps <- calc.lps(Xs, param)
+#
+#   #Compute pi and the survival of the uncured
+#   pi <- link.fun(lps[[1]])
+#   surv <- surv.fun(time, lps)
+#   surv.term <- log(pi + (1 - pi) * surv)
+#   surv0 <- surv.fun(time0, lps)
+#   surv.term0 <- log(pi + (1 - pi) * surv0)
+#   surv.term <- surv.term - surv.term0
+#
+#   #Calculate hazard term only for uncensored patients.
+#   events <- which(event == 1)
+#   dens <- dens.fun(time[events], lapply(lps, function(lp) lp[events,]))
+#   pi.events <- pi[events]
+#   surv.events <- surv[events]
+#   haz.term <- log( bhazard[events] + dens * ( 1 - pi.events ) / ( pi.events + (1 - pi.events) * surv.events ))
+#   surv.term[events] <- surv.term[events] + haz.term
+#
+#   #Output the negative log likelihood
+#   -sum(surv.term)
+# }
+#
+# # Likelihood for non-mixture cure models
+# nmixture_minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, link.fun,
+#                                          surv.fun, dens.fun, bhazard){
+#
+#   #Calculate linear predictors
+#   lps <- calc.lps(Xs, param)
+#
+#   #Compute pi and the survival of the uncured
+#   pi <- link.fun(lps[[1]])
+#   surv <- surv.fun(time, lps)
+#   surv.term <- log(pi) - log(pi) * surv
+#   surv0 <- surv.fun(time0, lps)
+#   surv.term0 <- log(pi) - log(pi) * surv0
+#   surv.term <- surv.term - surv.term0
+#
+#   #Calculate hazard term only for uncensored patients.
+#   events <- which(event == 1)
+#   dens <- dens.fun(time[events], lapply(lps, function(lp) lp[events,]))
+#   pi.events <- pi[events]
+#   haz.term <- log( bhazard[events] - log(pi.events) * dens)
+#   surv.term[events] <- surv.term[events] + haz.term
+#
+#   #Output the negative log likelihood
+#   -sum(surv.term)
+# }
 
 
 
@@ -390,9 +409,18 @@ nmixture_minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, l
 #   -sum(likterms)
 # }
 
+mix <- list(surv = function(pi, surv) pi + (1 - pi) * surv,
+            haz = function(pi, gradS, surv) - (1 - pi) * gradS / surv,
+            dens = function(pi, gradS, surv) - (1 - pi) * gradS)
+
+nmix <- list(surv = function(pi, surv) pi ^ (1 - surv),
+             haz = function(pi, gradS, surv) log(pi) * gradS,
+             dens = function(pi, gradS, surv) log(pi) * gradS * surv)
+
 #Likelihood for generalized mixture cure models (including delayed entry - code from rstpm2)
-GenFlexMixMinLogLikDelayed <- function(param, event, X, XD, X.cr, X0, ind0, bhazard,
-                                link.type.cr, link.surv, kappa){
+GenFlexMinLogLikDelayed <- function(param, event, X, XD, X.cr, X0, ind0, bhazard,
+                                    link.type.cr, link.surv, kappa, constraint,
+                                    cure.type){
   #Get parameters
   gamma <- param[1:ncol(X.cr)]
   beta <- param[(ncol(X.cr) + 1):length(param)]
@@ -402,60 +430,94 @@ GenFlexMixMinLogLikDelayed <- function(param, event, X, XD, X.cr, X0, ind0, bhaz
   pi <- get.link(link.type.cr)(eta.pi)
   eta <- X %*% beta
   surv <- link.surv$ilink(eta)
-  rsurv <- pi + (1 - pi) * surv
+  rsurv <- cure.type$surv(pi, surv)
   likterms <- log(rsurv)
   eta0 <- X0 %*% beta
   surv0 <- link.surv$ilink(eta0)
-  rsurv0 <- pi[ind0] + (1 - pi[ind0]) * surv0
+  rsurv0 <- cure.type$surv(pi[ind0], surv0)
   likterms[ind0] <- likterms[ind0] - log(rsurv0)
 
   #Add the hazard term only for events
   etaD <- XD %*% beta
-  ehaz <- - ( 1 - pi[event] ) * link.surv$gradS(eta[event], etaD[event]) / rsurv[event]
-  haz <- bhazard[event] + ehaz
+  ehaz <- cure.type$haz(pi[event], link.surv$gradS(eta[event], etaD[event]), rsurv[event])
+  haz <- haz.const <- bhazard[event] + ehaz
   haz[haz <= 0] <- .Machine$double.eps
   likterms[event] <- likterms[event] + log(haz)
 
   #Calculate hazard for which constraints are used
-  hazsu <- link.surv$h(eta, etaD)
+  if(constraint) haz.const <- link.surv$h(eta, etaD)
 
   #Output the negative log likelihood
-  -sum( likterms ) + kappa / 2 * sum( ( hazsu[hazsu < 0] ) ^ 2 )
+  -sum( likterms ) + kappa / 2 * sum( ( haz.const[haz.const < 0] ) ^ 2 )
 }
 
 
-#Likelihood for generalized non-mixture cure models (including delayed entry - code from rstpm2)
-GenFlexNmixMinLogLikDelayed <- function(param, event, X, XD, X.cr, X0, ind0,
-                                       bhazard, link.type.cr, link.surv, kappa){
-  #Get parameters
-  gamma <- param[1:ncol(X.cr)]
-  beta <- param[(ncol(X.cr) + 1):length(param)]
-
-  #Calculate linear predictors
-  eta.pi <- X.cr %*% gamma
-  pi <- get.link(link.type.cr)(eta.pi)
-  eta <- X %*% beta
-  surv <- link.surv$ilink(eta)
-  rsurv <- pi ^ (1 - surv)
-  likterms <- log(rsurv)
-  eta0 <- X0 %*% beta
-  surv0 <- link.surv$ilink(eta0)
-  rsurv0 <- pi[ind0] ^ (1 - surv0)
-  likterms[ind0] <- likterms[ind0] - log(rsurv0)
-
-  #Add the hazard term only for events
-  etaD <- XD %*% beta
-  ehaz <- log( pi[event] ) * link.surv$gradS( eta[event], etaD[event] )
-  haz <- bhazard[event] + ehaz
-  haz[ haz < 0 ] <- .Machine$double.eps
-  likterms[event] <- likterms[event] + log( haz )
-
-  #Calculate hazard for which constraints are used
-  hazZ <- link.surv$h(eta, etaD)
-
-  #Output the negative log likelihood
-  -sum(likterms) + kappa / 2 * sum( ( hazZ[hazZ < 0] ) ^ 2 )
-}
+#Likelihood for generalized mixture cure models (including delayed entry - code from rstpm2)
+# GenFlexMixMinLogLikDelayed <- function(param, event, X, XD, X.cr, X0, ind0, bhazard,
+#                                 link.type.cr, link.surv, kappa, constraint){
+#   #Get parameters
+#   gamma <- param[1:ncol(X.cr)]
+#   beta <- param[(ncol(X.cr) + 1):length(param)]
+#
+#   #Calculate linear predictors
+#   eta.pi <- X.cr %*% gamma
+#   pi <- get.link(link.type.cr)(eta.pi)
+#   eta <- X %*% beta
+#   surv <- link.surv$ilink(eta)
+#   rsurv <- pi + (1 - pi) * surv
+#   likterms <- log(rsurv)
+#   eta0 <- X0 %*% beta
+#   surv0 <- link.surv$ilink(eta0)
+#   rsurv0 <- pi[ind0] + (1 - pi[ind0]) * surv0
+#   likterms[ind0] <- likterms[ind0] - log(rsurv0)
+#
+#   #Add the hazard term only for events
+#   etaD <- XD %*% beta
+#   ehaz <- - ( 1 - pi[event] ) * link.surv$gradS(eta[event], etaD[event]) / rsurv[event]
+#   haz <- haz.const <- bhazard[event] + ehaz
+#   haz[haz <= 0] <- .Machine$double.eps
+#   likterms[event] <- likterms[event] + log(haz)
+#
+#   #Calculate hazard for which constraints are used
+#   if(constraint) haz.const <- link.surv$h(eta, etaD)
+#
+#   #Output the negative log likelihood
+#   -sum( likterms ) + kappa / 2 * sum( ( haz.const[haz.const < 0] ) ^ 2 )
+# }
+#
+#
+# #Likelihood for generalized non-mixture cure models (including delayed entry - code from rstpm2)
+# GenFlexNmixMinLogLikDelayed <- function(param, event, X, XD, X.cr, X0, ind0,
+#                                        bhazard, link.type.cr, link.surv, kappa, constraint){
+#   #Get parameters
+#   gamma <- param[1:ncol(X.cr)]
+#   beta <- param[(ncol(X.cr) + 1):length(param)]
+#
+#   #Calculate linear predictors
+#   eta.pi <- X.cr %*% gamma
+#   pi <- get.link(link.type.cr)(eta.pi)
+#   eta <- X %*% beta
+#   surv <- link.surv$ilink(eta)
+#   rsurv <- pi ^ (1 - surv)
+#   likterms <- log(rsurv)
+#   eta0 <- X0 %*% beta
+#   surv0 <- link.surv$ilink(eta0)
+#   rsurv0 <- pi[ind0] ^ (1 - surv0)
+#   likterms[ind0] <- likterms[ind0] - log(rsurv0)
+#
+#   #Add the hazard term only for events
+#   etaD <- XD %*% beta
+#   ehaz <- log( pi[event] ) * link.surv$gradS( eta[event], etaD[event] )
+#   haz <- haz.const <- bhazard[event] + ehaz
+#   haz[ haz < 0 ] <- .Machine$double.eps
+#   likterms[event] <- likterms[event] + log( haz )
+#
+#   #Calculate hazard for which constraints are used
+#   if(constraint) haz.const <- link.surv$h(eta, etaD)
+#
+#   #Output the negative log likelihood
+#   -sum(likterms) + kappa / 2 * sum( ( haz.const[haz.const < 0] ) ^ 2 )
+# }
 
 
 #Basis function
