@@ -373,7 +373,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
         haz.const <- bhazard + ehaz
       }
       neghaz <- any(haz.const < 0)
-      optim.args$kappa <- optim.args$kappa ^ 2
+      optim.args$kappa <- optim.args$kappa * 10
     }
     optim.args$kappa <- 1
     res_list[[i]] <- res.optim
