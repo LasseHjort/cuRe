@@ -552,7 +552,29 @@ basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
 
   a <- list(knots = knots[1,], ortho = ortho, R.inv = R.inv, intercept = intercept)
   attributes(b) <- c(attributes(b), a)
+  class(b) <- c("cb", "matrix")
   b
+}
+
+#Predict function associated with bsx.
+predict.cb <- function (object, newx, ...)
+{
+  if (missing(newx))
+    return(object)
+  a <- c(list(x = newx), attributes(object)[c("knots", "ortho",
+                                              "R.inv", "intercept")])
+  do.call("basis", a)
+}
+
+#Additional function needed to fix the knot location in cases where df is only specified
+makepredictcall.cb <- function (var, call)
+{
+  if (as.character(call)[1L] != "cb")
+    return(call)
+  at <- attributes(var)[c("knots", "ortho", "R.inv", "intercept")]
+  xxx <- call[1L:2]
+  xxx[names(at)] <- at
+  xxx
 }
 
 #Derivate of basis function
