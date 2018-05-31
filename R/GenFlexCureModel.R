@@ -59,7 +59,8 @@
 #' @import numDeriv
 #' @example inst/GenFlexCureModel.ex.R
 
-
+#Note that the order of the terms in the smooth.formula matters.
+#Meaning: smooth.formula = nsx(df = 4, x = something), will produce an error, while nsx(x = smothing, df= 4) will not
 GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args = NULL,
                              df = 3, tvc = NULL,
                              tvc.formula = NULL, bhazard = NULL, cr.formula = ~ 1,
@@ -285,7 +286,21 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
     rm(data0)
   }
 
-  X.cr <- model.matrix(cr.formula, data = data)
+  #Create linear object for the cure rate part
+  lm.call <- mf
+  lm.call[[1L]] <- as.name("lm")
+  lm.formula <- cr.formula
+  rstpm2:::lhs(lm.formula) <- quote(arbri)
+  lm.call$formula <- lm.formula
+  dataEvents <- data
+  dataEvents$arbri <- rnorm(nrow(dataEvents))
+  if (interval)
+    dataEvents <- data
+  lm.call$data <- quote(dataEvents)
+  lm.obj.cr <- eval(lm.call)
+
+  X.cr <- rstpm2:::lpmatrix.lm(lm.obj.cr, data)
+  #X.cr <- model.matrix(cr.formula, data = data)
 
   if(is.null(init)){
     if(verbose) cat("Finding initial values... ")
@@ -412,8 +427,9 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
             coefs.spline = res$par[(ncol(X.cr) + 1):length(res$par)],
             data = data, NegMaxLik = min(MLs), covariance = cov, ci = covariance,
             type = type, NegMaxLiks = MLs, optim.pars = optim.args[c("control", "fn")],
-            args = args, timeExpr = timeExpr, lm.obj = lm.obj, link.type.cr = link.type.cr,
-            link.surv = link.surv, excess = excess, timeVar = timeVar, transX = transX, transXD = transXD,
+            args = args, timeExpr = timeExpr, lm.obj = lm.obj, lm.obj.cr = lm.obj.cr,
+            link.type.cr = link.type.cr, link.surv = link.surv, excess = excess,
+            timeVar = timeVar, transX = transX, transXD = transXD,
             time = time, event = event, eventExpr = eventExpr, cure.type = cure.type)
 
   class(L) <- c("gfcm", "cuRe")

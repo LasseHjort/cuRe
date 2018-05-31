@@ -69,8 +69,9 @@ fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, t
 
   #Delete missing observations and extract response data
   all.formulas <- c(formula, formula.surv)
-  all.vars <- unique(unlist(lapply(all.formulas, all.vars)))
-  data.c <- data[complete.cases(data[, all.vars]),]
+  all_vars <- unique(unlist(lapply(all.formulas, all.vars)))
+  # data.c <- data[complete.cases(data[, all_vars]),]
+  data.c <- data
 
   #Extract survival time and event variable
   eventExpr <- rstpm2:::lhs(formula)[[length(rstpm2:::lhs(formula))]]

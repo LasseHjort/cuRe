@@ -58,7 +58,7 @@ general.haz2 <- function(time, rmap, data = NULL, ratetable = survexp.dk, scale 
   dimid <- attr(ratetable, "dimid")
   vars <-
 
-  od <- sapply(c("age", "sex", "year"), function(x) which(dimid == x))
+    od <- sapply(c("age", "sex", "year"), function(x) which(dimid == x))
   n <- length(time)
 
   haz <- rep(NA, n)
@@ -521,7 +521,8 @@ GenFlexMinLogLikDelayed <- function(param, event, X, XD, X.cr, X0, ind0, bhazard
 
 
 #Basis function
-basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
+#' @export
+cb <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
   nx <- length(x)
   if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
   nk <- ncol(knots)
@@ -538,7 +539,7 @@ basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
     }
   }
 
-  if(!intercept) b <- b[,-1]
+  if(!intercept) b <- b[,-1, drop = FALSE]
 
   if(ortho){
     if(is.null(R.inv)){
@@ -546,8 +547,11 @@ basis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
       b <- qr.Q(qr_decom)
       R.inv <- solve(qr.R(qr_decom))
     } else{
+      R.inv <- matrix(R.inv, nrow = ncol(b))
       b <- b %*% R.inv
     }
+  } else {
+    R.inv <- diag(ncol(b))
   }
 
   a <- list(knots = knots[1,], ortho = ortho, R.inv = R.inv, intercept = intercept)
@@ -563,10 +567,11 @@ predict.cb <- function (object, newx, ...)
     return(object)
   a <- c(list(x = newx), attributes(object)[c("knots", "ortho",
                                               "R.inv", "intercept")])
-  do.call("basis", a)
+  do.call("cb", a)
 }
 
 #Additional function needed to fix the knot location in cases where df is only specified
+#' @export
 makepredictcall.cb <- function (var, call)
 {
   if (as.character(call)[1L] != "cb")
@@ -578,7 +583,7 @@ makepredictcall.cb <- function (var, call)
 }
 
 #Derivate of basis function
-dbasis <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
+dbasis <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
   if(ortho & is.null(R.inv)) stop("Both 'ortho' and 'R.inv' has to be specified!")
   nx <- length(x)
   if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
@@ -620,9 +625,12 @@ rhs <- function (formula)
   newformula
 }
 
+###############KIG HER LASSSSSEEEEEE##################3
+#Fix problem med cb.cure! Det virker med orthogonalisering.
 
 # Cure base functions
-basis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
+#' @export
+cbc <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE){
   nk <- length(knots)
   b <- matrix(nrow = length(x), ncol = nk - 1)
   knots_rev <- rev(knots)
@@ -637,7 +645,7 @@ basis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
     }
   }
 
-  if(!intercept) b <- b[,-1]
+  if(!intercept) b <- b[,-1, drop = F]
 
   if(ortho){
     if(is.null(R.inv)){
@@ -645,14 +653,39 @@ basis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
       b <- qr.Q(qr_decom)
       R.inv <- solve(qr.R(qr_decom))
     } else{
+      R.inv <- matrix(R.inv, nrow = ncol(b))
       b <- b %*% R.inv
     }
+  } else {
+    R.inv <- diag(ncol(b))
   }
 
-  a <- list(R.inv = R.inv)
-  attributes(b) <- a
-  class(b) <- c("bsx", "basis", "matrix")
+  a <- list(knots = knots, ortho = ortho, R.inv = R.inv, intercept = intercept)
+  attributes(b) <- c(attributes(b), a)
+  class(b) <- c("cbc", "matrix")
   b
+}
+
+#Predict function associated with bsx.
+predict.cbc <- function (object, newx, ...)
+{
+  if (missing(newx))
+    return(object)
+  a <- c(list(x = newx), attributes(object)[c("knots", "ortho",
+                                              "R.inv", "intercept")])
+  do.call("cbc", a)
+}
+
+#Additional function needed to fix the knot location in cases where df is only specified
+#' @export
+makepredictcall.cbc <- function (var, call)
+{
+  if (as.character(call)[1L] != "cbc")
+    return(call)
+  at <- attributes(var)[c("knots", "ortho", "R.inv", "intercept")]
+  xxx <- call[1L:2]
+  xxx[names(at)] <- at
+  xxx
 }
 
 dbasis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){

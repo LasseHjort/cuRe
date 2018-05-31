@@ -108,7 +108,8 @@ predict.gfcm <- function (object, newdata = NULL,
     })
 
     X.cr <- lapply(1:length(newdata.list), function(i){
-      model.matrix(object$cr.formula, data = newdata.list[[i]])
+      rstpm2:::lpmatrix.lm(object$lm.obj.cr, newdata.list[[i]])
+      #model.matrix(object$cr.formula, data = newdata.list[[i]])
     })
 
   } else {
