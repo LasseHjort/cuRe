@@ -62,19 +62,22 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
     time <- seq(0, tau, length.out = 100)
   }
 
+  is_null_newdata <- is.null(newdata)
+  if(is_null_newdata){
+    if(any(class(object) %in% c("stpm2", "pstpm2"))){
+      data <- object@data
+      newdata <- data.frame(arbritary_var = 0)
+    }else{
+      data <- object$data
+    }
+  }
+
   if(is.null(exp.fun)){
     #The time points for the expected survival
     times <- seq(0, tau + 1, by = 0.1)
 
     #Extract expected survival function
-    if(is.null(newdata)){
-      if(any(class(object) %in% c("stpm2", "pstpm2"))){
-        data <- object@data
-        #if(class(data) == "list") data <- do.call(cbind, data)
-        newdata <- data.frame(arbritary_var = 0)
-      }else{
-        data <- object$data
-      }
+    if(is_null_newdata){
       expected <- list(do.call("survexp",
                                list(formula = ~ 1, rmap = substitute(rmap),
                                     data = data, ratetable = ratetable,
