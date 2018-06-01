@@ -40,7 +40,7 @@
 
 calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
                     tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk,
-                    rmap, pars = NULL, n = 100, scale = ayear){
+                    rmap, pars = NULL, n = 100, scale = ayear, smooth.exp = T){
   type <- match.arg(type)
   if(!type %in% c("ll", "mrl"))
     stop("Argument 'type' is wrongly specified, must be either 'll' and 'mrl'")
@@ -91,10 +91,22 @@ calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
                                       scale = scale, times = times * scale))
       }
     }
-    exp.fun <- lapply(1:length(expected), function(i){
-      smooth.obj <- smooth.spline(x = expected[[i]]$time, y = expected[[i]]$surv, all.knots = T)
-      function(time) predict(smooth.obj, x = time)$y
-    })
+    if(smooth.exp){
+      exp.fun <- lapply(1:length(expected), function(i){
+        smooth.obj <- smooth.spline(x = expected[[i]]$time, y = expected[[i]]$surv, all.knots = T)
+        function(time) predict(smooth.obj, x = time)$y
+      })
+    } else {
+      exp.fun <- lapply(1:length(expected), function(i){
+        function(time){
+          s <- summary(expected[[i]], time)
+          names(s$surv) <- s$time
+          survs <- s$surv[as.character(time)]
+          names(survs) <- NULL
+          survs
+        }
+      })
+    }
   }
 
 
