@@ -1,37 +1,40 @@
 #' Fit generalized mixture cure model
 #'
 #' The following function fits a generalized mixture or non-mixture cure model
-#' using a link function for the cure rate and for the survival of the uncured, i.e.,
+#' using a link function for the cure rate and for the survival of the uncured.
+#' For a mixture cure model, the model is specified by
 #' \deqn{S(t|z) = \pi(z) + [1 - \pi(z)] S_u(t|z),}
 #' where
 #' \deqn{g_1[S_u(t|z)] = \eta_1(t, z)\qquad and \qquad g_2[\pi(z)] = \eta_2(z).}
-#' The function implements a range of link functions for both \eqn{g_1} and \eqn{g_2} and allows
-#' the linear predictors to be specified in any way.
+#' The function implements multiple link functions for both \eqn{g_1} and \eqn{g_2}. The default time-effect
+#' is natural cubic splines, but the function allows for the use of other smoothers.
 #'
-#' @param formula Formula for modelling the survival of the uncured. A linear term for time-varying coefficients is required here.
-#' Reponse has to be of the form \code{Surv(time, status)}.
-#' @param data Data frame in which to interpret the variables names in \code{formula}, \code{smooth.formula}, and \code{cr.formula}.
+#' @param formula Formula for modelling the survival of the uncured. Reponse has to be of the form \code{Surv(time, status)}.
+#' @param data Data frame in which to interpret the variables names in \code{formula},
+#' \code{smooth.formula}, \code{tvc.formula}, and \code{cr.formula}.
 #' @param smooth.formula Formula for describing the time-effect of the survival of the uncured (default is \code{NULL}).
 #' @param smooth.args List. Optional arguments to the time-effect of the survival of the uncured (default is \code{NULL}).
 #' @param df Integer. Degrees of freedom (default is 3) for the time-effect of the survival of the uncured.
 # @param logH.args
 # @param logH.formula blabal
 #' @param tvc Named list of integers. Specifies the degrees of freedom for a time-varying covariate effect.
-#' For instance, \code{tvc = list(a = 3)} creates a time-varying spline-effect of the covariate "a" with 3 degrees of freedom using
-#' the the \code{rstpm2::nsx} function.
+#' For instance, \code{tvc = list(x = 3)} creates a time-varying spline-effect of the covariate "x" with
+#' 3 degrees of freedom using the \code{rstpm2::nsx} function.
 #' @param tvc.formula Formula for the time-varying covariate effects.
 #' For time-varying effects, a linear term of the covariate has to be included in \code{formula}.
 #' @param cr.formula Formula for the cure proportion.
 #' The left hand side of the formula is not used and should therefore not be specified.
 #' @param bhazard Background hazard.
 #' @param type A character indicating the type of cure model.
-#' Possible values are \code{mixture} (default) and \code{nmixture}.
+#' Possible values are \code{mixture} for mixture cure models (default) and \code{nmixture}
+#' for non-mixture cure models.
 #' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
 #' @param verbose Logical. If \code{TRUE} status messages of the function is outputted.
 #' @param link.type.cr Character providing the link function for the cure proportion.
 #' Possible values are \code{logit} (default), \code{loglog}, \code{identity}, and \code{probit}.
 #' @param link.type Character providing the link function for the survival of the uncured.
-#' Possible values are \code{PH} (default), \code{PO}, and \code{probit}.
+#' Possible values are \code{PH} for a proportional hazards model (default), \code{PO} for a proportion odds model,
+#' and \code{probit} for a probit model.
 #' @param init Providing initial values for the optimization procedure.
 #' If not specified, the function will create initial values internally.
 #' @param timeVar Optional character giving the name of the variable specifying the time component of the \code{Surv} object.
@@ -52,7 +55,10 @@
 #' Functions such as \code{ns}, \code{bs} are readily available for usage. Also the \code{basis} function of \code{flexsurv} works.
 # The function also allows for the use of any smoother from the \code{mgvc} package.
 #' Initial values are calculated by two procedures and the model is fitted under each set of initial values.
-#' The model producding the highest likelihood is selected.
+#' The model producding the highest likelihood is selected.\cr
+#'
+#' Using \code{link.type = 'PH'}, the link function \eqn{g_1(x) = \log(-\log(x))} is used.
+#' Using \code{link.type = 'PO'}, the link function \eqn{g_1(x) = \log(\frac{x}{1 - x})} is used.
 #' @export
 #' @import survival
 #' @import rstpm2

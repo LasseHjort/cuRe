@@ -24,6 +24,9 @@
 #' @param n Number of knots used for the Gauss-Legendre quadrature.
 #' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
 #' That is, the time scale is assumed to be in years.
+#' @param smooth.exp Logical. If \code{TRUE}, the general population survival function is smoothed by the function
+#' \code{smooth.spline} using the the argument \code{all.knots = TRUE}.
+#' @param pars A vector of parameter values for the model given in \code{object}. Currently not used.
 #' @return An object of class \code{le} containing the life expectancy estimates
 #' of each individual in \code{newdata}.
 #' @details If \code{type = "ll"}, the function computes
@@ -40,22 +43,19 @@
 
 calc.LL <- function(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
                     tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk,
-                    rmap, pars = NULL, n = 100, scale = ayear, smooth.exp = T){
+                    rmap, smooth.exp = FALSE, pars = NULL, n = 100, scale = ayear){
   type <- match.arg(type)
-  if(!type %in% c("ll", "mrl"))
-    stop("Argument 'type' is wrongly specified, must be either 'll' and 'mrl'")
-
   var.type <- match.arg(var.type)
 
   #Replace coefficients if new ones are provided
-  if(!is.null(pars)){
-    if(any(class(object) %in% c("stpm2", "pstpm2"))){
-      object@fullcoef <- pars
-    } else {
-      object$coefs <- pars[1:length(object$coefs)]
-      object$coefs.spline <- pars[(length(object$coefs) + 1):length(pars)]
-    }
-  }
+  # if(!is.null(pars)){
+  #   if(any(class(object) %in% c("stpm2", "pstpm2"))){
+  #     object@fullcoef <- pars
+  #   } else {
+  #     object$coefs <- pars[1:length(object$coefs)]
+  #     object$coefs.spline <- pars[(length(object$coefs) + 1):length(pars)]
+  #   }
+  # }
 
   #Time points at which to evaluate integral
   if(is.null(time)){

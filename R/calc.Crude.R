@@ -6,11 +6,11 @@
 #' \code{gfcm}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
-#' @param type Probability to compute. Possible values are \code{cancer} (default),
+#' @param type Probability to compute. Possible values are \code{disease} (default),
 #' \code{other}, and \code{condother} (see details).
-#' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
+#' @param time Time points at which to compute predictions. If empty, a grid of 100 time points between 0
 #' and \code{tau} is selected.
-#' @param tau Upper bound of the cancer related death integral (see details).
+#' @param tau Upper bound of the integral used to compute the probability of disease-related death (see details).
 #' The argument is only used for \code{type = condother}. Default is 100.
 #' @param var.type Character. Possible values are "\code{ci}" (default) for confidence intervals,
 #' "\code{se}" for standard errors, and "\code{n}" for neither.
@@ -18,58 +18,77 @@
 #' Default is \code{survexp.dk}.
 #' @param exp.fun Object of class \code{list} containing functions for the expected survival
 #' of each row in \code{newdata}. If not specified, the function computes the expected
-#' survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.
+#' survival based on \code{newdata} using the \code{survival::survexp} function. If \code{newdata} is not provided,
+#' the expected survival is based on the data which the model was fitted on.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
 #' @param reverse Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
 #' Only applicable for \code{type = condother}.
 #' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
 #' That is, the time scale is assumed to be in years.
-#' @param Link Link function for computing variance in order to bound confidence intervals. Default is \code{loglog}.
+#' @param link Link function for computing variance in order to restrict confidence intervals to [0, 1].
+#' Default is \code{loglog}.
 #' @param n Number of knots used for the Gauss-Legendre quadrature.
+#' @param smooth.exp Logical. If \code{TRUE}, the general population survival function is smoothed by the function
+#' \code{smooth.spline} using the the argument \code{all.knots = TRUE}.
+#' @param pars A vector of parameter values for the model given in \code{object}. Currently not used.
 #' @return A list containing the crude probability estimates
 #' of each individual in \code{newdata}.
 #' @details The function estimates crude probabilities by using the relative survival, expected survival,
 #' and the cause-specific hazard function.
-#' The crude cumulative incidence of cancer related death (\code{type = "cancer"}) is
-#' \deqn{P(T \leq t, D = cancer) = \int_0^t S^*(u) R(u) \lambda(u)du.}
+#' The crude cumulative incidence of disease-related death (\code{type = "disease"}) is
+#' \deqn{P(T \leq t, D = disease) = \int_0^t S^*(u) R(u) \lambda(u)du.}
 #' The crude cumulative incidence of death from other causes (\code{type = "other"}) is
 #' \deqn{P(T \leq t, D = other) = \int_0^t S^*(u) R(u) h^*(u)du.}
-#' The conditional probability of eventually dying from other causes than cancer (\code{type = "condother"}) is
-#' \deqn{P(D = other| T > t) = \frac{P(D = cancer) - P(T \leq t, D = cancer)}{P(T > t)}.}
-#' The proportion of patients bound to die from the disease (P(D = cancer))
-#' can be computed by using \code{type = "cancer"} and choosing a sufficiently large time point (e.g., 100 years).
+#' The conditional probability of eventually dying from other causes than disease (\code{type = "condother"}) is
+#' \deqn{P(D = other| T > t) = \frac{P(D = disease) - P(T \leq t, D = disease)}{P(T > t)}.}
+#' The probability of disease-related death, P(D = disease),
+#' can be computed by using \code{type = "disease"} and choosing a sufficiently large time point.
+#' For P(D = other| T>t), the argument \code|tau| controls this time point (default is 100).
 #' @references Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
-#' for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
+#' for improved risk communication in population-based disease patient survival. \emph{Epidemiology}, 12:86.
 #' @export
 #' @example inst/calc.Crude.ex.R
-#' @import statmod
 
-calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "condother"),
+calc.Crude <- function(object, newdata = NULL, type = c("disease", "other", "condother"),
                        time = NULL, tau = 100, reverse = FALSE, scale = ayear,
                        var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk, rmap,
-                       link = "loglog", n = 100){
+                       smooth.exp = FALSE, pars = NULL, link = "loglog", n = 100){
 
   type <- match.arg(type)
   var.type <- match.arg(var.type)
+
+  #Replace coefficients if new ones are provided
+  # if(!is.null(pars)){
+  #   if(any(class(object) %in% c("stpm2", "pstpm2"))){
+  #     object@fullcoef <- pars
+  #   } else {
+  #     object$coefs <- pars[1:length(object$coefs)]
+  #     object$coefs.spline <- pars[(length(object$coefs) + 1):length(pars)]
+  #   }
+  # }
 
   #Time points at which to evaluate integral
   if(is.null(time)){
     time <- seq(0, tau, length.out = 100)
   }
+
+  is_null_newdata <- is.null(newdata)
+  if(is_null_newdata){
+    if(any(class(object) %in% c("stpm2", "pstpm2"))){
+      data <- object@data
+      newdata <- data.frame(arbritary_var = 0)
+    }else{
+      data <- object$data
+    }
+  }
+
   if(is.null(exp.fun)){
     #The time points for the expected survival
     times <- seq(0, tau + 1, by = 0.1)
 
     #Extract expected survival function
-    if(is.null(newdata)){
-      if(any(class(object) %in% c("stpm2", "pstpm2"))){
-        data <- object@data
-        #if(class(data) == "list") data <- do.call(cbind, data)
-        newdata <- data.frame(arbritary_var = 0)
-      }else{
-        data <- object$data
-      }
+    if(is_null_newdata){
       expected <- list(do.call("survexp",
                                list(formula = ~ 1, rmap = substitute(rmap),
                                     data = data, ratetable = ratetable,
@@ -83,10 +102,22 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "cond
                                       scale = scale, times = times * scale))
       }
     }
-    exp.fun <- lapply(1:length(expected), function(i){
-      smooth.obj <- smooth.spline(x = expected[[i]]$time, y = expected[[i]]$surv, all.knots = T)
-      function(time) predict(smooth.obj, x = time)$y
-    })
+    if(smooth.exp){
+      exp.fun <- lapply(1:length(expected), function(i){
+        smooth.obj <- smooth.spline(x = expected[[i]]$time, y = expected[[i]]$surv, all.knots = T)
+        function(time) predict(smooth.obj, x = time)$y
+      })
+    } else {
+      exp.fun <- lapply(1:length(expected), function(i){
+        function(time){
+          s <- summary(expected[[i]], time)
+          names(s$surv) <- s$time
+          survs <- s$surv[as.character(time)]
+          names(survs) <- NULL
+          survs
+        }
+      })
+    }
   }
 
   #Extract relative survival function
@@ -146,16 +177,16 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "cond
 
 
   probfun <- switch(type,
-                    cancer = prob_cuminc,
+                    disease = prob_cuminc,
                     other = prob_cuminc,
                     condother = cprob_time)
 
   cs_haz <- switch(type,
-                   cancer = excess_haz,
+                   disease = excess_haz,
                    other = expected_haz,
                    condother = excess_haz)
 
-  gaussxw <- statmod::gauss.quad(n)
+  gaussxw <- rstpm2:::gauss.quad(n)
 
   probs <- lapply(1:length(exp.fun), function(i){
     prob <- probfun(time = time, rel_surv = rel_surv[[i]], cs_haz = cs_haz[[i]],
@@ -178,7 +209,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("cancer", "other", "cond
       }
     }
     res$Estimate <- get.link(link)(res$Estimate)
-    if(type %in% c("cancer", "other")){
+    if(type %in% c("disease", "other")){
       res[time == 0,] <- 0
     }
     res

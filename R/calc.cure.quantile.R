@@ -3,29 +3,28 @@
 #' The following function estimates the time to statistical cure using the
 #' conditional probability of cure.
 #' @param fit Fitted model to do predictions from. Possible classes are
-#' \code{gfcm}, \code{cm}, \code{stpm2}, and \code{pstpm2}.
+#' \code{gfcm}, \code{cm}, and \code{stpm2}.
 #' @param q Threshold to estimate statistical cure according to.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
-#' @param max.time Upper boundary of the interval [0, \code{max.time}] in which to search for solution.
+#' @param max.time Upper boundary of the interval [0, \code{max.time}] in which to search for solution (see details).
+#' Default is 20.
 #' @param var.type Character. Possible values are "\code{ci}" (default) for confidence intervals,
 #' "\code{se}" for standard errors, and "\code{n}" for neither.
-#' @param reverse Logical. Whether to use 1 - prob (default) or prob as measure.
+#' @param reverse Logical. Whether to use the conditional probability of not being cured (default) or
+#' the conditional probability of cure.
 #' @return The estimated cure point.
+#' @details The cure point is calculated as the time point at which the conditional probability of disease-related
+#' death reaches the threshold, \code{q}. If \code{q} is not reached within \code{max.time}, no solution is reported.
 #' @example inst/calc.cure.quantile.ex.R
 #' @export
 
 calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var.type = c("ci", "n"), reverse = TRUE){
   var.type <- match.arg(var.type)
 
-  if("gfcm" %in% class(fit)){
+  if(any(c("gfcm", "cm") %in% class(fit))){
     pred <- function(time, newdata, var.type = "n"){
-      predict(fit, time = time, type = "probcure", newdata = newdata[i,,drop = F],
-              var.type = var.type, link = "I")[[1]]
-    }
-  } else if ("cm" %in% class(fit)){
-    pred <- function(time, newdata, var.type = "n"){
-      predict(fit, time = time, type = "probcure", newdata = newdata[i,,drop = F],
+      predict(fit, time = time, type = "probcure", newdata = newdata,
               var.type = var.type, link = "I")[[1]]
     }
   } else if("stpm2" %in% class(fit)){
@@ -42,7 +41,8 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
   }
 
   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))
-  ests <- lapply(1:n.obs, function(i){
+  ests <- vector("list", n.obs)
+  for(i in 1:n.obs){
     ci.new <- F
     if(reverse){
       f <- function(time, q) 1 - pred(time, newdata = newdata[i,,drop = F])$Estimate - q
@@ -73,11 +73,11 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
         df <- data.frame(Estimate = uni, SE = NA, lower.ci = NA, upper.ci = NA)
       }
       #if(var.type == "ci") subset(df, select = -SE) else subset(df, select = -c(lower.ci, upper.ci))
-      df
+      ests[[i]] <- df
     } else{
-      data.frame(Estimate = uni)
+      ests[[i]] <- data.frame(Estimate = uni)
     }
-  })
+  }
 
   do.call(rbind, ests)
 }

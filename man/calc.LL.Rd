@@ -6,7 +6,8 @@
 \usage{
 calc.LL(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
   tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = survexp.dk, rmap, pars = NULL, n = 100, scale = ayear)
+  ratetable = survexp.dk, rmap, pars = NULL, n = 100, scale = ayear,
+  smooth.exp = T)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are

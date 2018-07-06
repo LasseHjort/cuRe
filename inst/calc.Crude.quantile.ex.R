@@ -7,4 +7,11 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
 
 #Fit cure model and estimate cure point
 fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
-calc.Crude.quantile(fit, q = 0.05, rmap = list(age = agedays, sex = sex, year = dx))
+cp <- calc.Crude.quantile(fit, q = 0.05, rmap = list(age = agedays, sex = sex, year = dx))
+
+#Compare the result with the trajectory of the conditional probability of disease-related death
+res <- calc.Crude(fit, type = "condother", time = seq(0, 20, length.out = 100),
+                  var.type = "n", rmap = list(age = agedays, sex = sex, year = dx), reverse = T)
+plot(res)
+abline(h = 0.05, v = cp$Estimate)
+

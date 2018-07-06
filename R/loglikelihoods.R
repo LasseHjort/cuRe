@@ -300,6 +300,31 @@ minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, ind0, link
   -sum(likterms)
 }
 
+grad2 <- function(func,x,...) # would shadow numDeriv::grad()
+{
+  h <- .Machine$double.eps^(1/3)*ifelse(abs(x)>1,abs(x),1)
+  temp <- x+h
+  h.hi <- temp-x
+  temp <- x-h
+  h.lo <- x-temp
+  twoeps <- h.hi+h.lo
+  nx <- length(x)
+  ny <- length(func(x,...))
+  if (ny==0L) stop("Length of function equals 0")
+  df <- if(ny==1L) rep(NA, nx) else matrix(NA, nrow=nx,ncol=ny)
+  for (i in 1L:nx) {
+    hi2 <- lo2 <- hi <- lo <- x
+    hi[i] <- x[i] + h.hi[i]
+    hi2[i] <- x[i] + 2 * h.hi[i]
+    lo[i] <- x[i] - h.lo[i]
+    lo2[i] <- x[i] - 2 * h.lo[i]
+    if (ny==1L)
+      df[i] <- (func(lo2, ...) - 8 * func(lo, ...) + 8 * func(hi, ...) - func(hi2, ...))/ (12 * h)
+    else df[i,] <- (func(lo2, ...) - 8 * func(lo, ...) + 8 * func(hi, ...) - func(hi2, ...))/ (12 * h)
+  }
+  return(df)
+}
+
 
 
 # Likelihood for mixture cure models
