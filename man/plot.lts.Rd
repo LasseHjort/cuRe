@@ -4,21 +4,21 @@
 \alias{plot.lts}
 \title{Plot the long term survival}
 \usage{
-plot.lts(obj, ylim = NULL, xlim = NULL, ci = F, col = 1, ylab = NULL,
-  xlab = "Time", add = F, ...)
+plot.lts(object, ylim = NULL, xlim = NULL, ci = T, col = 1,
+  ylab = NULL, xlab = "Time", add = F, ...)
 }
 \arguments{
-\item{obj}{Object of class \code{lts}.}
+\item{object}{Object of class \code{lts}.}
 
-\item{ylim}{Limit of the y-axis. If empty, these are chosen occording to the extremes in \code{obj}.}
+\item{ylim}{Limit of the y-axis.}
 
-\item{xlim}{Limit of x-axis. If empty, these are chosen according to the time extremes of \code{obj}.}
+\item{xlim}{Limit of x-axis.}
 
-\item{ci}{Logical indicating wether confidence intervals should be included in the plot (default is TRUE).}
+\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are added to the plot.}
 
 \item{col}{Numeric or character indicating the colours of the curves.}
 
-\item{ylab}{Label to be written on the y-axis.}
+\item{ylab}{Label to be written on the y-axis. If \code{NULL}, this is based on \code{type}.}
 
 \item{xlab}{Label to be written on the x-axis.}
 

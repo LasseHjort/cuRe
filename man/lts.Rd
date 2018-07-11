@@ -4,13 +4,16 @@
 \alias{lts}
 \title{Long term survival predictions}
 \usage{
-lts(fit, type = c("surv", "hazard", "cumhaz", "loghaz"), newdata = NULL,
-  time = NULL, var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = survexp.dk, rmap, scale = 365.24, smooth.exp = FALSE)
+lts(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
+  newdata = NULL, time = NULL, var.type = c("ci", "se", "n"),
+  exp.fun = NULL, ratetable = survexp.dk, rmap, scale = 365.24,
+  smooth.exp = FALSE, link = NULL)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{gfcm}, \code{stpm2},
 \code{pstpm2}, and \code{cm}.}
+
+\item{type}{Prediction type (see details). The default is \code{surv}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
@@ -39,11 +42,19 @@ That is, the time scale is assumed to be in years.}
 \code{smooth.spline} using the the argument \code{all.knots = TRUE}.}
 }
 \value{
-A object of class \code{lts} containing the loss of lifetime estiamtes
-of each individual in \code{newdata}.
+An object of class \code{lts} containing the predictions of each individual in \code{newdata}.
 }
 \description{
-Function for computing survival estimates using a relative survival model and the expected background survival.
+Function for computing survival estimates using a relative survival model and the
+expected general population survival.
+}
+\details{
+Possible values for argument \code{type} are:\cr
+\code{surv}: Survival function computed by \eqn{S(t) = R(t)S^*(t)}\cr
+\code{hazard}: Hazard function computed by \eqn{h(t) = \lambda(t) + h^*(t)}\cr
+\code{cumhaz}: The cumulative hazard function computed by \eqn{H(t) = \Lambda(t) + H^*(t)}\cr
+\code{loghazard}: The log-hazard function computed by \eqn{\log(\lambda(t) + h^*(t))}\cr
+\code{fail}: The distribution function computed by \eqn{1 - R(t)S^*(t)}
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package

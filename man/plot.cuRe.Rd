@@ -32,7 +32,7 @@ depending on \code{object$type} and \code{object$excess}.}
 
 \item{col}{Colour of each line.}
 
-\item{ci}{Logical. If \code{TRUE}, confidence intervals are added to the plot.}
+\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are added to the plot.}
 
 \item{add}{Loglca. If \code{TRUE} the curve is added to the existing plot.}
 

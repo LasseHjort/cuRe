@@ -9,7 +9,7 @@
 #' @param ylab Label of the y-axis. If \code{NULL}, the function uses its default labels depending on \code{object$type}.
 #' @param xlab Label of the x-axis (default is "Time").
 #' @param add Logical indicating wether the cruves should be added to the current plot window (default is \code{FALSE}).
-#' @param ci Logical denoting whether confidence intervals should be plotted (default is \code{TRUE}).
+#' @param ci Logical. If \code{TRUE} (default), confidence intervals are added to the plot.
 #' @param ... Further arguments passed to \code{plot} and \code{lines}.
 #' @export
 

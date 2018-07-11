@@ -14,7 +14,7 @@
 #' @param ylab Label of the y-axis. If \code{NULL}, the function uses its default y-labels
 #' depending on \code{object$type} and \code{object$excess}.
 #' @param col Colour of each line.
-#' @param ci Logical. If \code{TRUE}, confidence intervals are added to the plot.
+#' @param ci Logical. If \code{TRUE} (default), confidence intervals are added to the plot.
 #' @param add Loglca. If \code{TRUE} the curve is added to the existing plot.
 #' @param ... Further arguments passed to \code{plot} and \code{lines}.
 #' @return A plot containing the predictions of each observation in \code{newdata}.

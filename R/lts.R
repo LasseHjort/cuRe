@@ -1,9 +1,11 @@
 #' Long term survival predictions
 #'
-#' Function for computing survival estimates using a relative survival model and the expected background survival.
+#' Function for computing survival estimates using a relative survival model and the
+#' expected general population survival.
 #'
 #' @param fit Fitted model to do predictions from. Possible classes are \code{gfcm}, \code{stpm2},
 #' \code{pstpm2}, and \code{cm}.
+#' @param type Prediction type (see details). The default is \code{surv}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param time Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
@@ -22,16 +24,22 @@
 #' That is, the time scale is assumed to be in years.
 #' @param smooth.exp Logical. If \code{TRUE}, the general population survival function is smoothed by the function
 #' \code{smooth.spline} using the the argument \code{all.knots = TRUE}.
-#' @return A object of class \code{lts} containing the loss of lifetime estiamtes
-#' of each individual in \code{newdata}.
+#' @return An object of class \code{lts} containing the predictions of each individual in \code{newdata}.
+#' @details
+#' Possible values for argument \code{type} are:\cr
+#' \code{surv}: Survival function computed by \eqn{S(t) = R(t)S^*(t)}\cr
+#' \code{hazard}: Hazard function computed by \eqn{h(t) = \lambda(t) + h^*(t)}\cr
+#' \code{cumhaz}: The cumulative hazard function computed by \eqn{H(t) = \Lambda(t) + H^*(t)}\cr
+#' \code{loghazard}: The log-hazard function computed by \eqn{\log(\lambda(t) + h^*(t))}\cr
+#' \code{fail}: The distribution function computed by \eqn{1 - R(t)S^*(t)}
 #' @export
 #' @example inst/predict.lts.ex.R
 
 
-lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz"),
+lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
                 newdata = NULL, time = NULL, var.type = c("ci", "se", "n"),
                 exp.fun = NULL, ratetable = survexp.dk, rmap, scale = 365.24,
-                smooth.exp = FALSE){
+                smooth.exp = FALSE, link = NULL){
 
   var.type <- match.arg(var.type)
   type <- match.arg(type)
@@ -146,23 +154,55 @@ lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz"),
     function(t, pars) numDeriv::grad(func = cum_haz_smooth, t)
   })
 
+  if(is.null(link)){
+    link <- switch(type, surv = "cloglog", hazard = "log", cumhaz = "log", loghazard = "I", fail = "mlog")
+  }
+
+  var.link <- switch(link, I = function(x) x, log = function(x) log(x),
+                     cloglog = function(x) log(-log(x)), mlog = function(x) -log(x))
+  var.link.inv <- switch(link, I = function(x) x, log = function(x) exp(x),
+                         cloglog = function(x) exp(-exp(x)), mlog = function(x) exp(-x))
+
   res <- vector("list", length(exp.fun))
   for(i in 1:length(exp.fun)){
-    Est <- if(type == "surv"){
-      est <- exp.fun[[i]](time) * rel_surv[[i]](time, model.params)
-      # gr <- jacobian(rel_surv[[i]], x = model.params, t = time)
-      # SE <- sqrt(apply(gr, 1, function(x) x %*% cov %*% x))
-    } else if(type == "hazard"){
-      expected_haz[[i]](time) + excess_haz[[i]](time, model.params)
-    } else if(type == "cumhaz"){
-      -log(exp.fun[[i]](time) * rel_surv[[i]](time, model.params))
-    } else if(type == "loghazard"){
-      log(expected_haz[[i]](time) + excess_haz[[i]](time, model.params))
+    est <- lts.local(exp.fun = exp.fun[[i]], rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
+                     expected_haz = expected_haz[[i]], time = time,
+                     model.params = model.params, var.link = var.link, type = type)
+    D <- data.frame(Estimate = est)
+    if(var.type != "n"){
+      gr <- jacobian(lts.local, x = model.params, time = time, exp.fun = exp.fun[[i]],
+                     rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
+                     expected_haz = expected_haz[[i]], var.link = var.link, type = type)
+      D$SE <- sqrt(apply(gr, 1, function(x) x %*% cov %*% x))
+      if(var.type == "ci"){
+        lower <- var.link.inv(D$Estimate - D$SE * qnorm(0.975))
+        upper <- var.link.inv(D$Estimate + D$SE * qnorm(0.975))
+        D$lower <- pmin(lower, upper)
+        D$upper <- pmax(lower, upper)
+        D <- subset(D, select = -SE)
+      }
     }
-
-    res[[i]] <- data.frame(Estimate = Est)
+    D$Estimate <- var.link.inv(D$Estimate)
+    res[[i]] <- D
   }
-  attributes(res) <- list(time = time, type = type)
+  attributes(res) <- list(time = time, type = type, var.type = var.type)
   class(res) <- "lts"
   res
+}
+
+
+
+lts.local <- function(exp.fun, rel_surv, excess_haz, expected_haz, time, model.params, var.link, type){
+  Est <- if(type == "surv"){
+    exp.fun(time) * rel_surv(time, model.params)
+  } else if(type == "hazard"){
+    expected_haz(time) + excess_haz(time, model.params)
+  } else if(type == "cumhaz"){
+    -log(exp.fun(time) * rel_surv(time, model.params))
+  } else if(type == "loghazard"){
+    log(expected_haz(time) + excess_haz(time, model.params))
+  } else if(type == "fail"){
+    1 - (exp.fun(time) * rel_surv(time, model.params))
+  }
+  return(var.link(Est))
 }

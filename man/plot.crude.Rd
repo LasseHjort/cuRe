@@ -14,7 +14,7 @@ plot.crude(object, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
 
 \item{xlim}{Limits of x-axis.}
 
-\item{ci}{Logical denoting whether confidence intervals should be plotted (default is \code{TRUE}).}
+\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are added to the plot.}
 
 \item{col}{Colour of each curve.}
 
