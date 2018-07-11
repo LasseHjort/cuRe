@@ -7,7 +7,8 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
 
 ##Spline-base cure model
 #Fit cure model
-fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
+fit <- rstpm2::stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6,
+                     bhazard = colonDC$bhaz, cure = T)
 
 #Compute the probability of disease-related death
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 50),

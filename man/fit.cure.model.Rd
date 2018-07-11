@@ -4,19 +4,18 @@
 \alias{fit.cure.model}
 \title{Parametric cure model}
 \usage{
-fit.cure.model(formula, data, bhazard = NULL, formula.surv = NULL,
-  type = c("mixture", "nmixture"), dist = c("weibull", "exponential",
-  "lognormal", "weiwei", "weiexp"), link = c("logit", "loglog", "identity",
-  "probit"), covariance = TRUE, link.mix = c("logit", "loglog", "identity",
-  "probit"), control = list(maxit = 10000), method = "Nelder-Mead",
-  init = NULL)
+fit.cure.model(formula, data, formula.surv = NULL, type = c("mixture",
+  "nmixture"), dist = c("weibull", "exponential", "lognormal", "weiwei",
+  "weiexp"), link = c("logit", "loglog", "identity", "probit"),
+  bhazard = NULL, covariance = TRUE, link.mix = c("logit", "loglog",
+  "identity", "probit"), control = list(maxit = 10000),
+  method = "Nelder-Mead", init = NULL)
 }
 \arguments{
-\item{formula}{Formula for modelling the cure proportion. Reponse has to be of the form \code{Surv(time, status)}.}
+\item{formula}{Formula for modelling the cure proportion. The left hand side
+has to be of the form \code{Surv(time, status)}.}
 
 \item{data}{Data frame in which to interpret the variable names in \code{formula} and \code{formula.surv}.}
-
-\item{bhazard}{Background hazard.}
 
 \item{formula.surv}{List of formulas for each parameter in the parametric distribution (see details).}
 
@@ -27,10 +26,12 @@ Possible values are \code{mixture} (default) and \code{nmixture}.}
 
 \item{link}{Character. Specifies the link function of the cure proportion.}
 
+\item{bhazard}{Background hazard.}
+
 \item{covariance}{Logical. If \code{TRUE} (default), the covariance matrix is computed.}
 
 \item{link.mix}{Character. Specifies the link function for the mixture parameter in a
-weibull-weibull mixture model and weibull-exponential model. Only used when \code{dist = "weiwei"} and \code{dist = "weiexp"}.}
+weibull-weibull mixture model and weibull-exponential model.\cr Only used when \code{dist = "weiwei"} and \code{dist = "weiexp"}.}
 
 \item{control}{List of control parameters passed to \code{optim}.}
 
@@ -43,14 +44,17 @@ If not provided, the optimization will start in 0.}
 An object of class \code{cm} containing the parameters of the cure model.
 }
 \description{
-This function is used to fit parametric cure models on the relative survival.
+This function fits parametric cure models using simple parametric distributions.
 }
 \details{
-The function fits the model,
-\deqn{S(t) = \pi + (1 - \pi) S_u(t).}
-The \code{formula.surv} argument is used to model \eqn{S_u(t)}. It is a \code{list} of formulas with as many entries as there are
+If \code{type = "mixture"}, the function fits the model,
+\deqn{S(t|z) = \pi(z) + [1 - \pi(z)] S_u(t|z),}
+and if \code{type = "nmixture"}, the function fits the model,
+\deqn{S(t|z) = \pi(z)^{\widetilde F(t)},}
+where z is a vector of covariates. The \code{formula.surv} argument is used to model
+\eqn{S_u(t)} (1 - \eqn{\widetilde F(t)}). It is a \code{list} of formulas with as many entries as there are
 parameters in the chosen parametric distribution. If not specified, all formulas are assumed to be \code{~1}.
-The ith formula, i.e., \code{formula.surv[[i]]} refers \eqn{\theta_i} in the below survival functions.\cr\cr
+The ith formula, i.e., \code{formula.surv[[i]]} refers to \eqn{\theta_i} in the below survival functions.\cr\cr
 Exponential model:
 \deqn{S_u(t) = \exp\left(-t \theta_1\right).}
 Weibull model:
@@ -61,9 +65,9 @@ Weibull-exponential mixture model:
 \deqn{S_u(t) = \theta_1\exp\left(-\theta_2 t^{\theta_3}\right) + (1 - \theta_1)\exp\left(-\theta_4 t\right).}
 Weibull-Weibull mixture model:
 \deqn{S_u(t) = \theta_1\exp\left(-\theta_2 t^{\theta_3}\right) + (1 - \theta_1)\exp\left(-\theta_4 t^{\theta_5}\right).}
-In the the mixture models, the link function for the mixture component is controlled by \code{link.mix}.
+In the two last mixture models, the link function for the mixture component is controlled by \code{link.mix}.
 The remaining parameters are modelled using an exponential link function except \eqn{\theta_1} in the log-normal model,
-which is modeled using the identity.
+which is modelled using the identity.
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
@@ -79,7 +83,7 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
 fit.wei <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz",
                           type = "mixture", dist = "weibull", link = "logit")
 
-##Plot various summaries of the model
+##Plot various summaries of the model (see ?predict.cm)
 plot(fit.wei)
 plot(fit.wei, time = seq(0, 40, length.out = 100))
 plot(fit.wei, type = "hazard")
@@ -91,23 +95,23 @@ fit.weiwei <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard =
                           type = "mixture", dist = "weiwei", link = "logit")
 
 #Compare to the weibull model
-plot(fit.wei, var.type = "n")
-plot(fit.weiwei, add = T, col = 2, var.type = "n")
+plot(fit.wei, ci = F)
+plot(fit.weiwei, add = T, col = 2, ci = F)
 
 ###With covariates
-##Fit weibull mixture cure model
+##Fit weibull mixture cure model with age effect for both components of the Weibull model
 fit <- fit.cure.model(Surv(FUyear, status) ~ age, data = colonDC, bhazard = "bhaz",
-                      formula.surv = list(~ age, ~1),
+                      formula.surv = list(~ age, ~ age),
                       type = "mixture", dist = "weibull", link = "logit")
 
-##Plot model
+##Plot model for age 50 and 60
 plot(fit, newdata = data.frame(age = 60),
-     time = seq(0, 15, length.out = 100), var.type = "n")
+     time = seq(0, 15, length.out = 100), ci = F)
 plot(fit, newdata = data.frame(age = 50),
-     time = seq(0, 15, length.out = 100), var.type = "n", add = TRUE, col = 2)
+     time = seq(0, 15, length.out = 100), ci = F, add = TRUE, col = 2)
 
 plot(fit, newdata = data.frame(age = 60),
-     time = seq(0, 15, length.out = 100), var.type = "n", type = "hazard")
+     time = seq(0, 15, length.out = 100), ci = F, type = "hazard")
 plot(fit, newdata = data.frame(age = 50),
-     time = seq(0, 15, length.out = 100), var.type = "n", type = "hazard", add = T, col = 2)
+     time = seq(0, 15, length.out = 100), ci = F, type = "hazard", add = T, col = 2)
 }

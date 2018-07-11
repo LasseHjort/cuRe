@@ -13,13 +13,15 @@
 #' "\code{se}" for standard errors, and "\code{n}" for neither.
 #' @param reverse Logical. Whether to use the conditional probability of not being cured (default) or
 #' the conditional probability of cure.
+#' @param bdr.knot Time point from which cure is assumed. Only relevant for class \code{stpm2}.
 #' @return The estimated cure point.
 #' @details The cure point is calculated as the time point at which the conditional probability of disease-related
 #' death reaches the threshold, \code{q}. If \code{q} is not reached within \code{max.time}, no solution is reported.
 #' @example inst/calc.cure.quantile.ex.R
 #' @export
 
-calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var.type = c("ci", "n"), reverse = TRUE){
+calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var.type = c("ci", "n"),
+                               reverse = TRUE, bdr.knot = NULL){
   var.type <- match.arg(var.type)
 
   if(any(c("gfcm", "cm") %in% class(fit))){
@@ -28,16 +30,42 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
               var.type = var.type, link = "I")[[1]]
     }
   } else if("stpm2" %in% class(fit)){
-    pred <- function(time, newdata, var.type = "n"){
-      times <- c(time, max(fit@data[[fit@timeVar]]))###Change this
-      p <- predict.stpm2(fit, newdata = data.frame(FU_years = times), type = "probcure",
-                         exposed = function(x) x[which.max(x$FU_years),, drop = F],
-                         se.fit = ifelse(var.type == "n", FALSE, TRUE), link = "I")
-      col_names = if(var.type == "n") "Estimate" else c("Estimate", "SE")
-      D <- as.data.frame(p)
-      colnames(D) <- col_names
-      D[-nrow(D),, drop = F]
+    if(is.null(bdr.knot)){
+      bdr.knot <- exp(max(as.list(as.list(attr(fit@terms, "predvars"))[[3]])$Boundary.knots))
     }
+    exposed <- function(newdata){
+      newdata[[fit@timeVar]] <- bdr.knot
+      newdata
+    }
+
+    pred <- function(time, newdata, var.type = "n"){
+      data.x <- data.frame(time)
+      names(data.x) <- fit@timeVar
+      newdata[[fit@timeVar]] <- NULL
+      newdata <- merge(newdata, data.x)
+      colnames(newdata)[ncol(newdata)] <- fit@timeVar
+      p <- predict(fit, newdata = data.frame(FU_years = time), type = "probcure",
+                   exposed = exposed, se.fit = ifelse(var.type == "n", FALSE, TRUE), link = "I")
+      if(var.type != "n"){
+        p$SE <- (p$upper - p$Estimate) / qnorm(0.975)
+        return(p)
+      } else {
+        D <- as.data.frame(p)
+        colnames(D) <- "Estimate"
+        return(D)
+      }
+    }
+
+    # pred <- function(time, newdata, var.type = "n"){
+    #   times <- c(time, max(fit@data[[fit@timeVar]]))###Change this
+    #   p <- predict.stpm2(fit, newdata = data.frame(FU_years = times), type = "probcure",
+    #                      exposed = function(x) x[which.max(x$FU_years),, drop = F],
+    #                      se.fit = ifelse(var.type == "n", FALSE, TRUE), link = "I")
+    #   col_names = if(var.type == "n") "Estimate" else c("Estimate", "SE")
+    #   D <- as.data.frame(p)
+    #   colnames(D) <- col_names
+    #   D[-nrow(D),, drop = F]
+    # }
   }
 
   n.obs <- ifelse(is.null(newdata), 1, nrow(newdata))

@@ -4,14 +4,14 @@
 \alias{predict.cm}
 \title{Predict function for cure models}
 \usage{
-predict.cm(fit, newdata = NULL, type = c("surv", "curerate", "probcure",
+predict.cm(object, newdata = NULL, type = c("surv", "curerate", "probcure",
   "survuncured", "hazarduncured", "cumhazuncured", "densityuncured",
   "failuncured", "oddsuncured", "loghazarduncured", "hazard", "density", "fail",
   "loghazard", "odds", "cumhaz"), time = NULL, var.type = c("ci", "se",
   "n"), pars = NULL, link = NULL, keep.attributes = F)
 }
 \arguments{
-\item{fit}{Object of class \code{cm} to do predictions from.}
+\item{object}{Object of class \code{cm} to do predictions from.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the data which
 the model was fitted on.}
@@ -19,16 +19,17 @@ the model was fitted on.}
 \item{type}{Prediction type (see details). The default is \code{surv}.}
 
 \item{time}{Optional time points at which to compute predictions.
-This argument is not used if type is \code{curerate}.}
+This argument is not used if \code{type = curerate}.}
 
 \item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
 "\code{se}" for standard errors, and "\code{n}" for neither.}
 
-\item{pars}{Numerical vector containing the parameters values of the model.
+\item{pars}{Numerical vector containing the parameter values of the model.
 In general, this argument can be ignored by the user.}
 
 \item{link}{Character, indicating the link function for the variance calculations.
-Possible values are "\code{log}", "\code{cloglog}", "\code{log2}", and "\code{I}".
+Possible values are "\code{log}", "\code{cloglog}" for \eqn{log(-log(x))} , "\code{mlog}" for -log(x),
+and "\code{I}" for the indentity.
 If \code{NULL} (default), the function will determine \code{link} from \code{type}.}
 
 \item{keep.attributes}{Logical. If \code{TRUE}, \code{newdata} will be added to the attributes of the output.}
@@ -37,12 +38,12 @@ If \code{NULL} (default), the function will determine \code{link} from \code{typ
 A list containing the predictions of each individual in \code{newdata}.
 }
 \description{
-This function is used to make predictions of the cure models.
+This function is used to make predictions from simple parametric cure models.
 }
 \details{
 Possible values for argument \code{type} are:\cr
 \code{surv}: Survival function\cr
-\code{curerate}: The cure rate\cr
+\code{curerate}: The cure fraction\cr
 \code{probcure}: The conditional probability of being cured\cr
 \code{survuncured}: The survival of the uncured\cr
 \code{hazarduncured}: The hazard function of the uncured\cr

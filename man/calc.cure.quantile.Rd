@@ -5,23 +5,27 @@
 \title{Compute the time to statistical cure using the conditional probability of cure}
 \usage{
 calc.cure.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
-  var.type = c("ci", "n"), reverse = TRUE)
+  var.type = c("ci", "n"), reverse = TRUE, bdr.knot = NULL)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
-\code{gfcm}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
+\code{gfcm}, \code{cm}, and \code{stpm2}.}
 
 \item{q}{Threshold to estimate statistical cure according to.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
 
-\item{max.time}{Upper boundary of the interval [0, \code{max.time}] in which to search for solution.}
+\item{max.time}{Upper boundary of the interval [0, \code{max.time}] in which to search for solution (see details).
+Default is 20.}
 
 \item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
 "\code{se}" for standard errors, and "\code{n}" for neither.}
 
-\item{reverse}{Logical. Whether to use 1 - prob (default) or prob as measure.}
+\item{reverse}{Logical. Whether to use the conditional probability of not being cured (default) or
+the conditional probability of cure.}
+
+\item{bdr.knot}{Time point from which cure is assumed. Only relevant for class \code{stpm2}.}
 }
 \value{
 The estimated cure point.
@@ -29,6 +33,10 @@ The estimated cure point.
 \description{
 The following function estimates the time to statistical cure using the
 conditional probability of cure.
+}
+\details{
+The cure point is calculated as the time point at which the conditional probability of disease-related
+death reaches the threshold, \code{q}. If \code{q} is not reached within \code{max.time}, no solution is reported.
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
@@ -39,6 +47,7 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
                             data = colonDC, ratetable = survexp.dk)
 
 #Fit cure model and estimate cure point
-fit <- GenFlexCureModel(Surv(FUyear, status) ~ 1, data = colonDC, df = 5, bhazard = "bhaz")
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ 1, data = colonDC,
+                        df = 5, bhazard = "bhaz")
 calc.cure.quantile(fit, q = 0.05)
 }

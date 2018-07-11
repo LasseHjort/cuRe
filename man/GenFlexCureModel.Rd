@@ -18,13 +18,16 @@ GenFlexCureModel(formula, data, smooth.formula = NULL, smooth.args = NULL,
 \item{data}{Data frame in which to interpret the variables names in \code{formula},
 \code{smooth.formula}, \code{tvc.formula}, and \code{cr.formula}.}
 
-\item{smooth.formula}{Formula for describing the time-effect of the survival of the uncured (default is \code{NULL}).}
+\item{smooth.formula}{Formula for describing the time-effect of the survival of the uncured.
+If \code{NULL} (default), the function uses the natural cubic splines modelled on the log-time scale.}
 
-\item{smooth.args}{List. Optional arguments to the time-effect of the survival of the uncured (default is \code{NULL}).}
+\item{smooth.args}{List. Optional arguments to the time-effect of the survival
+of the uncured (default is \code{NULL}).}
 
-\item{df}{Integer. Degrees of freedom (default is 3) for the time-effect of the survival of the uncured.}
+\item{df}{Integer. Degrees of freedom (default is 3) for the time-effect of the survival of the uncured.
+Is not used if \code{smooth.formula} is provided.}
 
-\item{tvc}{Named list of integers. Specifies the degrees of freedom for a time-varying covariate effect.
+\item{tvc}{Named list of integers. Specifies the degrees of freedom for time-varying covariate effects.
 For instance, \code{tvc = list(x = 3)} creates a time-varying spline-effect of the covariate "x" with
 3 degrees of freedom using the \code{rstpm2::nsx} function.}
 
@@ -47,7 +50,7 @@ Possible values are \code{logit} (default), \code{loglog}, \code{identity}, and 
 Possible values are \code{PH} for a proportional hazards model (default), \code{PO} for a proportion odds model,
 and \code{probit} for a probit model.}
 
-\item{init}{Providing initial values for the optimization procedure.
+\item{init}{Initial values for the optimization procedure.
 If not specified, the function will create initial values internally.}
 
 \item{baseoff}{Logical. If \code{TRUE}, the time-effect is modelled only using \code{tvc.formula} rather
@@ -56,7 +59,8 @@ than merging with \code{smooth.formula}.}
 \item{timeVar}{Optional character giving the name of the variable specifying the time component of the \code{Surv} object.
 Should currently not be used.}
 
-\item{time0Var}{Optional character giving the name of the variable specifying the time start time component used for delayed entry.}
+\item{time0Var}{Optional character giving the name of the variable specifying the time start time component used for delayed entry.
+Should currently not be used.}
 
 \item{covariance}{Logical. If \code{TRUE} (default), the covariance matrix is computed.}
 
@@ -87,12 +91,15 @@ is natural cubic splines, but the function allows for the use of other smoothers
 }
 \details{
 The default smoother is natural cubic splines established by the \code{rstpm2::nsx} function.
-Functions such as \code{ns}, \code{bs} are readily available for usage. Also the \code{basis} function of \code{flexsurv} works.
-Initial values are calculated by two procedures and the model is fitted under each set of initial values.
-The model producding the highest likelihood is selected.\cr
+Functions such as \code{ns}, \code{bs} are readily available for usage. Also the \code{cb} function in this package
+can be used. Initial values are calculated by two procedures and the model is fitted under each set of initial values.
+The model producing the highest likelihood is selected.\cr
 
 Using \code{link.type = 'PH'}, the link function \eqn{g_1(x) = \log(-\log(x))} is used.
-Using \code{link.type = 'PO'}, the link function \eqn{g_1(x) = \log(\frac{x}{1 - x})} is used.
+Using \code{link.type = 'PO'}, the link function \eqn{g_1(x) = \log(\frac{x}{1 - x})} is used.\cr
+
+If \code{constraint = TRUE}, a non-negative hazard of the uncured is ensured by a general penalization scheme.
+If \code{constraint = FALSE}, penalization is still employed, but on the all-cause hazard instead.
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
@@ -129,37 +136,46 @@ predict(fit, type = "curerate")
 
 ###With covariates
 ##Fit mixture cure model
-fit <- GenFlexCureModel(Surv(FUyear, status) ~ sex, data = colonDC, df = 4, bhazard = "bhaz", cr.formula = ~ sex)
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ sex, data = colonDC, df = 4,
+                        bhazard = "bhaz", cr.formula = ~ sex)
 
 ##Plot model
 plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), ci = "n")
+     time = seq(0.001, 15, length.out = 100), ci = F)
 plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), col = 2, ci = "n", add = T)
+     time = seq(0.001, 15, length.out = 100), col = 2, ci = F, add = T)
 
 
 plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), ci = "n", type = "survuncured")
+     time = seq(0.001, 15, length.out = 100), ci = F, type = "survuncured")
 plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), col = 2, ci = "n", add = T, type = "survuncured")
+     time = seq(0.001, 15, length.out = 100), col = 2, ci = F,
+     add = T, type = "survuncured")
 
-predict(fit, type = "curerate", data.frame(sex = factor("female", levels = c("male", "female"))))
+predict(fit, type = "curerate",
+        data.frame(sex = factor(c("male", "female"),
+                                levels = c("male", "female"))))
 
 
 ##Fit mixture cure model with time-varying covariates
 colonDC$gender <- as.numeric(colonDC$sex) - 1
-fit <- GenFlexCureModel(Surv(FUyear, status) ~ gender, data = colonDC, df = 4, bhazard = "bhaz",
-                        cr.formula = ~ gender, tvc = list(gender = 2))
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ gender, data = colonDC, df = 6,
+                        bhazard = "bhaz", cr.formula = ~ gender, tvc = list(gender = 2))
 
 ##Plot model
 plot(fit, newdata = data.frame(gender = 0))
 plot(fit, newdata = data.frame(gender = 1), add = T, col = 2)
 
-plot(fit, type = "hazard", newdata = data.frame(gender = 0), ci = "n")
-plot(fit, type = "hazard", newdata = data.frame(gender = 1), add = T, col = 2, ci = "n")
+plot(fit, type = "hazard", newdata = data.frame(gender = 0), ci = F)
+plot(fit, type = "hazard", newdata = data.frame(gender = 1),
+     add = T, col = 2, ci = F)
 
 #Predict cure proportions for a male and female patients
 predict(fit, type = "curerate", newdata = data.frame(gender = 0))
 predict(fit, type = "curerate", newdata = data.frame(gender = 1))
 
+
+fit2 <- stpm2(Surv(FUyear, status) ~ gender, data = colonDC, df = 4,
+              bhazard = colonDC$bhaz, tvc = list(gender = 2))
+plot(fit2, newdata = data.frame(gender = 0), type = "hazard")
 }

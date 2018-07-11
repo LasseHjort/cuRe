@@ -6,5 +6,6 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
                             data = colonDC, ratetable = survexp.dk)
 
 #Fit cure model and estimate cure point
-fit <- GenFlexCureModel(Surv(FUyear, status) ~ 1, data = colonDC, df = 5, bhazard = "bhaz")
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ 1, data = colonDC,
+                        df = 5, bhazard = "bhaz")
 calc.cure.quantile(fit, q = 0.05)

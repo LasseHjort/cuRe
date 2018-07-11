@@ -12,6 +12,8 @@ predict.gfcm(object, newdata = NULL, type = c("surv", "curerate",
   keep.attributes = FALSE, ...)
 }
 \arguments{
+\item{object}{Object of class \code{gfcm} to do predictions from.}
+
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the data which
 the model was fitted on.}
 
@@ -27,12 +29,11 @@ This argument is not used if type is \code{curerate}.}
 In general, this argument can be ignored by the user.}
 
 \item{link}{Character, indicating the link function for the variance calculations.
-Possible values are "\code{log}", "\code{cloglog}", "\code{log2}", and "\code{I}".
+Possible values are "\code{log}", "\code{cloglog}" for \eqn{log(-log(x))} , "\code{mlog}" for -log(x),
+and "\code{I}" for the indentity.
 If \code{NULL} (default), the function will determine \code{link} from \code{type}.}
 
 \item{keep.attributes}{Logical. If \code{TRUE}, \code{newdata} will be added to the attributes of the output.}
-
-\item{fit}{Object of class \code{gfcm} to do predictions from.}
 }
 \value{
 A list containing the predictions of each individual in \code{newdata}.
@@ -43,7 +44,7 @@ Function for doing predictions for class \code{gfcm}.
 \details{
 Possible values for argument \code{type} are:\cr
 \code{surv}: Survival function\cr
-\code{curerate}: The cure rate\cr
+\code{curerate}: The cure fraction\cr
 \code{probcure}: The conditional probability of being cured\cr
 \code{survuncured}: The survival of the uncured\cr
 \code{hazarduncured}: The hazard function of the uncured\cr

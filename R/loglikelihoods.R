@@ -2,9 +2,9 @@
 #'
 #' Yearly general population hazards matched on age, gender, and calendar year is extracted from a ratetable.
 #'
-#' @param time Either a numeric vector of follow-up times or a character indicating the variable
+#' @param time Either a numeric vector of follow-up times (in days) or a character indicating the variable
 #' containing the follow-up times in the data.
-#' @param age Either a numeric vector of ages or a character indicating the variable containing the patient ages in the data.
+#' @param age Either a numeric vector of ages (in days) or a character indicating the variable containing the patient ages in the data.
 #' @param sex Either a character vector or factor with the sex of each patient
 #' or a character indicating the variable containing the patient sex in the data.
 #' @param year Either a vector of class \code{Date} with the calendar time points

@@ -8,13 +8,15 @@ plot.cuRe(object, newdata = NULL, type = c("surv", "probcure",
   "survuncured", "hazarduncured", "cumhazuncured", "densityuncured",
   "failuncured", "oddsuncured", "loghazarduncured", "hazard", "density", "fail",
   "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL, ylim = c(0,
-  1), xlab = "Time", ylab = NULL, col = 1, ci = T, add = F)
+  1), xlab = "Time", ylab = NULL, col = 1, ci = T, add = F, ...)
 }
 \arguments{
+\item{object}{Object of class \code{cuRe}.}
+
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
 
-\item{type}{Character. Defines the desired scale to plot. See ?predict.gfcm to see explaination of possible values.}
+\item{type}{Character. Defines the desired scale to plot. See ?predict.gfcm for possible values.}
 
 \item{time}{Optional time points at which to compute predictions.
 This argument is not used if type is \code{curerate}.}
@@ -26,16 +28,18 @@ This argument is not used if type is \code{curerate}.}
 \item{xlab}{Label of the x-axis. Default is "Time".}
 
 \item{ylab}{Label of the y-axis. If \code{NULL}, the function uses its default y-labels
-depending on \code{fit$type} and \code{fit$excess}.}
+depending on \code{object$type} and \code{object$excess}.}
 
 \item{col}{Colour of each line.}
 
 \item{ci}{Logical. If \code{TRUE}, confidence intervals are added to the plot.}
 
-\item{add}{Loglca. If \code{TRUE} the curve is added to the existing plot.
-#' @return A plot containing the predictions of each observation in \code{newdata}.}
+\item{add}{Loglca. If \code{TRUE} the curve is added to the existing plot.}
 
-\item{fit}{Object of class \code{cuRe}.}
+\item{...}{Further arguments passed to \code{plot} and \code{lines}.}
+}
+\value{
+A plot containing the predictions of each observation in \code{newdata}.
 }
 \description{
 Plot function associated with the classes \code{gfcm} and \code{cm}

@@ -10,7 +10,7 @@ data(colonDC)
 }
 \description{
 A dataset containing the individual baseline and follow-up data on more than 15,000
-colon cancer patient. The data is a data cleaned version of the \code{rstpm2::colon} data set.
+colon cancer patient. The data is a cleaned version of the \code{rstpm2::colon} data set.
 }
 \details{
 \itemize{

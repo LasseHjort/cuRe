@@ -51,8 +51,8 @@
 #' @example inst/calc.Crude.ex.R
 
 calc.Crude <- function(object, newdata = NULL, type = c("disease", "other", "condother"),
-                       time = NULL, tau = 100, reverse = FALSE, scale = ayear,
-                       var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk, rmap,
+                       time = NULL, tau = 100, reverse = FALSE, var.type = c("ci", "se", "n"),
+                       exp.fun = NULL, ratetable = survexp.dk, rmap, scale = ayear,
                        smooth.exp = FALSE, pars = NULL, link = "loglog", n = 100){
 
   type <- match.arg(type)

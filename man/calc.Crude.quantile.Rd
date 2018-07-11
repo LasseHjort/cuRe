@@ -2,26 +2,28 @@
 % Please edit documentation in R/calc.Crude.quantile.R
 \name{calc.Crude.quantile}
 \alias{calc.Crude.quantile}
-\title{Compute the time to statistical cure using the conditional probability of cancer-related death}
+\title{Compute the time to statistical cure using the conditional probability of disease-related death}
 \usage{
 calc.Crude.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
-  exp.fun = NULL, var.type = c("ci", "n"), rmap, ratetable = survexp.dk,
-  tau = 100, reverse = TRUE, scale = ayear)
+  exp.fun = NULL, var.type = c("ci", "se", "n"), rmap,
+  ratetable = survexp.dk, tau = 100, reverse = TRUE, scale = ayear)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
-\code{fmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
+\code{gfmc}, \code{cm}, \code{stpm2}, and \code{pstpm2}.}
 
 \item{q}{Threshold to estimate statistical cure according to.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
 
-\item{max.time}{Upper boundary of the interval [0, \code{max.time}] in which to search for solution.}
+\item{max.time}{Upper boundary of the interval [0, \code{max.time}] in which to search for solution (see details).
+Default is 20.}
 
 \item{exp.fun}{Object of class \code{list} containing functions for the expected survival
 of each row in \code{newdata}. If not specified, the function computes the expected
-survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.}
+survival based on \code{newdata} using the \code{survival::survexp} function. If \code{newdata} is not provided,
+the expected survival is based on the data which the model was fitted on.}
 
 \item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
 "\code{se}" for standard errors, and "\code{n}" for neither.}
@@ -32,7 +34,7 @@ Detailed documentation on this argument can be found by \code{?survexp}.}
 \item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
 Default is \code{survexp.dk}}
 
-\item{tau}{Constant at which the bound to tie probability is calculated. Default is 100.}
+\item{tau}{Upper bound of integral (see ?calc.Crude). Default is 100.}
 
 \item{reverse}{Logical passed on to \code{calc.Crude}. If \code{TRUE} (default), 1 - probability is provided.
 Only applicable for \code{type = condother}.}
@@ -45,7 +47,11 @@ The estimated cure point.
 }
 \description{
 The following function estimates the time to statistical cure using the conditional
-probability of cancer-related death.
+probability of disease-related death.
+}
+\details{
+The cure point is calculated as the time point at which the conditional probability of disease-related
+death reaches the threshold, \code{q}. If \code{q} is not reached within \code{max.time}, no solution is reported.
 }
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
@@ -56,6 +62,16 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
                             data = colonDC, ratetable = survexp.dk)
 
 #Fit cure model and estimate cure point
-fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
-calc.Crude.quantile(fit, q = 0.05, rmap = list(age = agedays, sex = sex, year = dx))
+fit <- rstpm2::stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6,
+                     bhazard = colonDC$bhaz, cure = T)
+cp <- calc.Crude.quantile(fit, q = 0.05,
+                          rmap = list(age = agedays, sex = sex, year = dx))
+
+#Compare the result with the trajectory of the conditional probability of disease-related death
+res <- calc.Crude(fit, type = "condother", time = seq(0, 20, length.out = 100),
+                  var.type = "n",
+                  rmap = list(age = agedays, sex = sex, year = dx), reverse = T)
+plot(res)
+abline(h = 0.05, v = cp$Estimate)
+
 }

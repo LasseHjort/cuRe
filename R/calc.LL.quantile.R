@@ -7,19 +7,21 @@
 #' @param q Threshold to estimate statistical cure according to.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
-#' @param max.time Upper boundary of the interval [0, \code{max.time}] in which to search for solution.
-#' @param tau The upper limit of the integral. Default is 100.
+#' @param max.time Upper boundary of the interval [0, \code{max.time}] in which to search for solution (see details).
+#' Default is 20.
+#' @param tau Upper bound of integral (see ?calc.LL). Default is 100.
 #' @param var.type Character. Possible values are "\code{ci}" (default) for confidence intervals,
 #' "\code{se}" for standard errors, and "\code{n}" for neither.
 #' @param ratetable Object of class \code{ratetable} used to compute the general population survival.
 #' Default is \code{survexp.dk}
 #' @param exp.fun Object of class \code{list} containing functions for the expected survival
 #' of each row in \code{newdata}. If not specified, the function computes the expected
-#' survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.
+#' survival based on \code{newdata} using the \code{survival::survexp} function. If \code{newdata} is not provided,
+#' the expected survival is based on the data which the model was fitted on.
 #' @param rmap List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 #' Detailed documentation on this argument can be found by \code{?survexp}.
-#' @param type Type of life expectancy measure. Possible values are "ll" for the loss of lifetime
-#' and "mrl" for the mean residual lifetime.
+#' @param type Type of life expectancy measure. Possible values are \code{type = "ll"} for the loss of lifetime
+#' and \code{type = "mrl"} for the mean residual lifetime.
 #' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
 #' That is, the time scale is assumed to be in years.
 #' @return The estimated cure point.

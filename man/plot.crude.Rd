@@ -4,11 +4,11 @@
 \alias{plot.crude}
 \title{Plot crude event probabilities}
 \usage{
-plot.crude(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
+plot.crude(object, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
   ylab = NULL, xlab = "Time", add = F, ...)
 }
 \arguments{
-\item{obj}{Object of class \code{crude} in which crude probabilities are calculated.}
+\item{object}{Object of class \code{crude} in which crude probabilities are stored.}
 
 \item{ylim}{Limits of y-axis.}
 
@@ -18,7 +18,7 @@ plot.crude(obj, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
 
 \item{col}{Colour of each curve.}
 
-\item{ylab}{Label of the y-axis. If \code{NULL}, the function uses its default labels depending on \code{obj$type}.}
+\item{ylab}{Label of the y-axis. If \code{NULL}, the function uses its default labels depending on \code{object$type}.}
 
 \item{xlab}{Label of the x-axis (default is "Time").}
 

@@ -32,36 +32,45 @@ predict(fit, type = "curerate")
 
 ###With covariates
 ##Fit mixture cure model
-fit <- GenFlexCureModel(Surv(FUyear, status) ~ sex, data = colonDC, df = 4, bhazard = "bhaz", cr.formula = ~ sex)
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ sex, data = colonDC, df = 4,
+                        bhazard = "bhaz", cr.formula = ~ sex)
 
 ##Plot model
 plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), ci = "n")
+     time = seq(0.001, 15, length.out = 100), ci = F)
 plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), col = 2, ci = "n", add = T)
+     time = seq(0.001, 15, length.out = 100), col = 2, ci = F, add = T)
 
 
 plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), ci = "n", type = "survuncured")
+     time = seq(0.001, 15, length.out = 100), ci = F, type = "survuncured")
 plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), col = 2, ci = "n", add = T, type = "survuncured")
+     time = seq(0.001, 15, length.out = 100), col = 2, ci = F,
+     add = T, type = "survuncured")
 
-predict(fit, type = "curerate", data.frame(sex = factor("female", levels = c("male", "female"))))
+predict(fit, type = "curerate",
+        data.frame(sex = factor(c("male", "female"),
+                                levels = c("male", "female"))))
 
 
 ##Fit mixture cure model with time-varying covariates
 colonDC$gender <- as.numeric(colonDC$sex) - 1
-fit <- GenFlexCureModel(Surv(FUyear, status) ~ gender, data = colonDC, df = 4, bhazard = "bhaz",
-                        cr.formula = ~ gender, tvc = list(gender = 2))
+fit <- GenFlexCureModel(Surv(FUyear, status) ~ gender, data = colonDC, df = 6,
+                        bhazard = "bhaz", cr.formula = ~ gender, tvc = list(gender = 2))
 
 ##Plot model
 plot(fit, newdata = data.frame(gender = 0))
 plot(fit, newdata = data.frame(gender = 1), add = T, col = 2)
 
-plot(fit, type = "hazard", newdata = data.frame(gender = 0), ci = "n")
-plot(fit, type = "hazard", newdata = data.frame(gender = 1), add = T, col = 2, ci = "n")
+plot(fit, type = "hazard", newdata = data.frame(gender = 0), ci = F)
+plot(fit, type = "hazard", newdata = data.frame(gender = 1),
+     add = T, col = 2, ci = F)
 
 #Predict cure proportions for a male and female patients
 predict(fit, type = "curerate", newdata = data.frame(gender = 0))
 predict(fit, type = "curerate", newdata = data.frame(gender = 1))
 
+
+fit2 <- stpm2(Surv(FUyear, status) ~ gender, data = colonDC, df = 4,
+              bhazard = colonDC$bhaz, tvc = list(gender = 2))
+plot(fit2, newdata = data.frame(gender = 0), type = "hazard")

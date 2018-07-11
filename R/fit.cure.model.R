@@ -1,8 +1,9 @@
 #' Parametric cure model
 #'
-#' This function is used to fit parametric cure models on the relative survival.
+#' This function fits parametric cure models using simple parametric distributions.
 #'
-#' @param formula Formula for modelling the cure proportion. Reponse has to be of the form \code{Surv(time, status)}.
+#' @param formula Formula for modelling the cure proportion. The left hand side
+#' has to be of the form \code{Surv(time, status)}.
 #' @param data Data frame in which to interpret the variable names in \code{formula} and \code{formula.surv}.
 #' @param bhazard Background hazard.
 #' @param formula.surv List of formulas for each parameter in the parametric distribution (see details).
@@ -12,17 +13,20 @@
 #' @param link Character. Specifies the link function of the cure proportion.
 #' @param covariance Logical. If \code{TRUE} (default), the covariance matrix is computed.
 #' @param link.mix Character. Specifies the link function for the mixture parameter in a
-#' weibull-weibull mixture model and weibull-exponential model. Only used when \code{dist = "weiwei"} and \code{dist = "weiexp"}.
+#' weibull-weibull mixture model and weibull-exponential model.\cr Only used when \code{dist = "weiwei"} and \code{dist = "weiexp"}.
 #' @param control List of control parameters passed to \code{optim}.
 #' @param method Optimization method passed to \code{optim}.
 #' @param init Initial values for the maximum likelihood optimization.
 #' If not provided, the optimization will start in 0.
 #' @return An object of class \code{cm} containing the parameters of the cure model.
-#' @details The function fits the model,
-#' \deqn{S(t) = \pi + (1 - \pi) S_u(t).}
-#' The \code{formula.surv} argument is used to model \eqn{S_u(t)}. It is a \code{list} of formulas with as many entries as there are
+#' @details If \code{type = "mixture"}, the function fits the model,
+#' \deqn{S(t|z) = \pi(z) + [1 - \pi(z)] S_u(t|z),}
+#' and if \code{type = "nmixture"}, the function fits the model,
+#' \deqn{S(t|z) = \pi(z)^{\widetilde F(t)},}
+#' where z is a vector of covariates. The \code{formula.surv} argument is used to model
+#' \eqn{S_u(t)} (1 - \eqn{\widetilde F(t)}). It is a \code{list} of formulas with as many entries as there are
 #' parameters in the chosen parametric distribution. If not specified, all formulas are assumed to be \code{~1}.
-#' The ith formula, i.e., \code{formula.surv[[i]]} refers \eqn{\theta_i} in the below survival functions.\cr\cr
+#' The ith formula, i.e., \code{formula.surv[[i]]} refers to \eqn{\theta_i} in the below survival functions.\cr\cr
 #' Exponential model:
 #' \deqn{S_u(t) = \exp\left(-t \theta_1\right).}
 #' Weibull model:
@@ -33,16 +37,16 @@
 #' \deqn{S_u(t) = \theta_1\exp\left(-\theta_2 t^{\theta_3}\right) + (1 - \theta_1)\exp\left(-\theta_4 t\right).}
 #' Weibull-Weibull mixture model:
 #' \deqn{S_u(t) = \theta_1\exp\left(-\theta_2 t^{\theta_3}\right) + (1 - \theta_1)\exp\left(-\theta_4 t^{\theta_5}\right).}
-#' In the the mixture models, the link function for the mixture component is controlled by \code{link.mix}.
+#' In the two last mixture models, the link function for the mixture component is controlled by \code{link.mix}.
 #' The remaining parameters are modelled using an exponential link function except \eqn{\theta_1} in the log-normal model,
-#' which is modeled using the identity.
+#' which is modelled using the identity.
 #' @export
 #' @example inst/fit.cure.model.ex.R
 
 
-fit.cure.model <- function(formula, data, bhazard = NULL, formula.surv = NULL, type = c("mixture", "nmixture"),
+fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture", "nmixture"),
                            dist = c("weibull", "exponential", "lognormal", "weiwei", "weiexp"),
-                           link = c("logit", "loglog", "identity", "probit"),
+                           link = c("logit", "loglog", "identity", "probit"), bhazard = NULL,
                            covariance = TRUE, link.mix = c("logit", "loglog", "identity", "probit"),
                            control = list(maxit = 10000), method = "Nelder-Mead", init = NULL){
 

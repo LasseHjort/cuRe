@@ -1,26 +1,27 @@
 #' Predict function for cure models
 #'
-#' This function is used to make predictions of the cure models.
+#' This function is used to make predictions from simple parametric cure models.
 #'
-#' @param fit Object of class \code{cm} to do predictions from.
+#' @param object Object of class \code{cm} to do predictions from.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
 #' the model was fitted on.
 #' @param type Prediction type (see details). The default is \code{surv}.
 #' @param time Optional time points at which to compute predictions.
-#' This argument is not used if type is \code{curerate}.
+#' This argument is not used if \code{type = curerate}.
 #' @param var.type Character. Possible values are "\code{ci}" (default) for confidence intervals,
 #' "\code{se}" for standard errors, and "\code{n}" for neither.
-#' @param pars Numerical vector containing the parameters values of the model.
+#' @param pars Numerical vector containing the parameter values of the model.
 #' In general, this argument can be ignored by the user.
 #' @param link Character, indicating the link function for the variance calculations.
-#' Possible values are "\code{log}", "\code{cloglog}", "\code{log2}", and "\code{I}".
+#' Possible values are "\code{log}", "\code{cloglog}" for \eqn{log(-log(x))} , "\code{mlog}" for -log(x),
+#' and "\code{I}" for the indentity.
 #' If \code{NULL} (default), the function will determine \code{link} from \code{type}.
 #' @param keep.attributes Logical. If \code{TRUE}, \code{newdata} will be added to the attributes of the output.
 #' @return A list containing the predictions of each individual in \code{newdata}.
 #' @details
 #' Possible values for argument \code{type} are:\cr
 #' \code{surv}: Survival function\cr
-#' \code{curerate}: The cure rate\cr
+#' \code{curerate}: The cure fraction\cr
 #' \code{probcure}: The conditional probability of being cured\cr
 #' \code{survuncured}: The survival of the uncured\cr
 #' \code{hazarduncured}: The hazard function of the uncured\cr
@@ -37,21 +38,21 @@
 #' \code{cumhaz}: The cumulative hazard function
 #' @export
 #'
-predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
+predict.cm <- function(object, newdata = NULL, type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
                                                      "cumhazuncured", "densityuncured", "failuncured", "oddsuncured",
                                                      "loghazarduncured", "hazard", "density", "fail",
                                                      "loghazard", "odds", "cumhaz"),
                        time = NULL, var.type = c("ci", "se", "n"), pars = NULL, link = NULL, keep.attributes = F){
   type <- match.arg(type)
   if(!is.null(pars)){
-    groups <- factor(rep(1:length(fit$coefs), fit$n.param.formula), 1:length(fit$coefs))
-    fit$coefs <- split(pars, f = groups)
+    groups <- factor(rep(1:length(object$coefs), object$n.param.formula), 1:length(object$coefs))
+    object$coefs <- split(pars, f = groups)
   }
   is_null_newdata <- is.null(newdata)
 
   #Check if covariates are included in the model in cases where newdata is not provided
   if(is_null_newdata){
-    classes <- sapply(lapply(fit$all.formulas, rstpm2:::rhs), class)
+    classes <- sapply(lapply(object$all.formulas, rstpm2:::rhs), class)
     if(any(classes != "numeric")){
       stop("'newdata' must be specified for model including covariates")
     }
@@ -61,14 +62,14 @@ predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcu
 
   #if(is.null(time)) time <- 0
   if (is.null(time)) {
-    dtimes <- fit$data[[fit$timeVar]][fit$event]
+    dtimes <- object$data[[object$timeVar]][object$event]
     time <- seq(min(dtimes), max(dtimes), length.out = 300)[-1]
   }
   if(type == "curerate"){
     time <- 1
   }
 
-  all.formulas <- lapply(fit$all.formulas, function(x){
+  all.formulas <- lapply(object$all.formulas, function(x){
     rstpm2:::lhs(x) <- NULL
     x
   }
@@ -76,7 +77,7 @@ predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcu
 
   X.all <- lapply(all.formulas, get_design, data = newdata)
 
-  if(fit$ci){
+  if(object$ci){
     var.type <- match.arg(var.type)
   } else {
     var.type <- "n"
@@ -84,13 +85,13 @@ predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcu
 
   pred <- if (!var.type %in% c("ci", "se")) {
     lapply(1:nrow(newdata), function(i){
-      data.frame(Estimate = local.cm(fit, type = type, X.all = lapply(X.all, function(X) X[i,, drop = F]),
+      data.frame(Estimate = local.cm(object, type = type, X.all = lapply(X.all, function(X) X[i,, drop = F]),
                                      time = time))
     })
   } else {
     gd <- NULL
     if (is.null(link)){
-      if(!fit$excess){
+      if(!object$excess){
         link <- switch(type, linkS = "I", linkpi = "I", curerate = "cloglog",
                        probcure = "cloglog", survuncured = "cloglog",
                        hazarduncured = "log", cumhazuncured = "log",
@@ -102,21 +103,21 @@ predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcu
         link <- switch(type, linkS = "I", linkpi = "I", curerate = "cloglog",
                        probcure = "cloglog", survuncured = "log",
                        hazarduncured = "I", cumhazuncured = "I",
-                       densityuncured = "I", failuncured = "log2",
+                       densityuncured = "I", failuncured = "mlog",
                        oddsuncured = "cloglog", loghazarduncured = "I",
-                       surv = "log", hazard = "I", density = "I", fail = "log2",
+                       surv = "log", hazard = "I", density = "I", fail = "mlog",
                        loghazard = "I", odds = "cloglog", cumhaz = "I")
       }
     }
 
     var.link <- switch(link, I = function(x) x, log = function(x) log(x),
-                       cloglog = function(x) log(-log(x)), log2 = function(x) -log(x))
+                       cloglog = function(x) log(-log(x)), mlog = function(x) -log(x))
     var.link.inv <- switch(link, I = function(x) x, log = function(x) exp(x),
-                           cloglog = function(x) exp(-exp(x)), log2 = function(x) exp(-x))
+                           cloglog = function(x) exp(-exp(x)), mlog = function(x) exp(-x))
 
 
     lapply(1:nrow(newdata), function(i){
-      res <- predictnl.default.cm(fit, local.cm, var.link = var.link, type = type,
+      res <- predictnl.default.cm(object, local.cm, var.link = var.link, type = type,
                                   X.all = lapply(X.all, function(X) X[i,, drop = F]), time = time)
       if(var.type == "ci"){
         lower <- var.link.inv(res$Estimate - res$SE * qnorm(0.975))
@@ -136,36 +137,36 @@ predict.cm <- function(fit, newdata = NULL, type = c("surv", "curerate", "probcu
 }
 
 
-predictnl.default.cm <- function (fit, fun, ...)
+predictnl.default.cm <- function (object, fun, ...)
 {
   localf <- function(coef, ...) {
-    fit$coefs <- split(coef, rep(1:length(fit$coefs), fit$n.param.formula))
-    fun(fit, ...)
+    object$coefs <- split(coef, rep(1:length(object$coefs), object$n.param.formula))
+    fun(object, ...)
   }
-  numDeltaMethod.cm(fit, localf, ...)
+  numDeltaMethod.cm(object, localf, ...)
 }
 
 
-numDeltaMethod.cm <- function (fit, fun, ...)
+numDeltaMethod.cm <- function (object, fun, ...)
 {
-  coef <- unlist(fit$coefs)
+  coef <- unlist(object$coefs)
   est <- fun(coef, ...)
-  Sigma <- fit$covariance
+  Sigma <- object$covariance
   gd <- rstpm2:::grad(fun, coef, ...)
   se.est <- as.vector(sqrt(colSums(gd * (Sigma %*% gd))))
   data.frame(Estimate = est, SE = se.est)
 }
 
 
-local.cm <- function(fit, type = "surv", var.link = function(x) x,
+local.cm <- function(object, type = "surv", var.link = function(x) x,
                      X.all, time) {
-  lps <- lapply(1:length(fit$coefs), function(i) as.vector(X.all[[i]] %*% fit$coefs[[i]]))
-  pi <- as.vector(get.link(fit$link)(lps[[1]]))
-  Su <- fit$surv.fun(x = time, lps = lps)
-  fu <- fit$dens.fun(x = time, lps = lps)
+  lps <- lapply(1:length(object$coefs), function(i) as.vector(X.all[[i]] %*% object$coefs[[i]]))
+  pi <- as.vector(get.link(object$link)(lps[[1]]))
+  Su <- object$surv.fun(x = time, lps = lps)
+  fu <- object$dens.fun(x = time, lps = lps)
   Hu <- -log(Su)
-  S <- fit$cure.type$surv(pi, Su)
-  f <- fit$cure.type$dens(pi, -fu, S)
+  S <- object$cure.type$surv(pi, Su)
+  f <- object$cure.type$dens(pi, -fu, S)
   H <- -log(S)
   est <- switch(type, linkS = lps, linkpi = lps[[1]], curerate = pi,
                 probcure = pi / S, survuncured = Su,

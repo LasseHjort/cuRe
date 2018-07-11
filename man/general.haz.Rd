@@ -7,10 +7,10 @@
 general.haz(time, age, sex, year, data = NULL, ratetable = survexp.dk)
 }
 \arguments{
-\item{time}{Either a numeric vector of follow-up times or a character indicating the variable
+\item{time}{Either a numeric vector of follow-up times (in days) or a character indicating the variable
 containing the follow-up times in the data.}
 
-\item{age}{Either a numeric vector of ages or a character indicating the variable containing the patient ages in the data.}
+\item{age}{Either a numeric vector of ages (in days) or a character indicating the variable containing the patient ages in the data.}
 
 \item{sex}{Either a character vector or factor with the sex of each patient
 or a character indicating the variable containing the patient sex in the data.}

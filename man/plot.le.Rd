@@ -4,17 +4,17 @@
 \alias{plot.le}
 \title{Plot the loss of lifetime function}
 \usage{
-plot.le(obj, ylim = NULL, xlim = NULL, ci = T, col = 1, ylab = NULL,
-  xlab = "Time", add = F, ...)
+plot.le(object, ylim = NULL, xlim = NULL, ci = T, col = 1,
+  ylab = NULL, xlab = "Time", add = F, ...)
 }
 \arguments{
-\item{obj}{Object of class \code{le}.}
+\item{object}{Object of class \code{le}.}
 
 \item{ylim}{Limit of the y-axis.}
 
 \item{xlim}{Limit of x-axis.}
 
-\item{ci}{Logical. If \code{TRUE}, confidence intervals are added to the plot.}
+\item{ci}{Logical. If \code{TRUE} (default), confidence intervals are added to the plot.}
 
 \item{col}{Numeric or character indicating the colours of the curves.}
 

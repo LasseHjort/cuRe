@@ -12,12 +12,15 @@
 #' @param formula Formula for modelling the survival of the uncured. Reponse has to be of the form \code{Surv(time, status)}.
 #' @param data Data frame in which to interpret the variables names in \code{formula},
 #' \code{smooth.formula}, \code{tvc.formula}, and \code{cr.formula}.
-#' @param smooth.formula Formula for describing the time-effect of the survival of the uncured (default is \code{NULL}).
-#' @param smooth.args List. Optional arguments to the time-effect of the survival of the uncured (default is \code{NULL}).
+#' @param smooth.formula Formula for describing the time-effect of the survival of the uncured.
+#' If \code{NULL} (default), the function uses the natural cubic splines modelled on the log-time scale.
+#' @param smooth.args List. Optional arguments to the time-effect of the survival
+#' of the uncured (default is \code{NULL}).
 #' @param df Integer. Degrees of freedom (default is 3) for the time-effect of the survival of the uncured.
+#' Is not used if \code{smooth.formula} is provided.
 # @param logH.args
 # @param logH.formula blabal
-#' @param tvc Named list of integers. Specifies the degrees of freedom for a time-varying covariate effect.
+#' @param tvc Named list of integers. Specifies the degrees of freedom for time-varying covariate effects.
 #' For instance, \code{tvc = list(x = 3)} creates a time-varying spline-effect of the covariate "x" with
 #' 3 degrees of freedom using the \code{rstpm2::nsx} function.
 #' @param tvc.formula Formula for the time-varying covariate effects.
@@ -35,11 +38,12 @@
 #' @param link.type Character providing the link function for the survival of the uncured.
 #' Possible values are \code{PH} for a proportional hazards model (default), \code{PO} for a proportion odds model,
 #' and \code{probit} for a probit model.
-#' @param init Providing initial values for the optimization procedure.
+#' @param init Initial values for the optimization procedure.
 #' If not specified, the function will create initial values internally.
 #' @param timeVar Optional character giving the name of the variable specifying the time component of the \code{Surv} object.
 #' Should currently not be used.
 #' @param time0Var Optional character giving the name of the variable specifying the time start time component used for delayed entry.
+#' Should currently not be used.
 #' @param baseoff Logical. If \code{TRUE}, the time-effect is modelled only using \code{tvc.formula} rather
 #' than merging with \code{smooth.formula}.
 #' @param control Named list with control arguments passed to \code{optim}.
@@ -52,13 +56,15 @@
 # This is usually \code{FALSE} (default).
 #' @return An object of class \code{gfcm}.
 #' @details The default smoother is natural cubic splines established by the \code{rstpm2::nsx} function.
-#' Functions such as \code{ns}, \code{bs} are readily available for usage. Also the \code{basis} function of \code{flexsurv} works.
-# The function also allows for the use of any smoother from the \code{mgvc} package.
-#' Initial values are calculated by two procedures and the model is fitted under each set of initial values.
-#' The model producding the highest likelihood is selected.\cr
+#' Functions such as \code{ns}, \code{bs} are readily available for usage. Also the \code{cb} function in this package
+#' can be used. Initial values are calculated by two procedures and the model is fitted under each set of initial values.
+#' The model producing the highest likelihood is selected.\cr
 #'
 #' Using \code{link.type = 'PH'}, the link function \eqn{g_1(x) = \log(-\log(x))} is used.
-#' Using \code{link.type = 'PO'}, the link function \eqn{g_1(x) = \log(\frac{x}{1 - x})} is used.
+#' Using \code{link.type = 'PO'}, the link function \eqn{g_1(x) = \log(\frac{x}{1 - x})} is used.\cr
+#'
+#' If \code{constraint = TRUE}, a non-negative hazard of the uncured is ensured by a general penalization scheme.
+#' If \code{constraint = FALSE}, penalization is still employed, but on the all-cause hazard instead.
 #' @export
 #' @import survival
 #' @import rstpm2

@@ -4,10 +4,11 @@
 \alias{calc.Crude}
 \title{Crude event probabilities}
 \usage{
-calc.Crude(object, newdata = NULL, type = c("cancer", "other", "condother"),
-  time = NULL, tau = 100, reverse = FALSE, scale = ayear,
+calc.Crude(object, newdata = NULL, type = c("disease", "other",
+  "condother"), time = NULL, tau = 100, reverse = FALSE,
   var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk,
-  rmap, link = "loglog", n = 100)
+  rmap, scale = ayear, smooth.exp = FALSE, pars = NULL, link = "loglog",
+  n = 100)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are
@@ -16,27 +17,25 @@ calc.Crude(object, newdata = NULL, type = c("cancer", "other", "condother"),
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
 
-\item{type}{Probability to compute. Possible values are \code{cancer} (default),
+\item{type}{Probability to compute. Possible values are \code{disease} (default),
 \code{other}, and \code{condother} (see details).}
 
-\item{time}{Optional time points at which to compute predictions. If empty, a grid of 100 time points between 0
+\item{time}{Time points at which to compute predictions. If empty, a grid of 100 time points between 0
 and \code{tau} is selected.}
 
-\item{tau}{Upper bound of the cancer related death integral (see details).
+\item{tau}{Upper bound of the integral used to compute the probability of disease-related death (see details).
 The argument is only used for \code{type = condother}. Default is 100.}
 
 \item{reverse}{Logical. If \code{TRUE}, 1 - probability is provided (default is \code{FALSE}).
 Only applicable for \code{type = condother}.}
-
-\item{scale}{Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
-That is, the time scale is assumed to be in years.}
 
 \item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
 "\code{se}" for standard errors, and "\code{n}" for neither.}
 
 \item{exp.fun}{Object of class \code{list} containing functions for the expected survival
 of each row in \code{newdata}. If not specified, the function computes the expected
-survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.}
+survival based on \code{newdata} using the \code{survival::survexp} function. If \code{newdata} is not provided,
+the expected survival is based on the data which the model was fitted on.}
 
 \item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
 Default is \code{survexp.dk}.}
@@ -44,9 +43,18 @@ Default is \code{survexp.dk}.}
 \item{rmap}{List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 Detailed documentation on this argument can be found by \code{?survexp}.}
 
-\item{n}{Number of knots used for the Gauss-Legendre quadrature.}
+\item{scale}{Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
+That is, the time scale is assumed to be in years.}
 
-\item{Link}{Link function for computing variance in order to bound confidence intervals. Default is \code{loglog}.}
+\item{smooth.exp}{Logical. If \code{TRUE}, the general population survival function is smoothed by the function
+\code{smooth.spline} using the the argument \code{all.knots = TRUE}.}
+
+\item{pars}{A vector of parameter values for the model given in \code{object}. Currently not used.}
+
+\item{link}{Link function for computing variance in order to restrict confidence intervals to [0, 1].
+Default is \code{loglog}.}
+
+\item{n}{Number of knots used for the Gauss-Legendre quadrature.}
 }
 \value{
 A list containing the crude probability estimates
@@ -58,17 +66,18 @@ Function for computing crude event probabilties based on relative survival model
 \details{
 The function estimates crude probabilities by using the relative survival, expected survival,
 and the cause-specific hazard function.
-The crude cumulative incidence of cancer related death (\code{type = "cancer"}) is
-\deqn{P(T \leq t, D = cancer) = \int_0^t S^*(u) R(u) \lambda(u)du.}
+The crude cumulative incidence of disease-related death (\code{type = "disease"}) is
+\deqn{P(T \leq t, D = disease) = \int_0^t S^*(u) R(u) \lambda(u)du.}
 The crude cumulative incidence of death from other causes (\code{type = "other"}) is
 \deqn{P(T \leq t, D = other) = \int_0^t S^*(u) R(u) h^*(u)du.}
-The conditional probability of eventually dying from other causes than cancer (\code{type = "condother"}) is
-\deqn{P(D = other| T > t) = \frac{P(D = cancer) - P(T \leq t, D = cancer)}{P(T > t)}.}
-The proportion of patients bound to die from the disease (P(D = cancer))
-can be computed by using \code{type = "cancer"} and choosing a sufficiently large time point (e.g., 100 years).
+The conditional probability of eventually dying from other causes than disease (\code{type = "condother"}) is
+\deqn{P(D = other| T > t) = \frac{P(D = disease) - P(T \leq t, D = disease)}{P(T > t)}.}
+The probability of disease-related death, P(D = disease),
+can be computed by using \code{type = "disease"} and choosing a sufficiently large time point.
+For P(D = other| T>t), the argument \code|tau| controls this time point (default is 100).
 }
 \examples{
-##Use data cleaned version of the colon cancer data from the rstpm2 package
+##Use data cleaned version of the colon disease data from the rstpm2 package
 data("colonDC")
 
 ##Extract general population hazards
@@ -77,14 +86,15 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
 
 ##Spline-base cure model
 #Fit cure model
-fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
+fit <- rstpm2::stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6,
+                     bhazard = colonDC$bhaz, cure = T)
 
-#Compute the probability of cancer related death
+#Compute the probability of disease-related death
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 50),
                   rmap = list(age = agedays, sex = sex, year = dx))
 plot(res)
 
-#Compute the conditional probability of dying from other causes than cancer
+#Compute the conditional probability of dying from other causes than disease
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 50), type = "condother",
                   rmap = list(age = agedays, sex = sex, year = dx))
 plot(res)
@@ -95,19 +105,19 @@ plot(res)
 fit <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz",
                       type = "mixture", dist = "weibull", link = "logit")
 
-#Compute the probability of cancer related death
+#Compute the probability of disease-related death
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 50),
                   rmap = list(age = agedays, sex = sex, year = dx))
 plot(res)
 
-#Compute the conditional probability of cancer-related death
-res <- calc.Crude(fit, time = seq(0, 20, length.out = 50), type = "condother",
+#Compute the conditional probability of disease-related death
+res2 <- calc.Crude(fit, time = seq(0, 20, length.out = 50), type = "condother",
                   rmap = list(age = agedays, sex = sex, year = dx), reverse = T)
-plot(res)
+plot(res2)
 
 
 }
 \references{
 Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
-for improved risk communication in population-based cancer patient survival. \emph{Epidemiology}, 12:86.
+for improved risk communication in population-based disease patient survival. \emph{Epidemiology}, 12:86.
 }

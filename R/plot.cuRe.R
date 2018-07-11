@@ -2,21 +2,22 @@
 #'
 #' Plot function associated with the classes \code{gfcm} and \code{cm}
 #'
-#' @param fit Object of class \code{cuRe}.
+#' @param object Object of class \code{cuRe}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
-#' @param type Character. Defines the desired scale to plot. See ?predict.gfcm to see explaination of possible values.
+#' @param type Character. Defines the desired scale to plot. See ?predict.gfcm for possible values.
 #' @param time Optional time points at which to compute predictions.
 #' This argument is not used if type is \code{curerate}.
 #' @param xlim Limits of the x-axis
 #' @param ylim Limits of the y-axis.
 #' @param xlab Label of the x-axis. Default is "Time".
 #' @param ylab Label of the y-axis. If \code{NULL}, the function uses its default y-labels
-#' depending on \code{fit$type} and \code{fit$excess}.
+#' depending on \code{object$type} and \code{object$excess}.
 #' @param col Colour of each line.
 #' @param ci Logical. If \code{TRUE}, confidence intervals are added to the plot.
 #' @param add Loglca. If \code{TRUE} the curve is added to the existing plot.
-#' #' @return A plot containing the predictions of each observation in \code{newdata}.
+#' @param ... Further arguments passed to \code{plot} and \code{lines}.
+#' @return A plot containing the predictions of each observation in \code{newdata}.
 #' @export
 
 plot.cuRe <- function(object, newdata = NULL, type = c("surv", "probcure", "survuncured", "hazarduncured",
@@ -25,7 +26,7 @@ plot.cuRe <- function(object, newdata = NULL, type = c("surv", "probcure", "surv
                                                        "density", "fail", "loghazard", "odds", "cumhaz"),
                       time = NULL, xlim = NULL, ylim = c(0, 1),
                       xlab = "Time", ylab = NULL, col = 1, ci = T,
-                      add = F){
+                      add = F, ...){
 
   type <- match.arg(type)
 
@@ -83,13 +84,13 @@ plot.cuRe <- function(object, newdata = NULL, type = c("surv", "probcure", "surv
   for(i in 1:nr.samples){
     if(i == 1 & !add){
       plot(Estimate ~ time, data = pred[[i]], type = "l", ylim = ylim, xlim = xlim,
-           xlab = xlab, ylab = ylab, col = col[i])
+           xlab = xlab, ylab = ylab, col = col[i], ...)
     }else{
-      lines(Estimate ~ time, data = pred[[i]], type = "l", col = col[i])
+      lines(Estimate ~ time, data = pred[[i]], type = "l", col = col[i], ...)
     }
     if(ci){
-      lines(upper ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2)
-      lines(lower ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2)
+      lines(upper ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2, ...)
+      lines(lower ~ time, data = pred[[i]], type = "l", col = col[i], lty = 2, ...)
     }
   }
 }

@@ -4,10 +4,10 @@
 \alias{calc.LL}
 \title{Loss of lifetime estimation}
 \usage{
-calc.LL(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
+calc.LL(object, newdata = NULL, type = c("ll", "mrl"), time = NULL,
   tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = survexp.dk, rmap, pars = NULL, n = 100, scale = ayear,
-  smooth.exp = T)
+  ratetable = survexp.dk, rmap, smooth.exp = FALSE, scale = ayear,
+  pars = NULL, n = 100)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are
@@ -16,21 +16,22 @@ calc.LL(object, newdata = NULL, time = NULL, type = c("ll", "mrl"),
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}
 
-\item{time}{Optional time points at which to compute predictions.
-If empty, a grid of 100 time points between 0 and \code{tau} is selected.}
-
 \item{type}{Type of life expectation estimate.
 Possible values are \code{ll} (default) which gives the loss of lifetime, and \code{mrl}
 which gives the mean residual lifetime.}
 
-\item{tau}{The upper limit of the integral. Default is 100.}
+\item{time}{Time points at which to compute predictions. If empty, a grid of 100 time points between 0
+and \code{tau} is selected.}
+
+\item{tau}{The upper limit of the integral (see details). Default is 100.}
 
 \item{var.type}{Character. Possible values are "\code{ci}" (default) for confidence intervals,
 "\code{se}" for standard errors, and "\code{n}" for neither.}
 
 \item{exp.fun}{Object of class \code{list} containing functions for the expected survival
 of each row in \code{newdata}. If not specified, the function computes the expected
-survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.}
+survival based on \code{newdata} using the \code{survival::survexp} function. If \code{newdata} is not provided,
+the expected survival is based on the data which the model was fitted on.}
 
 \item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
 Default is \code{survexp.dk}.}
@@ -38,25 +39,34 @@ Default is \code{survexp.dk}.}
 \item{rmap}{List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 Detailed documentation on this argument can be found by \code{?survexp}.}
 
-\item{n}{Number of knots used for the Gauss-Legendre quadrature.}
+\item{smooth.exp}{Logical. If \code{TRUE}, the general population survival function is smoothed by the function
+\code{smooth.spline} using the the argument \code{all.knots = TRUE}.}
 
 \item{scale}{Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
 That is, the time scale is assumed to be in years.}
+
+\item{pars}{A vector of parameter values for the model given in \code{object}. Currently not used.}
+
+\item{n}{Number of knots used for the Gauss-Legendre quadrature.}
 }
 \value{
 An object of class \code{le} containing the life expectancy estimates
 of each individual in \code{newdata}.
 }
 \description{
-Function for computing loss of lifetime function based on relative survival models.
+Function for computing mean residual lifetime and loss of lifetime estimates based on relative survival models.
 }
 \details{
+The mean residual lifetime function and loss of lifetime function are based on numerical
+integration of the area under the observed and expected conditional survival functions.
 If \code{type = "ll"}, the function computes
 \deqn{\frac{\int_t^\infty S^*(u)}{S^*(t)} - \frac{\int_t^\infty S(u)}{S(t)}.}
 If \code{type = "mrl"}, the function computes
 \deqn{\frac{\int_t^\infty S(u)}{S(t)},}
 for a given t. The function \eqn{S^*(t)} is the general population survival function and \eqn{S(t)}
-is the patient survival function. The integral is computed by Gauss-Legendre quadrature
+is the observed survival function. Integration to infinity is not required in studies of human mortality,
+so an upper limit, \code{tau}, is chosen instead. As most humans die before they 100 years, this is
+the default setting of the function. The integral is computed by Gauss-Legendre quadrature
 and the point wise variance is estimated using the delta method and numerical differentiation.
 }
 \examples{
@@ -69,7 +79,8 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
 
 ##Spline-base cure model
 #Fit cure model
-fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
+fit <- rstpm2::stpm2(Surv(FUyear, status) ~ 1, data = colonDC,
+                     df = 6, bhazard = colonDC$bhaz, cure = T)
 
 #Compute and plot the loss of lifetime function
 res <- calc.LL(fit, time = seq(0, 20, length.out = 50),

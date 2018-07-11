@@ -6,10 +6,10 @@
 \usage{
 lts(fit, type = c("surv", "hazard", "cumhaz", "loghaz"), newdata = NULL,
   time = NULL, var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = survexp.dk, rmap, scale = 365.24)
+  ratetable = survexp.dk, rmap, scale = 365.24, smooth.exp = FALSE)
 }
 \arguments{
-\item{fit}{Fitted model to do predictions from. Possible classes are \code{fcm}, \code{gfcm}, \code{stpm2},
+\item{fit}{Fitted model to do predictions from. Possible classes are \code{gfcm}, \code{stpm2},
 \code{pstpm2}, and \code{cm}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
@@ -23,7 +23,8 @@ and the maximum follow-up time is selected.}
 
 \item{exp.fun}{Object of class \code{list} containing functions for the expected survival
 of each row in \code{newdata}. If not specified, the function computes the expected
-survival using the \code{survival::survexp} function and smoothing by \code{smooth.spline}.}
+survival based on \code{newdata} using the \code{survival::survexp} function. If \code{newdata} is not provided,
+the expected survival is based on the data which the model was fitted on.}
 
 \item{ratetable}{Object of class \code{ratetable} used to compute the general population survival.
 Default is \code{survexp.dk}.}
@@ -31,8 +32,11 @@ Default is \code{survexp.dk}.}
 \item{rmap}{List to be passed to \code{survexp} from the \code{survival} package if \code{exp.fun = NULL}.
 Detailed documentation on this argument can be found by \code{?survexp}.}
 
-\item{scale}{Numeric. Passes to the \code{survival::survexp} function and defaults to 365.24.
+\item{scale}{Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
 That is, the time scale is assumed to be in years.}
+
+\item{smooth.exp}{Logical. If \code{TRUE}, the general population survival function is smoothed by the function
+\code{smooth.spline} using the the argument \code{all.knots = TRUE}.}
 }
 \value{
 A object of class \code{lts} containing the loss of lifetime estiamtes

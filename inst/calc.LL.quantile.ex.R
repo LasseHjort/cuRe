@@ -6,5 +6,7 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
                             data = colonDC, ratetable = survexp.dk)
 
 #Fit cure model and estimate cure point
-fit <- stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6, bhazard = colonDC$bhaz, cure = T)
-calc.LL.quantile(fit, q = 1, rmap = list(age = agedays, sex = sex, year = dx))
+fit <- rstpm2::stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6,
+                     bhazard = colonDC$bhaz, cure = T)
+calc.LL.quantile(fit, q = 1,
+                 rmap = list(age = agedays, sex = sex, year = dx))

@@ -11,7 +11,6 @@
 #' @param xlab Label to be written on the x-axis.
 #' @param add Logical indicating whether to add to current plot window (default is FALSE).
 #' @param ... Further argument passed to \code{plot} and \code{lines}.
-#' @export
 
 plot.lts <- function(obj, ylim = NULL, xlim = NULL, ci = F, col = 1,
                     ylab = NULL, xlab = "Time", add = F, ...){
