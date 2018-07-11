@@ -74,7 +74,7 @@ The conditional probability of eventually dying from other causes than disease (
 \deqn{P(D = other| T > t) = \frac{P(D = disease) - P(T \leq t, D = disease)}{P(T > t)}.}
 The probability of disease-related death, P(D = disease),
 can be computed by using \code{type = "disease"} and choosing a sufficiently large time point.
-For P(D = other| T>t), the argument \code|tau| controls this time point (default is 100).
+For P(D = other| T>t), the argument \code{tau} controls this time point (default is 100).
 }
 \examples{
 ##Use data cleaned version of the colon disease data from the rstpm2 package
