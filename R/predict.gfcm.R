@@ -2,7 +2,7 @@
 #'
 #' Function for doing predictions for class \code{gfcm}.
 #'
-#' @param fit Object of class \code{gfcm} to do predictions from.
+#' @param object Object of class \code{gfcm} to do predictions from.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
 #' the model was fitted on.
 #' @param type Prediction type (see details). The default is \code{surv}.
@@ -13,14 +13,15 @@
 #' @param pars Numerical vector containing the parameters values of the model.
 #' In general, this argument can be ignored by the user.
 #' @param link Character, indicating the link function for the variance calculations.
-#' Possible values are "\code{log}", "\code{cloglog}", "\code{log2}", and "\code{I}".
+#' Possible values are "\code{log}", "\code{cloglog}" for \eqn{log(-log(x))} , "\code{mlog}" for -log(x),
+#' and "\code{I}" for the indentity.
 #' If \code{NULL} (default), the function will determine \code{link} from \code{type}.
 #' @param keep.attributes Logical. If \code{TRUE}, \code{newdata} will be added to the attributes of the output.
 #' @return A list containing the predictions of each individual in \code{newdata}.
 #' @details
 #' Possible values for argument \code{type} are:\cr
 #' \code{surv}: Survival function\cr
-#' \code{curerate}: The cure rate\cr
+#' \code{curerate}: The cure fraction\cr
 #' \code{probcure}: The conditional probability of being cured\cr
 #' \code{survuncured}: The survival of the uncured\cr
 #' \code{hazarduncured}: The hazard function of the uncured\cr
@@ -150,17 +151,17 @@ predict.gfcm <- function (object, newdata = NULL,
         link <- switch(type, linkS = "I", linkpi = "I", curerate = "cloglog",
                        probcure = "cloglog", survuncured = "log",
                        hazarduncured = "I", cumhazuncured = "I",
-                       densityuncured = "I", failuncured = "log2",
+                       densityuncured = "I", failuncured = "mlog",
                        oddsuncured = "cloglog", loghazarduncured = "I",
-                       surv = "log", hazard = "I", density = "I", fail = "log2",
+                       surv = "log", hazard = "I", density = "I", fail = "mlog",
                        loghazard = "I", odds = "cloglog", cumhaz = "I")
       }
     }
 
     var.link <- switch(link, I = function(x) x, log = function(x) log(x),
-                       cloglog = function(x) log(-log(x)), log2 = function(x) -log(x))
+                       cloglog = function(x) log(-log(x)), mlog = function(x) -log(x))
     var.link.inv <- switch(link, I = function(x) x, log = function(x) exp(x),
-                           cloglog = function(x) exp(-exp(x)), log2 = function(x) exp(-x))
+                           cloglog = function(x) exp(-exp(x)), mlog = function(x) exp(-x))
 
     if (use.gr) {
       if (type == "hazard" && link %in% c("I", "log")) {
