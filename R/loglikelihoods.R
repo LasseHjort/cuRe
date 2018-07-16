@@ -300,32 +300,6 @@ minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, ind0, link
   -sum(likterms)
 }
 
-grad2 <- function(func,x,...) # would shadow numDeriv::grad()
-{
-  h <- .Machine$double.eps^(1/3)*ifelse(abs(x)>1,abs(x),1)
-  temp <- x+h
-  h.hi <- temp-x
-  temp <- x-h
-  h.lo <- x-temp
-  twoeps <- h.hi+h.lo
-  nx <- length(x)
-  ny <- length(func(x,...))
-  if (ny==0L) stop("Length of function equals 0")
-  df <- if(ny==1L) rep(NA, nx) else matrix(NA, nrow=nx,ncol=ny)
-  for (i in 1L:nx) {
-    hi2 <- lo2 <- hi <- lo <- x
-    hi[i] <- x[i] + h.hi[i]
-    hi2[i] <- x[i] + 2 * h.hi[i]
-    lo[i] <- x[i] - h.lo[i]
-    lo2[i] <- x[i] - 2 * h.lo[i]
-    if (ny==1L)
-      df[i] <- (func(lo2, ...) - 8 * func(lo, ...) + 8 * func(hi, ...) - func(hi2, ...))/ (12 * h)
-    else df[i,] <- (func(lo2, ...) - 8 * func(lo, ...) + 8 * func(hi, ...) - func(hi2, ...))/ (12 * h)
-  }
-  return(df)
-}
-
-
 
 # Likelihood for mixture cure models
 # mixture_minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, link.fun,
@@ -545,95 +519,6 @@ GenFlexMinLogLikDelayed <- function(param, event, X, XD, X.cr, X0, ind0, bhazard
 # }
 
 
-#Basis function
-#' @export
-cb <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
-  nx <- length(x)
-  if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
-  nk <- ncol(knots)
-  b <- matrix(nrow=length(x), ncol=nk)
-  if (nk>0){
-    b[,1] <- 1
-    b[,2] <- x
-  }
-  if (nk>2) {
-    lam <- (knots[,nk] - knots)/(knots[,nk] - knots[,1])
-    for (j in 1:(nk-2)) {
-      b[,j+2] <- pmax(x - knots[,j+1], 0)^3 - lam[,j+1]*pmax(x - knots[,1], 0)^3 -
-        (1 - lam[,j+1])*pmax(x - knots[,nk], 0)^3
-    }
-  }
-
-  if(!intercept) b <- b[,-1, drop = FALSE]
-
-  if(ortho){
-    if(is.null(R.inv)){
-      qr_decom <- qr(b)
-      b <- qr.Q(qr_decom)
-      R.inv <- solve(qr.R(qr_decom))
-    } else{
-      R.inv <- matrix(R.inv, nrow = ncol(b))
-      b <- b %*% R.inv
-    }
-  } else {
-    R.inv <- diag(ncol(b))
-  }
-
-  a <- list(knots = knots[1,], ortho = ortho, R.inv = R.inv, intercept = intercept)
-  attributes(b) <- c(attributes(b), a)
-  class(b) <- c("cb", "matrix")
-  b
-}
-
-#Predict function associated with bsx.
-predict.cb <- function (object, newx, ...)
-{
-  if (missing(newx))
-    return(object)
-  a <- c(list(x = newx), attributes(object)[c("knots", "ortho",
-                                              "R.inv", "intercept")])
-  do.call("cb", a)
-}
-
-#Additional function needed to fix the knot location in cases where df is only specified
-#' @export
-makepredictcall.cb <- function (var, call)
-{
-  if (as.character(call)[1L] != "cb")
-    return(call)
-  at <- attributes(var)[c("knots", "ortho", "R.inv", "intercept")]
-  xxx <- call[1L:2]
-  xxx[names(at)] <- at
-  xxx
-}
-
-#Derivate of basis function
-dbasis <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
-  if(ortho & is.null(R.inv)) stop("Both 'ortho' and 'R.inv' has to be specified!")
-  nx <- length(x)
-  if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
-  nk <- ncol(knots)
-  b <- matrix(nrow=length(x), ncol=nk)
-  if (nk>0){
-    b[,1] <- 0
-    b[,2] <- 1
-  }
-  if (nk>2) {
-    lam <- (knots[,nk] - knots)/(knots[,nk] - knots[,1])
-    for (j in 3:nk) {
-      b[,j] <- 3*pmax(x - knots[,j-1], 0)^2 - 3*lam[,j-1]*pmax(x - knots[,1], 0)^2 -
-        3*(1 - lam[,j-1])*pmax(x - knots[,nk], 0)^2
-    }
-  }
-
-  if(!intercept) b <- b[, -1]
-  if(ortho){
-    b <- b %*% R.inv
-  }
-
-  b
-}
-
 
 lhs <- function(formula){
   if (length(formula) == 3) formula[[2]] else NULL
@@ -650,91 +535,6 @@ rhs <- function (formula)
   newformula
 }
 
-###############KIG HER LASSSSSEEEEEE##################3
-#Fix problem med cb.cure! Det virker med orthogonalisering.
-
-# Cure base functions
-#' @export
-cbc <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE){
-  nk <- length(knots)
-  b <- matrix(nrow = length(x), ncol = nk - 1)
-  knots_rev <- rev(knots)
-  if (nk > 0) {
-    b[, 1] <- 1
-  }
-  if (nk > 2) {
-    for (j in 2:(nk - 1)) {
-      lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
-      b[, j] <- pmax(knots_rev[nk - j + 1] - x, 0)^3 - lam * pmax(knots_rev[nk] - x, 0)^3 -
-        (1 - lam) * pmax(knots_rev[1] - x, 0)^3
-    }
-  }
-
-  if(!intercept) b <- b[,-1, drop = F]
-
-  if(ortho){
-    if(is.null(R.inv)){
-      qr_decom <- qr(b)
-      b <- qr.Q(qr_decom)
-      R.inv <- solve(qr.R(qr_decom))
-    } else{
-      R.inv <- matrix(R.inv, nrow = ncol(b))
-      b <- b %*% R.inv
-    }
-  } else {
-    R.inv <- diag(ncol(b))
-  }
-
-  a <- list(knots = knots, ortho = ortho, R.inv = R.inv, intercept = intercept)
-  attributes(b) <- c(attributes(b), a)
-  class(b) <- c("cbc", "matrix")
-  b
-}
-
-#Predict function associated with bsx.
-predict.cbc <- function (object, newx, ...)
-{
-  if (missing(newx))
-    return(object)
-  a <- c(list(x = newx), attributes(object)[c("knots", "ortho",
-                                              "R.inv", "intercept")])
-  do.call("cbc", a)
-}
-
-#Additional function needed to fix the knot location in cases where df is only specified
-#' @export
-makepredictcall.cbc <- function (var, call)
-{
-  if (as.character(call)[1L] != "cbc")
-    return(call)
-  at <- attributes(var)[c("knots", "ortho", "R.inv", "intercept")]
-  xxx <- call[1L:2]
-  xxx[names(at)] <- at
-  xxx
-}
-
-dbasis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
-  nk <- length(knots)
-  b <- matrix(nrow = length(x), ncol = nk - 1)
-  knots_rev <- rev(knots)
-  if (nk > 0) {
-    b[, 1] <- 0
-  }
-  if (nk > 2) {
-    for (j in 2:(nk - 1)) {
-      lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
-      b[, j] <- - 3 * pmax(knots_rev[nk - j + 1] - x, 0)^2 + 3 * lam * pmax(knots_rev[nk] - x, 0)^2 +
-        3 * (1 - lam) * pmax(knots_rev[1] - x, 0)^2
-    }
-  }
-
-  if(!intercept) b <- b[, -1]
-
-  if(ortho){
-    b <- b %*% R.inv
-  }
-  b
-}
 
 
 
@@ -760,10 +560,5 @@ minuslog_likelihood <- function(param, time, event, b, db,
   event_logical <- as.numeric(event != 0)
   -sum(inner_sum + (1 - event_logical) * log(1 - sum_Fks))
 }
-
-
-
-#legendre.quadrature.rule.200 <- legendre.quadrature.rules(200)[[200]]
-#save(legendre.quadrature.rule.200, file = "data/legendre.quadrature.rules.200.RData")
 
 

@@ -4,6 +4,32 @@
 
 #The bs function is extended to bsx by user a QR decompositon to restrict the trajectory beyond the boundary knots.
 #The restriction is possible for both the first and last knot.
+
+
+#' Polynomial B-splines with eXtensions
+#'
+#' Generate the B-spline basis matrix for a polynomial spline with derivative restrictions at the boundary knots.
+#'
+#' @param x the predictor variable. Missing values are allowed.
+#' @param df degrees of freedom; one can specify \code{df} rather than knots; \code{bs()} then chooses
+#' \code{df}-\code{degree} (minus one if there is an intercept) knots at suitable quantiles of \code{x}
+#' (which will ignore missing values). The default, \code{NULL}, corresponds to no inner knots,
+#' i.e., \code{degree}-\code{intercept}.
+#' @param knots the internal breakpoints that define the spline. The default is \code{NULL}, which results
+#' in a basis for ordinary polynomial regression. Typical values are the mean or median for one knot,
+#' quantiles for more knots. See also \code{Boundary.knots}.
+#' @param degree degree of the piecewise polynomial—default is \code{3} for cubic splines.
+#' @param Boundary.knots boundary points at which to anchor the B-spline basis (default the range of the non-NA data).
+#' If both \code{knots} and \code{Boundary.knots} are supplied, the basis parameters do not depend on \code{x}.
+#' Data can extend beyond \code{Boundary.knots}.
+#' @param intercept if \code{TRUE}, an intercept is included in the basis; default is \code{FALSE}.
+#' @param deriv an integer vector of length 2 with values between 0 and \code{degree + 1} giving the
+#' derivative constraint order at the left and right boundary knots;
+#' an order of 2 constrains the second derivative to zero (f”(x)=0);
+#' an order of 1 constrains the first and second derivatives to zero (f'(x)=f”(x)=0);
+#' an order of 0 constrains the zero, first and second derivatives to zero (f(x)=f'(x)=f”(x)=0)
+#' An order of \code{degree + 1} computes the basis matrix similarly to \code{bs}.
+#' @return A matrix with containing the basis functions evaluated in \code{x}.
 bsx <- function (x, df = NULL, knots = NULL, degree = 3, intercept = FALSE,
                  Boundary.knots = range(x), deriv = NULL)
 {
@@ -131,26 +157,26 @@ makepredictcall.bsx <- function (var, call)
 
 
 #Prespecified arguments for testing
-#library(splines)
-# x <- -20:20
-# df <- NULL
-# knots <- c(2, 5,7)
-# Boundary.knots <- c(1, 10)
-# intercept <- FALSE
-# deriv <- c(4,1)
-# degree <- 3
+library(splines)
+x <- -20:20
+df <- NULL
+knots <- c(2, 5,7)
+Boundary.knots <- c(1, 10)
+intercept <- FALSE
+deriv <- NULL
+degree <- 3
 
 
 # #Lets test if it works for cubic splines. Define x values and boundary knots
-# x <- seq(-1, 14, length.out = 100)
-# Boundary.knots <- c(1, 10)
-# #Compute basis
-# b <- bsx(x = x, df = 5, degree = 3, deriv = c(1,1), Boundary.knots = Boundary.knots)
-# #Pick random coefficients
-# coefs <- rnorm(ncol(b))
-# #Plot the trajectory
-# plot(time, b %*% coefs, type = "l")
-# abline(v = Boundary.knots)
+x <- seq(-1, 14, length.out = 100)
+Boundary.knots <- c(1, 10)
+#Compute basis
+b <- bsx(x = x, df = 5, degree = 3, deriv = c(4,0), Boundary.knots = Boundary.knots)
+#Pick random coefficients
+coefs <- rnorm(ncol(b))
+#Plot the trajectory
+plot(x, b %*% coefs, type = "l")
+abline(v = Boundary.knots)
 #
 #
 # #Lets try degree 4 and 5
