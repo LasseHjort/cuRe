@@ -170,7 +170,7 @@ lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
                      model.params = model.params, var.link = var.link, type = type)
     D <- data.frame(Estimate = est)
     if(var.type != "n"){
-      gr <- jacobian(lts.local, x = model.params, time = time, exp.fun = exp.fun[[i]],
+      gr <- numDeriv::jacobian(lts.local, x = model.params, time = time, exp.fun = exp.fun[[i]],
                      rel_surv = rel_surv[[i]], excess_haz = excess_haz[[i]],
                      expected_haz = expected_haz[[i]], var.link = var.link, type = type)
       D$SE <- sqrt(apply(gr, 1, function(x) x %*% cov %*% x))

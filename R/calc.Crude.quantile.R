@@ -93,7 +93,7 @@ calc.Crude.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, ex
     }
     if(var.type %in% c("ci", "se")){
       if(!ci.new){
-        gr <- grad(f, x = uni, q = 0)
+        gr <- numDeriv::grad(f, x = uni, q = 0)
         VAR <- calc.Crude(fit, time = uni, exp.fun = exp.fun[i], newdata = newdata[i,,drop = F],
                           tau = tau, var.type = "se", type = "condother", link = "identity",
                           reverse = reverse)[[1]]$SE ^ 2

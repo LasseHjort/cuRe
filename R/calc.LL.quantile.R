@@ -85,7 +85,7 @@ calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type
     }
     if(var.type %in% c("ci", "se")){
       if(!ci.new){
-        gr <- grad(f, x = uni, q = 0)
+        gr <- numDeriv::grad(f, x = uni, q = 0)
         VAR <- calc.LL(fit, time = uni, exp.fun = exp.fun[i], newdata = newdata[i,,drop = F],
                           tau = tau, var.type = "se")[[1]]$SE ^ 2
         SE <- sqrt(gr ^ (-2) * VAR / (uni ^ 2))

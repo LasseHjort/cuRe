@@ -292,7 +292,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
     data0 <- data
     data0[[timeVar]] <- data0[[time0Var]]
     X <- transX(rstpm2:::lpmatrix.lm(lm.obj, data0), data0)
-    XD <- grad(lpfunc, 0, lm.obj, data0, timeVar)
+    XD <- rstpm2:::grad(lpfunc, 0, lm.obj, data0, timeVar)
     XD <- transXD(matrix(XD, nrow = nrow(X)))
     X0 <- matrix(0, nrow(X), ncol(X))
     rm(data0)
@@ -419,10 +419,10 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   #Compute the covariance matrix matrix
   if(covariance){
     args$kappa <- 0
-    args$x0 <- res$par
-    args$f <- minusloglik
+    args$x <- res$par
+    args$func <- minusloglik
     args$constraint <- FALSE
-    hes <- do.call(pracma::hessian, args)
+    hes <- do.call(numDeriv::hessian, args)
     cov <- if (!inherits(vcov <- try(solve(hes)), "try-error"))  vcov
     # cov <- solve(hes)
     if(!is.null(cov) && any(is.na(cov))){

@@ -179,9 +179,9 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
 
   #Compute covariance
   if(covariance){
-    args$x0 <- optim.out$par
-    args$f <- minusloglik
-    hes <- do.call(pracma::hessian, args)
+    args$x <- optim.out$par
+    args$func <- minusloglik
+    hes <- do.call(numDeriv::hessian, args)
     cov <- if (!inherits(vcov <- try(solve(hes)), "try-error"))  vcov
     if(!is.null(cov) && any(is.na(cov))){
       warning("Hessian is not invertible!")

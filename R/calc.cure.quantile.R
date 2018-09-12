@@ -91,7 +91,7 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
     }
     if(var.type %in% c("ci", "se")){
       if(!ci.new){
-        gr <- grad(f, x = uni, q = 0)
+        gr <- numDeriv::grad(f, x = uni, q = 0)
         VAR <- pred(time = uni, newdata = newdata[i,,drop = F], var.type = "se")$SE ^ 2
         SE <- sqrt(gr ^ (-2) * VAR / (uni ^ 2))
         upper <- log(uni) + SE * qnorm(0.975)
