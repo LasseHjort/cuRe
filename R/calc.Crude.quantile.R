@@ -38,11 +38,11 @@ calc.Crude.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, ex
 
   is_null_newdata <- is.null(newdata)
   if(is_null_newdata){
-    if(any(class(object) %in% c("stpm2", "pstpm2"))){
-      data <- object@data
+    if(any(class(fit) %in% c("stpm2", "pstpm2"))){
+      data <- fit@data
       newdata <- data.frame(arbritary_var = 0)
     }else{
-      data <- object$data
+      data <- fit$data
     }
   }
 
