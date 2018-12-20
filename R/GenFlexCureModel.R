@@ -504,8 +504,7 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
     }
 
     #Fit relative survival model
-    suppressWarnings(fit <- rstpm2::stpm2(formula.2, data = data,
-                                          bhazard = bhazard))
+    suppressWarnings(fit <- do.call(rstpm2::stpm2, list(formula = formula.2, data = data, bhazard = bhazard)))
 
 
     #Predict survival function
