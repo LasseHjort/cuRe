@@ -4,12 +4,13 @@
 \alias{GenFlexCureModel}
 \title{Fit generalized mixture cure model}
 \usage{
-GenFlexCureModel(formula, data, smooth.formula = NULL, smooth.args = NULL,
-  df = 3, tvc = NULL, tvc.formula = NULL, bhazard = NULL,
-  cr.formula = ~1, type = "mixture", link.type.cr = c("logit", "loglog",
-  "identity", "probit"), link.type = c("PH", "PO", "probit"), init = NULL,
-  baseoff = FALSE, timeVar = "", time0Var = "", covariance = T,
-  verbose = T, control = list(maxit = 10000), method = "Nelder-Mead",
+GenFlexCureModel(formula, data, smooth.formula = NULL,
+  smooth.args = NULL, df = 3, tvc = NULL, tvc.formula = NULL,
+  bhazard = NULL, cr.formula = ~1, type = "mixture",
+  link.type.cr = c("logit", "loglog", "identity", "probit"),
+  link.type = c("PH", "PO", "probit"), init = NULL, baseoff = FALSE,
+  timeVar = "", time0Var = "", covariance = T, verbose = T,
+  control = list(maxit = 10000), method = "Nelder-Mead",
   constraint = TRUE, ini.types = c("cure", "flexpara"))
 }
 \arguments{

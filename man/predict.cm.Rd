@@ -4,11 +4,12 @@
 \alias{predict.cm}
 \title{Predict function for cure models}
 \usage{
-predict.cm(object, newdata = NULL, type = c("surv", "curerate", "probcure",
-  "survuncured", "hazarduncured", "cumhazuncured", "densityuncured",
-  "failuncured", "oddsuncured", "loghazarduncured", "hazard", "density", "fail",
-  "loghazard", "odds", "cumhaz"), time = NULL, var.type = c("ci", "se",
-  "n"), pars = NULL, link = NULL, keep.attributes = F)
+predict.cm(object, newdata = NULL, type = c("surv", "curerate",
+  "probcure", "survuncured", "hazarduncured", "cumhazuncured",
+  "densityuncured", "failuncured", "oddsuncured", "loghazarduncured",
+  "hazard", "density", "fail", "loghazard", "odds", "cumhaz"),
+  time = NULL, var.type = c("ci", "se", "n"), pars = NULL,
+  link = NULL, keep.attributes = F)
 }
 \arguments{
 \item{object}{Object of class \code{cm} to do predictions from.}

@@ -395,8 +395,8 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
         eta.pi <- X.cr %*% gamma
         pi <- get.link(link.type.cr)(eta.pi)
         surv <- link.surv$ilink(eta)
-        rsurv <- survhaz.fun$surv(pi, surv)
-        ehaz <- survhaz.fun$haz(pi, link.surv$gradS(eta, etaD), rsurv)
+        rsurv <- cure.type$surv(pi, surv)
+        ehaz <- cure.type$haz(pi, link.surv$gradS(eta, etaD), rsurv)
         haz.const <- bhazard + ehaz
       }
       neghaz <- any(haz.const < 0)

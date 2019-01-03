@@ -157,26 +157,26 @@ makepredictcall.bsx <- function (var, call)
 
 
 #Prespecified arguments for testing
-library(splines)
-x <- -20:20
-df <- NULL
-knots <- c(2, 5,7)
-Boundary.knots <- c(1, 10)
-intercept <- FALSE
-deriv <- NULL
-degree <- 3
-
-
-# #Lets test if it works for cubic splines. Define x values and boundary knots
-x <- seq(-1, 14, length.out = 100)
-Boundary.knots <- c(1, 10)
-#Compute basis
-b <- bsx(x = x, df = 5, degree = 3, deriv = c(4,0), Boundary.knots = Boundary.knots)
-#Pick random coefficients
-coefs <- rnorm(ncol(b))
-#Plot the trajectory
-plot(x, b %*% coefs, type = "l")
-abline(v = Boundary.knots)
+# library(splines)
+# x <- -20:20
+# df <- NULL
+# knots <- c(2, 5,7)
+# Boundary.knots <- c(1, 10)
+# intercept <- FALSE
+# deriv <- NULL
+# degree <- 3
+#
+#
+# # #Lets test if it works for cubic splines. Define x values and boundary knots
+# x <- seq(-1, 14, length.out = 100)
+# Boundary.knots <- c(1, 10)
+# #Compute basis
+# b <- bsx(x = x, df = 5, degree = 3, deriv = c(4,0), Boundary.knots = Boundary.knots)
+# #Pick random coefficients
+# coefs <- rnorm(ncol(b))
+# #Plot the trajectory
+# plot(x, b %*% coefs, type = "l")
+# abline(v = Boundary.knots)
 #
 #
 # #Lets try degree 4 and 5

@@ -6,9 +6,10 @@
 \usage{
 plot.cuRe(object, newdata = NULL, type = c("surv", "probcure",
   "survuncured", "hazarduncured", "cumhazuncured", "densityuncured",
-  "failuncured", "oddsuncured", "loghazarduncured", "hazard", "density", "fail",
-  "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL, ylim = c(0,
-  1), xlab = "Time", ylab = NULL, col = 1, ci = T, add = F, ...)
+  "failuncured", "oddsuncured", "loghazarduncured", "hazard", "density",
+  "fail", "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL,
+  ylim = c(0, 1), xlab = "Time", ylab = NULL, col = 1, ci = T,
+  add = F, ...)
 }
 \arguments{
 \item{object}{Object of class \code{cuRe}.}
