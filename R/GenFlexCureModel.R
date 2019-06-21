@@ -380,28 +380,56 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   optim.args$cure.type <- cure.type
   res_list <- vector("list", length(init[run.these]))
   for(i in 1:length(res_list)){
+    optim.args$par <- init[run.these][[i]]
+    converged_outer <- FALSE
+    old_minusloglikelihood <- Inf
+    k = 0
+    while (!converged_outer) {
+      k = k + 1
+
+      res.optim <- do.call(optim, optim.args)
+      optim.args$par <- res.optim$par
+
+      new_minusloglikelihood <- res.optim$value
+      converged_outer <- (abs(new_minusloglikelihood - old_minusloglikelihood) < 1e-6) || (k > 100)
+
+      if (FALSE) {
+        cat("Init. Type:", i, "\n",
+            "\tIteration:", k, "\n",
+            "\t\t-LL (old):", old_minusloglikelihood, "\n",
+            "\t\t-LL (new):", new_minusloglikelihood, "\n",
+            "\t\tConverged:", converged_outer, "\n")
+      }
+
+      old_minusloglikelihood <- new_minusloglikelihood
+    }
+
     neghaz <- T
     while(neghaz){
-      #cat(optim.args$kappa, "\n")
-      optim.args$par <- init[run.these][[i]]
+      # cat(optim.args$kappa, "\n")
+
       res.optim <- do.call(optim, optim.args)
       beta <- res.optim$par[(ncol(X.cr) + 1):length(res.optim$par)]
       eta <- X %*% beta
       etaD <- XD %*% beta
+
       if(constraint){
         haz.const <- link.surv$h(eta, etaD)
-      } else {
+      }
+      else {
         gamma <- res.optim$par[1:ncol(X.cr)]
         eta.pi <- X.cr %*% gamma
         pi <- get.link(link.type.cr)(eta.pi)
         surv <- link.surv$ilink(eta)
-        rsurv <- cure.type$surv(pi, surv)
-        ehaz <- cure.type$haz(pi, link.surv$gradS(eta, etaD), rsurv)
+        rsurv <- survhaz.fun$surv(pi, surv)
+        ehaz <- survhaz.fun$haz(pi, link.surv$gradS(eta, etaD), rsurv)
         haz.const <- bhazard + ehaz
       }
+
       neghaz <- any(haz.const < 0)
       optim.args$kappa <- optim.args$kappa * 10
     }
+
     optim.args$kappa <- 1
     res_list[[i]] <- res.optim
   }
