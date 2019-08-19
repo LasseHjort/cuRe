@@ -12,6 +12,6 @@ BugReports: http://github.com/LasseHjort/cuRe/issues
 License: GPL (>=2)
 Encoding: UTF-8
 Depends: R (>= 3.0.2), survival, rstpm2
-Imports: numDeriv, rootSolve
+Imports: numDeriv, rootSolve, date
 LazyData: yes
 RoxygenNote: 6.1.1

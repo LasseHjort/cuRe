@@ -105,6 +105,8 @@ If \code{constraint = FALSE}, penalization is still employed, but on the all-cau
 \examples{
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
 data("colonDC")
+set.seed(2)
+colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
 
 ##Extract general population hazards
 colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
@@ -142,16 +144,16 @@ fit <- GenFlexCureModel(Surv(FUyear, status) ~ sex, data = colonDC, df = 4,
 
 ##Plot model
 plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), ci = F)
+     time = seq(0.001, 15, length.out = 100), ci = FALSE)
 plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), col = 2, ci = F, add = T)
+     time = seq(0.001, 15, length.out = 100), col = 2, ci = FALSE, add = TRUE)
 
 
 plot(fit, newdata = data.frame(sex = factor("female", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), ci = F, type = "survuncured")
+     time = seq(0.001, 15, length.out = 100), ci = FALSE, type = "survuncured")
 plot(fit, newdata = data.frame(sex = factor("male", levels = c("male", "female"))),
-     time = seq(0.001, 15, length.out = 100), col = 2, ci = F,
-     add = T, type = "survuncured")
+     time = seq(0.001, 15, length.out = 100), col = 2, ci = FALSE,
+     add = TRUE, type = "survuncured")
 
 predict(fit, type = "curerate",
         data.frame(sex = factor(c("male", "female"),
@@ -165,11 +167,11 @@ fit <- GenFlexCureModel(Surv(FUyear, status) ~ gender, data = colonDC, df = 6,
 
 ##Plot model
 plot(fit, newdata = data.frame(gender = 0))
-plot(fit, newdata = data.frame(gender = 1), add = T, col = 2)
+plot(fit, newdata = data.frame(gender = 1), add = TRUE, col = 2)
 
-plot(fit, type = "hazard", newdata = data.frame(gender = 0), ci = F)
+plot(fit, type = "hazard", newdata = data.frame(gender = 0), ci = FALSE)
 plot(fit, type = "hazard", newdata = data.frame(gender = 1),
-     add = T, col = 2, ci = F)
+     add = TRUE, col = 2, ci = FALSE)
 
 #Predict cure proportions for a male and female patients
 predict(fit, type = "curerate", newdata = data.frame(gender = 0))

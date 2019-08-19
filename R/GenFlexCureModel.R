@@ -69,6 +69,7 @@
 #' @import survival
 #' @import rstpm2
 #' @import numDeriv
+#' @import date
 #' @example inst/GenFlexCureModel.ex.R
 
 #Note that the order of the terms in the smooth.formula matters.

@@ -79,6 +79,8 @@ For P(D = other| T>t), the argument \code{tau} controls this time point (default
 \examples{
 ##Use data cleaned version of the colon disease data from the rstpm2 package
 data("colonDC")
+set.seed(2)
+colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
 
 ##Extract general population hazards
 colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
@@ -87,7 +89,7 @@ colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "d
 ##Spline-base cure model
 #Fit cure model
 fit <- rstpm2::stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6,
-                     bhazard = colonDC$bhaz, cure = T)
+                     bhazard = colonDC$bhaz, cure = TRUE)
 
 #Compute the probability of disease-related death
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 50),
@@ -112,7 +114,7 @@ plot(res)
 
 #Compute the conditional probability of disease-related death
 res2 <- calc.Crude(fit, time = seq(0, 20, length.out = 50), type = "condother",
-                  rmap = list(age = agedays, sex = sex, year = dx), reverse = T)
+                  rmap = list(age = agedays, sex = sex, year = dx), reverse = TRUE)
 plot(res2)
 
 
