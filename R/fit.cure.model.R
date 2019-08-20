@@ -215,7 +215,7 @@ get_design <- function(formula, data){
     data.frame()
 }
 
-#' @export
+
 print.cm <- function(fit){
   type <- switch(fit$type,
                  mixture = "mixture",
@@ -232,7 +232,7 @@ print.cm <- function(fit){
   print(coefs)
 }
 
-#' @export
+
 summary.cm <- function(fit){
   se <- sqrt(diag(fit$cov))
   coefs <- unlist(fit$coefs)
@@ -254,7 +254,7 @@ summary.cm <- function(fit){
   results
 }
 
-#' @export
+
 print.summary.cm <- function(x)
 {
   cat("Calls:\n")

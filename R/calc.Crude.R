@@ -48,6 +48,7 @@
 #' @references Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
 #' for improved risk communication in population-based disease patient survival. \emph{Epidemiology}, 12:86.
 #' @export
+#' @import date
 #' @example inst/calc.Crude.ex.R
 
 calc.Crude <- function(object, newdata = NULL, type = c("disease", "other", "condother"),

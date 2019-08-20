@@ -64,7 +64,6 @@ predict.cb <- function (object, newx, ...)
 }
 
 #Additional function needed to fix the knot location in cases where df is only specified
-#' @export
 makepredictcall.cb <- function (var, call)
 {
   if (as.character(call)[1L] != "cb")

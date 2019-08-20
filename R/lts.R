@@ -24,6 +24,9 @@
 #' That is, the time scale is assumed to be in years.
 #' @param smooth.exp Logical. If \code{TRUE}, the general population survival function is smoothed by the function
 #' \code{smooth.spline} using the the argument \code{all.knots = TRUE}.
+#' @param link Character, indicating the link function for the variance calculations.
+#' Possible values are "\code{log}", "\code{cloglog}" for \eqn{log(-log(x))} , "\code{mlog}" for -log(x),
+#' and "\code{I}" for the indentity.
 #' @return An object of class \code{lts} containing the predictions of each individual in \code{newdata}.
 #' @details
 #' Possible values for argument \code{type} are:\cr

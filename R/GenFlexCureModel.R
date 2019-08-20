@@ -69,7 +69,6 @@
 #' @import survival
 #' @import rstpm2
 #' @import numDeriv
-#' @import date
 #' @example inst/GenFlexCureModel.ex.R
 
 #Note that the order of the terms in the smooth.formula matters.
@@ -546,7 +545,7 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
 }
 
 
-#' @export
+
 #Print function for class fcm
 print.gfcm <- function(fit){
   cat("Call pi:\n")
@@ -558,7 +557,6 @@ print.gfcm <- function(fit){
              surv = fit$coefs.spline))
 }
 
-#' @export
 #Summary function for class fcm
 summary.gfcm <- function(fit){
   se <- sqrt(diag(fit$covariance))
@@ -589,7 +587,6 @@ summary.gfcm <- function(fit){
   results
 }
 
-#' @export
 #Print for class summary.fcm
 print.summary.gfcm <- function(x)
 {

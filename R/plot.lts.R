@@ -39,14 +39,14 @@ plot.lts <- function(object, ylim = NULL, xlim = NULL, ci = T, col = 1,
   }
   for(i in 1:length(object)){
     if(i == 1 & !add){
-      plot(object[[i]]$Estimate ~ time, ylim = ylim, xlim = xlim,
+      plot(Estimate ~ att$time, data = object[[i]], ylim = ylim, xlim = xlim,
            type = "l", col = col[i], xlab = xlab, ylab = ylab, ...)
     }else{
-      lines(object[[i]]$Estimate ~ time, col = col[i], ...)
+      lines(Estimate ~ att$time, data = object[[i]], col = col[i], ...)
     }
     if(ci){
-      lines(lower ~ time, data = object[[i]], lty = 2, col = col[i], ...)
-      lines(upper ~ time, data = object[[i]], lty = 2, col = col[i], ...)
+      lines(lower ~ att$time, data = object[[i]], lty = 2, col = col[i], ...)
+      lines(upper ~ att$time, data = object[[i]], lty = 2, col = col[i], ...)
     }
   }
 }

@@ -19,6 +19,9 @@ the model was fitted on.}
 
 \item{type}{Prediction type (see details). The default is \code{surv}.}
 
+\item{indi}{Logical. If \code{TRUE}, each line in \code{newdata} is treated as an individual observations. This
+functionality allows predictions for each observation at more than one time point.}
+
 \item{time}{Optional time points at which to compute predictions.
 This argument is not used if type is \code{curerate}.}
 
@@ -34,6 +37,8 @@ and "\code{I}" for the indentity.
 If \code{NULL} (default), the function will determine \code{link} from \code{type}.}
 
 \item{keep.attributes}{Logical. If \code{TRUE}, \code{newdata} will be added to the attributes of the output.}
+
+\item{...}{Additional arguments. Currently not used.}
 }
 \value{
 A list containing the predictions of each individual in \code{newdata}.

@@ -159,7 +159,7 @@ calc.LL <- function(object, newdata = NULL, type = c("ll", "mrl"), time = NULL,
     cov <- object$covariance
   }
 
-  gaussxw <- statmod::gauss.quad(n)
+  gaussxw <- rstpm2:::gauss.quad(n)
 
   Ests <- lapply(1:length(exp.fun), function(i){
     #Calculate loss of lifetime

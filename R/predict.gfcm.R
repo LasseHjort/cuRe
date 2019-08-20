@@ -17,6 +17,9 @@
 #' and "\code{I}" for the indentity.
 #' If \code{NULL} (default), the function will determine \code{link} from \code{type}.
 #' @param keep.attributes Logical. If \code{TRUE}, \code{newdata} will be added to the attributes of the output.
+#' @param indi Logical. If \code{TRUE}, each line in \code{newdata} is treated as an individual observations. This
+#' functionality allows predictions for each observation at more than one time point.
+#' @param ... Additional arguments. Currently not used.
 #' @return A list containing the predictions of each individual in \code{newdata}.
 #' @details
 #' Possible values for argument \code{type} are:\cr
