@@ -71,8 +71,3 @@ plot(fit, type = "hazard", newdata = data.frame(gender = 1),
 #Predict cure proportions for a male and female patients
 predict(fit, type = "curerate", newdata = data.frame(gender = 0))
 predict(fit, type = "curerate", newdata = data.frame(gender = 1))
-
-
-fit2 <- stpm2(Surv(FUyear, status) ~ gender, data = colonDC, df = 4,
-              bhazard = colonDC$bhaz, tvc = list(gender = 2))
-plot(fit2, newdata = data.frame(gender = 0), type = "hazard")

@@ -6,7 +6,8 @@
 \usage{
 calc.LL.quantile(fit, q = 1, newdata = NULL, max.time = 20,
   var.type = c("ci", "n"), exp.fun = NULL, rmap = NULL,
-  ratetable = survexp.dk, tau = 100, type = "ll", scale = ayear)
+  ratetable = cuRe::survexp.dk, tau = 100, type = "ll",
+  scale = ayear)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are

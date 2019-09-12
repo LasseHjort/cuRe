@@ -80,7 +80,7 @@ predict.gfcm <- function (object, newdata = NULL,
 
   lpfunc <- function(delta, fit, data, var) {
     data[[var]] <- data[[var]] + delta
-    rstpm2:::lpmatrix.lm(fit, data)
+    lpmatrix.lm(fit, data)
   }
 
   if (is.null(time)) {
@@ -103,24 +103,24 @@ predict.gfcm <- function (object, newdata = NULL,
     }
 
     X <- lapply(1:length(newdata.list), function(i){
-      object$transX(rstpm2:::lpmatrix.lm(object$lm.obj, newdata.list[[i]]), newdata.list[[i]])
+      object$transX(lpmatrix.lm(object$lm.obj, newdata.list[[i]]), newdata.list[[i]])
     })
 
     XD <- lapply(1:length(newdata.list), function(i){
-      XD.tmp <- rstpm2:::grad(lpfunc, 0, object$lm.obj, newdata.list[[i]], object$timeVar)
+      XD.tmp <- grad(lpfunc, 0, object$lm.obj, newdata.list[[i]], object$timeVar)
       object$transXD(matrix(XD.tmp, nrow = nrow(X[[i]])))
     })
 
     X.cr <- lapply(1:length(newdata.list), function(i){
-      rstpm2:::lpmatrix.lm(object$lm.obj.cr, newdata.list[[i]])
+      lpmatrix.lm(object$lm.obj.cr, newdata.list[[i]])
       #model.matrix(object$cr.formula, data = newdata.list[[i]])
     })
 
   } else {
     if(calcX){
-      X <- object$transX(rstpm2:::lpmatrix.lm(object$lm.obj, newdata),
+      X <- object$transX(lpmatrix.lm(object$lm.obj, newdata),
                          newdata)
-      XD <- rstpm2:::grad(lpfunc, 0, object$lm.obj, newdata, object$timeVar)
+      XD <- grad(lpfunc, 0, object$lm.obj, newdata, object$timeVar)
       XD <- object$transXD(matrix(XD, nrow = nrow(X)))
       X.cr <- model.matrix(object$cr.formula, data = newdata)
     }
@@ -220,7 +220,7 @@ numDeltaMethod <- function (object, fun, gd = NULL, ...)
   est <- fun(coef, ...)
   Sigma <- object$covariance
   if (is.null(gd))
-    gd <- rstpm2:::grad(fun, coef, ...)
+    gd <- grad(fun, coef, ...)
   se.est <- as.vector(sqrt(colSums(gd * (Sigma %*% gd))))
   data.frame(Estimate = est, SE = se.est)
 }
@@ -243,9 +243,9 @@ local <- function(object, newdata, type = "surv", var.link = function(x) x,
   S <- object$cure.type$surv(pi, Su)
   dSu <- link.surv$gradS(eta, etaD)
   haz <- object$cure.type$haz(pi, dSu, S)
-  if (!object$excess && any(h < 0))
+  if (!object$excess && any(haz < 0))
     warning(sprintf("Predicted hazards less than zero (n=%i).",
-                    sum(h < 0)))
+                    sum(haz < 0)))
   H <- -log(S)
   Sigma = object$covariance
   est <- switch(type, linkS = eta, linkpi = eta_pi, curerate = pi,
@@ -259,4 +259,11 @@ local <- function(object, newdata, type = "surv", var.link = function(x) x,
   est <- var.link(est)
   return(est)
 }
+
+expit <- function(x) {
+  ifelse(x==-Inf, 0, ifelse(x==Inf, 1, 1/(1+exp(-x))))
+}
+logit <- function(p) {
+  ifelse(p==0, -Inf, ifelse(p==1, Inf, log(p/(1-p))))
+} # numerical safety for large values?
 

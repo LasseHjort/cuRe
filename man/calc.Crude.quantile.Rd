@@ -6,7 +6,8 @@
 \usage{
 calc.Crude.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
   exp.fun = NULL, var.type = c("ci", "se", "n"), rmap,
-  ratetable = survexp.dk, tau = 100, reverse = TRUE, scale = ayear)
+  ratetable = cuRe::survexp.dk, tau = 100, reverse = TRUE,
+  scale = ayear)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are

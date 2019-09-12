@@ -49,11 +49,12 @@
 #' for improved risk communication in population-based disease patient survival. \emph{Epidemiology}, 12:86.
 #' @export
 #' @import date
+#' @importFrom statmod gauss.quad
 #' @example inst/calc.Crude.ex.R
 
 calc.Crude <- function(object, newdata = NULL, type = c("disease", "other", "condother"),
                        time = NULL, tau = 100, reverse = FALSE, var.type = c("ci", "se", "n"),
-                       exp.fun = NULL, ratetable = survexp.dk, rmap, scale = ayear,
+                       exp.fun = NULL, ratetable = cuRe::survexp.dk, rmap, scale = ayear,
                        smooth.exp = FALSE, pars = NULL, link = "loglog", n = 100){
 
   type <- match.arg(type)
@@ -187,7 +188,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("disease", "other", "con
                    other = expected_haz,
                    condother = excess_haz)
 
-  gaussxw <- rstpm2:::gauss.quad(n)
+  gaussxw <- statmod::gauss.quad(n)
 
   probs <- lapply(1:length(exp.fun), function(i){
     prob <- probfun(time = time, rel_surv = rel_surv[[i]], cs_haz = cs_haz[[i]],

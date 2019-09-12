@@ -41,7 +41,7 @@
 
 lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
                 newdata = NULL, time = NULL, var.type = c("ci", "se", "n"),
-                exp.fun = NULL, ratetable = survexp.dk, rmap, scale = 365.24,
+                exp.fun = NULL, ratetable = cuRe::survexp.dk, rmap, scale = 365.24,
                 smooth.exp = FALSE, link = NULL){
 
   var.type <- match.arg(var.type)

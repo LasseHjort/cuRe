@@ -43,11 +43,12 @@
 #' and the point wise variance is estimated using the delta method and numerical differentiation.
 #' @export
 #' @example inst/calc.LL.ex.R
+#' @importFrom numDeriv jacobian
 
 
 
 calc.LL <- function(object, newdata = NULL, type = c("ll", "mrl"), time = NULL,
-                    tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = survexp.dk,
+                    tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL, ratetable = cuRe::survexp.dk,
                     rmap, smooth.exp = FALSE, scale = ayear, pars = NULL, n = 100){
   type <- match.arg(type)
   var.type <- match.arg(var.type)
@@ -159,7 +160,7 @@ calc.LL <- function(object, newdata = NULL, type = c("ll", "mrl"), time = NULL,
     cov <- object$covariance
   }
 
-  gaussxw <- rstpm2:::gauss.quad(n)
+  gaussxw <- statmod::gauss.quad(n)
 
   Ests <- lapply(1:length(exp.fun), function(i){
     #Calculate loss of lifetime

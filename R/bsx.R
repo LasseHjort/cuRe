@@ -30,6 +30,9 @@
 #' an order of 0 constrains the zero, first and second derivatives to zero (f(x)=f'(x)=f”(x)=0)
 #' An order of \code{degree + 1} computes the basis matrix similarly to \code{bs}.
 #' @return A matrix with containing the basis functions evaluated in \code{x}.
+#' @importFrom splines splineDesign
+
+
 bsx <- function (x, df = NULL, knots = NULL, degree = 3, intercept = FALSE,
                  Boundary.knots = range(x), deriv = NULL)
 {
@@ -75,7 +78,7 @@ bsx <- function (x, df = NULL, knots = NULL, degree = 3, intercept = FALSE,
       k.pivot <- Boundary.knots[1L]
       xl <- cbind(1, outer(x[ol] - k.pivot, 1L:degree,
                            "^"))
-      tt <- splineDesign(Aknots, rep(k.pivot, ord), ord,
+      tt <- splines::splineDesign(Aknots, rep(k.pivot, ord), ord,
                          derivs)
       basis[ol, ] <- xl %*% (tt/scalef)
     }
@@ -87,16 +90,16 @@ bsx <- function (x, df = NULL, knots = NULL, degree = 3, intercept = FALSE,
                            "^"))
       #xr <- cbind(1, outer(x[or] - k.pivot, 1L:degree - 1,
       #                     "^"))
-      tt <- splineDesign(Aknots, rep(k.pivot, ord), ord,
+      tt <- splines::splineDesign(Aknots, rep(k.pivot, ord), ord,
                          derivs)
       basis[or, ] <- xr %*% (tt/scalef)
       #basis[or, ] <- splineDesign(Aknots, rep(k.pivot, length(x[or])), ord,
       #                            derivs = 0)
     }
     if (any(inside <- !outside))
-      basis[inside, ] <- splineDesign(Aknots, x[inside],
+      basis[inside, ] <- splines::splineDesign(Aknots, x[inside],
                                       ord)
-  } else basis <- splineDesign(Aknots, x, ord)
+  } else basis <- splines::splineDesign(Aknots, x, ord)
 
   if(!intercept){
     basis <- basis[, -1L, drop = FALSE]
@@ -108,7 +111,7 @@ bsx <- function (x, df = NULL, knots = NULL, degree = 3, intercept = FALSE,
   deriv.tmp <- c(deriv1, deriv2)
 
   if(!is.null(deriv.tmp)){
-    const <- splineDesign(knots = Aknots, x = x.tmp, ord = ord, deriv = deriv.tmp)
+    const <- splines::splineDesign(knots = Aknots, x = x.tmp, ord = ord, deriv = deriv.tmp)
 
     if (!intercept){
       const <- const[, -1L, drop = FALSE]

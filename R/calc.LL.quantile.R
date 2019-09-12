@@ -25,14 +25,14 @@
 #' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
 #' That is, the time scale is assumed to be in years.
 #' @return The estimated cure point.
-#' @import rootSolve
+#' @importFrom rootSolve uniroot.all
 #' @example inst/calc.LL.quantile.ex.R
 #' @export
 
 
 
 calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type = c("ci", "n"),
-                             exp.fun = NULL, rmap = NULL, ratetable = survexp.dk,
+                             exp.fun = NULL, rmap = NULL, ratetable = cuRe::survexp.dk,
                              tau = 100, type = "ll", scale = ayear){
 
   var.type <- match.arg(var.type)

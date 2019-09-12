@@ -52,7 +52,7 @@ predict.cm <- function(object, newdata = NULL, type = c("surv", "curerate", "pro
 
   #Check if covariates are included in the model in cases where newdata is not provided
   if(is_null_newdata){
-    classes <- sapply(lapply(object$all.formulas, rstpm2:::rhs), class)
+    classes <- sapply(lapply(object$all.formulas, rhs), class)
     if(any(classes != "numeric")){
       stop("'newdata' must be specified for model including covariates")
     }
@@ -70,7 +70,7 @@ predict.cm <- function(object, newdata = NULL, type = c("surv", "curerate", "pro
   }
 
   all.formulas <- lapply(object$all.formulas, function(x){
-    rstpm2:::lhs(x) <- NULL
+    lhs(x) <- NULL
     x
   }
   )
@@ -152,7 +152,7 @@ numDeltaMethod.cm <- function (object, fun, ...)
   coef <- unlist(object$coefs)
   est <- fun(coef, ...)
   Sigma <- object$covariance
-  gd <- rstpm2:::grad(fun, coef, ...)
+  gd <- grad(fun, coef, ...)
   se.est <- as.vector(sqrt(colSums(gd * (Sigma %*% gd))))
   data.frame(Estimate = est, SE = se.est)
 }

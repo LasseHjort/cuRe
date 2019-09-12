@@ -1,2 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^Readme\.md
+^Experimental$
+^Vignette$
+^data-raw$
+^cuRe\.pdf

@@ -16,7 +16,7 @@
 #' @export
 #' @example inst/general.haz.ex.R
 
-general.haz <- function(time, age, sex, year, data = NULL, ratetable = survexp.dk){
+general.haz <- function(time, age, sex, year, data = NULL, ratetable = cuRe::survexp.dk){
   if(is.character(time)){
     time <- data[, time]
   }
@@ -54,43 +54,43 @@ general.haz <- function(time, age, sex, year, data = NULL, ratetable = survexp.d
 }
 
 
-general.haz2 <- function(time, rmap, data = NULL, ratetable = survexp.dk, scale = ayear){
-  dimid <- attr(ratetable, "dimid")
-  vars <-
-
-    od <- sapply(c("age", "sex", "year"), function(x) which(dimid == x))
-  n <- length(time)
-
-  haz <- rep(NA, n)
-  sex_new <- as.character(sex)
-  age_new <- pmin(round((age + time) / ayear), 99)
-  year_eval <- format(year + time, "%Y")
-  ryear <- range(as.numeric(dimnames(ratetable)[[od["year"]]]))
-  year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
-  year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
-
-
-  D <- data.frame(age = age_new, sex = sex_new, year = year_eval, stringsAsFactors = F)
-  D <- D[, od]
-
-  #D2 <- D
-  #D2$sex <- ifelse(D2$sex == "male", 1, 2)
-  #D2$year <- as.numeric(D2$year)
-  #a <- match.ratetable(as.matrix(D2), ratetable)
-
-  dim_names <- dimnames(ratetable)
-  J <- data.frame(rates = c(ratetable), rep(as.numeric(dim_names[[1]]), length(dim_names[[2]]) * length(dim_names[[3]])),
-                  rep(as.numeric(dim_names[[2]]), length(dim_names[[1]]) * length(dim_names[[3]])),
-                  rep(dim_names[[3]], each = length(dim_names[[1]]) *  length(dim_names[[2]])))
-
-  names(J)[-1] <- dimid
-
-  #head(J)
-
-  #ratetable["38", "1835",]
-
-  merge(D, J)$rates * scale
-}
+# general.haz2 <- function(time, rmap, data = NULL, ratetable = survexp.dk, scale = ayear){
+#   dimid <- attr(ratetable, "dimid")
+#   vars <-
+#
+#     od <- sapply(c("age", "sex", "year"), function(x) which(dimid == x))
+#   n <- length(time)
+#
+#   haz <- rep(NA, n)
+#   sex_new <- as.character(sex)
+#   age_new <- pmin(round((age + time) / ayear), 99)
+#   year_eval <- format(year + time, "%Y")
+#   ryear <- range(as.numeric(dimnames(ratetable)[[od["year"]]]))
+#   year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
+#   year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
+#
+#
+#   D <- data.frame(age = age_new, sex = sex_new, year = year_eval, stringsAsFactors = F)
+#   D <- D[, od]
+#
+#   #D2 <- D
+#   #D2$sex <- ifelse(D2$sex == "male", 1, 2)
+#   #D2$year <- as.numeric(D2$year)
+#   #a <- match.ratetable(as.matrix(D2), ratetable)
+#
+#   dim_names <- dimnames(ratetable)
+#   J <- data.frame(rates = c(ratetable), rep(as.numeric(dim_names[[1]]), length(dim_names[[2]]) * length(dim_names[[3]])),
+#                   rep(as.numeric(dim_names[[2]]), length(dim_names[[1]]) * length(dim_names[[3]])),
+#                   rep(dim_names[[3]], each = length(dim_names[[1]]) *  length(dim_names[[2]])))
+#
+#   names(J)[-1] <- dimid
+#
+#   #head(J)
+#
+#   #ratetable["38", "1835",]
+#
+#   merge(D, J)$rates * scale
+# }
 
 
 #Global variable indicating the duration of a year

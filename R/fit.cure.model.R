@@ -78,9 +78,9 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
   data.c <- data
 
   #Extract survival time and event variable
-  eventExpr <- rstpm2:::lhs(formula)[[length(rstpm2:::lhs(formula))]]
-  delayed <- length(rstpm2:::lhs(formula)) >= 4
-  timeExpr <- rstpm2:::lhs(formula)[[ifelse(delayed, 3, 2)]]
+  eventExpr <- lhs(formula)[[length(lhs(formula))]]
+  delayed <- length(lhs(formula)) >= 4
+  timeExpr <- lhs(formula)[[ifelse(delayed, 3, 2)]]
   timeVar <- all.vars(timeExpr)
   time <- eval(timeExpr, data, parent.frame())
 
@@ -260,7 +260,7 @@ print.summary.cm <- function(x)
   cat("Calls:\n")
   print(x$formulas)
   #    cat("\n")
-  printCoefmat(x$coefs, P.value = TRUE, has.Pvalue = T)
+  printCoefmat(x$coefs, P.values = TRUE, has.Pvalue = T)
   cat("\n")
   cat("Type =", x$type, "\n")
   cat("Link =", x$link, "\n")

@@ -7,8 +7,8 @@
 calc.Crude(object, newdata = NULL, type = c("disease", "other",
   "condother"), time = NULL, tau = 100, reverse = FALSE,
   var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = survexp.dk, rmap, scale = ayear, smooth.exp = FALSE,
-  pars = NULL, link = "loglog", n = 100)
+  ratetable = cuRe::survexp.dk, rmap, scale = ayear,
+  smooth.exp = FALSE, pars = NULL, link = "loglog", n = 100)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are

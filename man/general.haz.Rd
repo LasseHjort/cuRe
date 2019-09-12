@@ -4,7 +4,8 @@
 \alias{general.haz}
 \title{Extract general population hazard}
 \usage{
-general.haz(time, age, sex, year, data = NULL, ratetable = survexp.dk)
+general.haz(time, age, sex, year, data = NULL,
+  ratetable = cuRe::survexp.dk)
 }
 \arguments{
 \item{time}{Either a numeric vector of follow-up times (in days) or a character indicating the variable

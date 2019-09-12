@@ -68,7 +68,11 @@
 #' @export
 #' @import survival
 #' @import rstpm2
-#' @import numDeriv
+#' @importFrom numDeriv hessian
+#' @importFrom graphics abline
+#' @importFrom stats .checkMFClasses as.formula delete.response dnorm lm model.frame model.matrix
+#' na.pass optim pnorm printCoefmat pt qnorm quantile rnorm smooth.spline terms
+#' @importFrom utils tail
 #' @example inst/GenFlexCureModel.ex.R
 
 #Note that the order of the terms in the smooth.formula matters.
@@ -93,8 +97,8 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   cure <- FALSE
 
   link.type <- match.arg(link.type)
-  link.surv <- switch(link.type, PH = rstpm2:::link.PH, PO = rstpm2:::link.PO, probit = rstpm2:::link.probit,
-                      AH = rstpm2:::link.AH)
+  link.surv <- switch(link.type, PH = link.PH, PO = link.PO, probit = link.probit,
+                      AH = link.AH)
 
   link.type.cr <- match.arg(link.type.cr)
 
@@ -103,10 +107,10 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   if (!is.null(smooth.args) && is.null(logH.args))
     logH.args <- smooth.args
 
-  eventInstance <- eval(rstpm2:::lhs(formula),envir = data)
-  stopifnot(length(rstpm2:::lhs(formula)) >= 2)
-  eventExpr <- rstpm2:::lhs(formula)[[length(rstpm2:::lhs(formula))]]
-  delayed <- length(rstpm2:::lhs(formula)) >= 4
+  eventInstance <- eval(lhs(formula),envir = data)
+  stopifnot(length(lhs(formula)) >= 2)
+  eventExpr <- lhs(formula)[[length(lhs(formula))]]
+  delayed <- length(lhs(formula)) >= 4
   surv.type <- attr(eventInstance, "type")
   if (surv.type %in% c("interval2", "left", "mstate"))
     stop("stpm2 not implemented for Surv type ", surv.type,
@@ -114,7 +118,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
 
   counting <- attr(eventInstance, "type") == "counting"
   interval <- attr(eventInstance, "type") == "interval"
-  timeExpr <- rstpm2:::lhs(formula)[[ifelse(delayed, 3, 2)]]
+  timeExpr <- lhs(formula)[[ifelse(delayed, 3, 2)]]
   if (timeVar == "")
     timeVar <- all.vars(timeExpr)
 
@@ -126,29 +130,29 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   }
   if (is.null(logH.formula))
     logH.formula <- as.formula(call("~", as.call(c(quote(nsx),
-                                                   call("log", timeExpr), rstpm2:::vector2call(logH.args)))))
+                                                   call("log", timeExpr), vector2call(logH.args)))))
   if (is.null(tvc.formula) && !is.null(tvc)) {
     tvc.formulas <- lapply(names(tvc), function(name) call(":",
                                                            as.name(name),
                                                            as.call(c(quote(nsx),
                                                                      call("log",
                                                                           timeExpr),
-                                                                     rstpm2:::vector2call(if (cure) list(cure = cure,
+                                                                     vector2call(if (cure) list(cure = cure,
                                                                                                          df = tvc[[name]]) else list(df = tvc[[name]]))))))
 
     if (length(tvc.formulas) > 1)
-      tvc.formulas <- list(Reduce(rstpm2:::`%call+%`, tvc.formulas))
+      tvc.formulas <- list(Reduce(`%call+%`, tvc.formulas))
     tvc.formula <- as.formula(call("~", tvc.formulas[[1]]))
   }
   if (!is.null(tvc.formula)) {
-    rstpm2:::rhs(logH.formula) <- rstpm2:::rhs(logH.formula) %call+% (rstpm2:::rhs(tvc.formula))
+    rhs(logH.formula) <- rhs(logH.formula) %call+% (rhs(tvc.formula))
   }
 
   if (baseoff)
-    rstpm2:::rhs(logH.formula) <- rstpm2:::rhs(tvc.formula)
+    rhs(logH.formula) <- rhs(tvc.formula)
 
   full.formula <- formula
-  rstpm2:::rhs(full.formula) <- rstpm2:::rhs(formula) %call+% rstpm2:::rhs(logH.formula)
+  rhs(full.formula) <- rhs(formula) %call+% rhs(logH.formula)
 
   .include <- apply(model.matrix(formula, data, na.action = na.pass),
                     1, function(row) !any(is.na(row))) & !is.na(eval(eventExpr,
@@ -164,7 +168,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
     warning("Some event times < 1e-4: consider transforming time to avoid problems with finite differences")
   time0Expr <- NULL
   if (delayed) {
-    time0Expr <- rstpm2:::lhs(formula)[[2]]
+    time0Expr <- lhs(formula)[[2]]
     if (time0Var == "")
       time0Var <- all.vars(time0Expr)
     time0 <- eval(time0Expr, data, parent.frame())
@@ -184,7 +188,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   #   coxph.call$model <- TRUE
   #   coxph.obj <- eval(coxph.call, envir = parent.frame())
   #   y <- model.extract(model.frame(coxph.obj), "response")
-  #   data$logHhat <- pmax(-18, link.surv$link(rstpm2:::Shat(coxph.obj)))
+  #   data$logHhat <- pmax(-18, link.surv$link(Shat(coxph.obj)))
   # }
   # if (interval) {
   #   survreg.call <- mf
@@ -199,7 +203,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   # lm.call <- mf
   # lm.call[[1L]] <- as.name("lm")
   # lm.formula <- full.formula
-  # rstpm2:::lhs(lm.formula) <- quote(logHhat)
+  # lhs(lm.formula) <- quote(logHhat)
   # lm.call$formula <- lm.formula
   # dataEvents <- data[event, ]
   # if (interval)
@@ -213,7 +217,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   lm.call <- mf
   lm.call[[1L]] <- as.name("lm")
   lm.formula <- full.formula
-  rstpm2:::lhs(lm.formula) <- quote(arbri)
+  lhs(lm.formula) <- quote(arbri)
   lm.call$formula <- lm.formula
   dataEvents <- data[event, ]
   dataEvents$arbri <- rnorm(nrow(dataEvents))
@@ -239,7 +243,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
 
   lpfunc <- function(delta, fit, dataset, var) {
     dataset[[var]] <- dataset[[var]] + delta
-    rstpm2:::lpmatrix.lm(fit, dataset)
+    lpmatrix.lm(fit, dataset)
   }
 
   ## initialise values specific to either delayed entry or interval-censored
@@ -252,22 +256,22 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   transXD <- function(XD) XD
 
   if (!interval) {
-    X <- rstpm2:::lpmatrix.lm(lm.obj, data)
+    X <- lpmatrix.lm(lm.obj, data)
     if (link.type == "AH") {
       datat0 <- data
       datat0[[timeVar]] <- 0
-      index0 <- which.dim(X - rstpm2:::lpmatrix.lm(lm.obj, datat0))
+      index0 <- which.dim(X - lpmatrix.lm(lm.obj, datat0))
       transX <- function(X, data) {
         datat0 <- data
         datat0[[timeVar]] <- 0
-        Xt0 <- rstpm2:::lpmatrix.lm(lm.obj, datat0)
+        Xt0 <- lpmatrix.lm(lm.obj, datat0)
         (X - Xt0)[, index0, drop = FALSE]
       }
       transXD <- function(XD) XD[, index0, drop = FALSE]
       init <- init[index0]
     }
     X <- transX(X, data)
-    XD <- rstpm2:::grad(lpfunc, 0, lm.obj, data, timeVar)
+    XD <- grad(lpfunc, 0, lm.obj, data, timeVar)
     XD <- transXD(matrix(XD, nrow = nrow(X)))
     X1 <- matrix(0, nrow(X), ncol(X))
     X0 <- matrix(0, 1, ncol(X))
@@ -282,17 +286,17 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
       which0[!ind0] <- NaN
       data0 <- data[ind0, , drop = FALSE]
       data0[[timeVar]] <- data0[[time0Var]]
-      X0 <- transX(rstpm2:::lpmatrix.lm(lm.obj, data0), data0)
+      X0 <- transX(lpmatrix.lm(lm.obj, data0), data0)
       #wt0 <- wt[ind0]
       rm(data0)
     }
   } else {
     ttype <- eventInstance[, 3]
-    X1 <- transX(rstpm2:::lpmatrix.lm(lm.obj, data), data)
+    X1 <- transX(lpmatrix.lm(lm.obj, data), data)
     data0 <- data
     data0[[timeVar]] <- data0[[time0Var]]
-    X <- transX(rstpm2:::lpmatrix.lm(lm.obj, data0), data0)
-    XD <- rstpm2:::grad(lpfunc, 0, lm.obj, data0, timeVar)
+    X <- transX(lpmatrix.lm(lm.obj, data0), data0)
+    XD <- grad(lpfunc, 0, lm.obj, data0, timeVar)
     XD <- transXD(matrix(XD, nrow = nrow(X)))
     X0 <- matrix(0, nrow(X), ncol(X))
     rm(data0)
@@ -302,7 +306,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   lm.call <- mf
   lm.call[[1L]] <- as.name("lm")
   lm.formula <- cr.formula
-  rstpm2:::lhs(lm.formula) <- quote(arbri)
+  lhs(lm.formula) <- quote(arbri)
   lm.call$formula <- lm.formula
   dataEvents <- data
   dataEvents$arbri <- rnorm(nrow(dataEvents))
@@ -311,7 +315,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
   lm.call$data <- quote(dataEvents)
   lm.obj.cr <- eval(lm.call)
 
-  X.cr <- rstpm2:::lpmatrix.lm(lm.obj.cr, data)
+  X.cr <- lpmatrix.lm(lm.obj.cr, data)
   #X.cr <- model.matrix(cr.formula, data = data)
 
   if(is.null(init)){
@@ -460,9 +464,9 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
   if(method == "cure"){
 
     formula.pi <- cr.formula
-    rstpm2:::lhs(formula.pi) <- rstpm2:::lhs(formula)
+    lhs(formula.pi) <- lhs(formula)
     formula.k1 <- formula
-    rstpm2:::lhs(formula.k1) <- NULL
+    lhs(formula.k1) <- NULL
 
     if(length(attr(terms(formula.k1), "term.labels"))){
       a <- Reduce(paste, deparse(formula.k1))
@@ -492,7 +496,7 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
     wh <- which(!vars1 %in% vars2)
     if(length(wh)){
       formula.pi <- as.formula(paste0("~ ", paste(vars1, collapse = "+")))
-      rstpm2:::rhs(formula.2) <- rstpm2:::rhs(formula) %call+% rstpm2:::rhs(formula.pi)
+      rhs(formula.2) <- rhs(formula) %call+% rhs(formula.pi)
     }
 
     if(length(attr(terms(formula.2), "term.labels"))){
@@ -500,7 +504,7 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
       a <- gsub("-1", "1", a)
       formula.2 <- as.formula(a)
     } else {
-      rstpm2:::rhs(formula.2) <- 1
+      rhs(formula.2) <- 1
     }
 
     #Fit relative survival model
@@ -593,17 +597,157 @@ print.summary.gfcm <- function(x)
   cat("Call - pi:\n")
   print(x$formula)
   #    cat("\n")
-  printCoefmat(x$pi, P.value = TRUE, has.Pvalue = T)
+  printCoefmat(x$pi, P.values = TRUE, has.Pvalue = T)
   cat("\nCall - surv - baseline: ")
   print(as.formula(deparse(x$formula.fix)))
   if(length(all.vars(x$formula.tvc))){
     cat("Call - surv - tvc: ")
     print(deparse(x$formula.tvc))
   }
-  printCoefmat(x$surv, P.value = TRUE, has.Pvalue = T)
+  printCoefmat(x$surv, P.values = TRUE, has.Pvalue = T)
   cat("\n")
   cat("Type =", x$type, "\n")
   cat("Link - pi =", x$linkpi, "\n")
   cat("Link - surv = ", x$linksu, "\n")
   cat("LogLik(model) =", x$ML, "\n")
 }
+
+
+#Functionalities from the rstpm2 package - thanks to Mark Clements for brilliant code
+## link families
+link.PH <- list(link=function(S) log(-log(as.vector(S))),
+                ilink=function(eta) exp(-exp(as.vector(eta))),
+                gradS=function(eta,X) -exp(as.vector(eta))*exp(-exp(as.vector(eta)))*X,
+                h=function(eta,etaD) as.vector(etaD)*exp(as.vector(eta)),
+                H=function(eta) exp(as.vector(eta)),
+                gradh=function(eta,etaD,obj) obj$XD*exp(as.vector(eta))+obj$X*as.vector(etaD)*exp(as.vector(eta)),
+                gradH=function(eta,obj) obj$X*exp(as.vector(eta)))
+link.PO <- list(link=function(S) -logit(as.vector(S)),
+                ilink=function(eta) expit(-as.vector(eta)),
+                gradS=function(eta,X) -(exp(as.vector(eta))/(1+exp(as.vector(eta)))^2)*X,
+                H=function(eta) log(1+exp(as.vector(eta))),
+                h=function(eta,etaD) as.vector(etaD)*exp(as.vector(eta))*expit(-as.vector(eta)),
+                gradh=function(eta,etaD,obj) {
+                  as.vector(etaD)*exp(as.vector(eta))*obj$X*expit(-as.vector(eta)) -
+                    exp(2*as.vector(eta))*obj$X*as.vector(etaD)*expit(-as.vector(eta))^2 +
+                    exp(as.vector(eta))*obj$XD*expit(-as.vector(eta))
+                },
+                gradH=function(eta,obj) obj$X*exp(as.vector(eta))*expit(-as.vector(eta)))
+link.probit <-
+  list(link=function(S) -qnorm(as.vector(S)),
+       ilink=function(eta) pnorm(-as.vector(eta)),
+       gradS=function(eta,X) -dnorm(-as.vector(eta))*X,
+       H=function(eta) -log(pnorm(-as.vector(eta))),
+       h=function(eta,etaD) dnorm(as.vector(eta))/pnorm(-as.vector(eta))*as.vector(etaD),
+       gradh=function(eta,etaD,obj) {
+         -as.vector(eta)*obj$X*dnorm(as.vector(eta))*as.vector(etaD)/pnorm(-as.vector(eta)) +
+           obj$X*dnorm(as.vector(eta))^2/pnorm(-as.vector(eta))^2*as.vector(etaD) +
+           dnorm(as.vector(eta))/pnorm(-as.vector(eta))*obj$XD
+       },
+       gradH=function(eta,obj) obj$X*dnorm(as.vector(eta))/pnorm(-as.vector(eta)))
+link.AH <- list(link=function(S) -log(S),
+                ilink=function(eta) exp(-as.vector(eta)),
+                gradS=function(eta,X) -as.vector(exp(-as.vector(eta)))*X,
+                h=function(eta,etaD) as.vector(etaD),
+                H=function(eta) as.vector(eta),
+                gradh=function(eta,etaD,obj) obj$XD,
+                gradH=function(eta,obj) obj$X)
+
+
+
+rhs=function(formula)
+  if (length(formula)==3) formula[[3]] else formula[[2]]
+lhs <- function(formula)
+  if (length(formula)==3) formula[[2]] else NULL
+"rhs<-" = function(formula,value) {
+  newformula <- formula
+  newformula[[length(formula)]] <- value
+  newformula
+}
+"lhs<-" <- function(formula,value) {
+  if (length(formula)==2)
+    as.formula(as.call(c(formula[[1]],value,formula[[2]])))
+  else {
+    newformula <- formula
+    newformula[[2]] <- value
+    newformula
+  }
+}
+
+
+
+allCall=function(obj) {
+  if (is.atomic(obj) && length(obj)==1) return(obj)
+  if (is.atomic(obj) && length(obj)>1) return(as.call(c(quote(c),as.list(obj))))
+  if (is.name(obj) || is.symbol(obj)) return(obj)
+  as.call(lapply(obj,allCall))
+}
+vector2call=function(obj) {
+  if (is.atomic(obj) && length(obj)==1) return(obj)
+  if (is.atomic(obj) && length(obj)>1) return(as.call(c(quote(c),as.list(obj))))
+  if (is.name(obj) || is.symbol(obj)) return(obj)
+  lapply(obj,allCall) # is this correct?
+}
+
+`%call+%` <- function(left,right) call("+",left,right)
+
+
+## predict lpmatrix for an lm object
+lpmatrix.lm <-
+  function (object, newdata, na.action = na.pass) {
+    tt <- terms(object)
+    if (!inherits(object, "lm"))
+      warning("calling predict.lm(<fake-lm-object>) ...")
+    if (missing(newdata) || is.null(newdata)) {
+      X <- model.matrix(object)
+    }
+    else {
+      Terms <- delete.response(tt)
+      m <- model.frame(Terms, newdata, na.action = na.action,
+                       xlev = object$xlevels)
+      if (!is.null(cl <- attr(Terms, "dataClasses")))
+        .checkMFClasses(cl, m)
+      X <- model.matrix(Terms, m, contrasts.arg = object$contrasts)
+    }
+    X
+  }
+
+## numerically calculate the partial gradient \partial func_j \over \partial x_i
+## (dim(grad(func,x)) == c(length(x),length(func(x)))
+grad <- function(func,x,...) # would shadow numDeriv::grad()
+{
+  h <- .Machine$double.eps^(1/3)*ifelse(abs(x)>1,abs(x),1)
+  temp <- x+h
+  h.hi <- temp-x
+  temp <- x-h
+  h.lo <- x-temp
+  twoeps <- h.hi+h.lo
+  nx <- length(x)
+  ny <- length(func(x,...))
+  if (ny==0L) stop("Length of function equals 0")
+  df <- if(ny==1L) rep(NA, nx) else matrix(NA, nrow=nx,ncol=ny)
+  for (i in 1L:nx) {
+    hi <- lo <- x
+    hi[i] <- x[i] + h.hi[i]
+    lo[i] <- x[i] - h.lo[i]
+    if (ny==1L)
+      df[i] <- (func(hi, ...) - func(lo, ...))/twoeps[i]
+    else df[i,] <- (func(hi, ...) - func(lo, ...))/twoeps[i]
+  }
+  return(df)
+}
+
+
+which.dim <- function (X, silent = TRUE)
+{
+  stopifnot(is.matrix(X))
+  silent <- as.logical(silent)[1]
+  qr.X <- qr(X, tol = 1e-07, LAPACK = FALSE)
+  if (qr.X$rank == ncol(X))
+    return(TRUE)
+  if (!silent)
+    message(gettextf("design is column rank deficient so dropping %d coef",
+                     ncol(X) - qr.X$rank))
+  return(qr.X$pivot[1:qr.X$rank])
+}
+

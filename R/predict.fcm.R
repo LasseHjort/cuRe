@@ -62,11 +62,11 @@ predict.fcm <- function(fit, newdata = NULL, type = c("relsurv", "curerate", "eh
     if(is.null(time)){
       time <- seq(min(fit$times), max(fit$times), length.out = 100)
     }
-    b <- basis(knots = fit$knots, x = log(time), ortho = fit$ortho, R.inv = fit$R.inv)
+    b <- cb(knots = fit$knots, x = log(time), ortho = fit$ortho, R.inv = fit$R.inv)
     db <- dbasis(knots = fit$knots, x = log(time), ortho = fit$ortho, R.inv = fit$R.inv)
     if(!is.null(fit$knots.time)){
       tvc.b <- lapply(1:length(fit$knots.time), function(i){
-        basis(knots = fit$knots.time[[i]], x = log(time), ortho = fit$ortho, R.inv = fit$R.inv_list[[i]])
+        cb(knots = fit$knots.time[[i]], x = log(time), ortho = fit$ortho, R.inv = fit$R.inv_list[[i]])
       })
       tvc.db <- lapply(1:length(fit$knots.time), function(i){
         dbasis(knots = fit$knots.time[[i]], x = log(time), ortho = fit$ortho, R.inv = fit$R.inv_list[[i]])
