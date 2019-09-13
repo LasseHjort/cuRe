@@ -561,4 +561,3 @@ minuslog_likelihood <- function(param, time, event, b, db,
   -sum(inner_sum + (1 - event_logical) * log(1 - sum_Fks))
 }
 
-

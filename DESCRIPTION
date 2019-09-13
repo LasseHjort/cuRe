@@ -11,7 +11,7 @@ URL: http://github.com/LasseHjort/cuRe
 BugReports: http://github.com/LasseHjort/cuRe/issues
 License: GPL (>=2)
 Encoding: UTF-8
-Depends: survival, rstpm2, date
+Depends: R (>= 3.5.0), survival, rstpm2, date
 Imports: numDeriv, rootSolve, statmod
 LazyData: yes
 RoxygenNote: 6.1.1
