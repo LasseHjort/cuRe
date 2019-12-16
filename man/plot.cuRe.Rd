@@ -4,15 +4,14 @@
 \alias{plot.cuRe}
 \title{Plot function for Flexible mixture cure model}
 \usage{
-plot.cuRe(object, newdata = NULL, type = c("surv", "probcure",
-  "survuncured", "hazarduncured", "cumhazuncured", "densityuncured",
-  "failuncured", "oddsuncured", "loghazarduncured", "hazard", "density",
-  "fail", "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL,
-  ylim = c(0, 1), xlab = "Time", ylab = NULL, col = 1, ci = T,
-  add = F, ...)
+\method{plot}{cuRe}(x, newdata = NULL,
+type = c("surv", "probcure", "survuncured", "hazarduncured", "cumhazuncured",
+"densityuncured", "failuncured", "oddsuncured", "loghazarduncured", "hazard",
+"density", "fail", "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL,
+ylim = c(0, 1), xlab = "Time", ylab = NULL, col = 1, ci = T, add = F, \dots)
 }
 \arguments{
-\item{object}{Object of class \code{cuRe}.}
+\item{x}{Object of class \code{cuRe}.}
 
 \item{newdata}{Data frame from which to compute predictions. If empty, predictions are made on the the data which
 the model was fitted on.}

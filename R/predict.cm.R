@@ -1,7 +1,12 @@
 #' Predict function for flexible mixture cure model
 #'
 #' Function for doing predictions for class \code{cm}.
-#'
+#' @usage \method{predict}{cm}(object, newdata = NULL,
+#' type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured", "cumhazuncured",
+#' "densityuncured", "failuncured", "oddsuncured", "loghazarduncured",
+#' "hazard", "density", "fail", "loghazard", "odds", "cumhaz"),
+#' time = NULL, var.type = c("ci", "se", "n"), pars = NULL,
+#' link = NULL, keep.attributes = F, \dots)
 #' @param object Object of class \code{cm} to do predictions from.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
 #' the model was fitted on.
@@ -38,6 +43,8 @@
 #' \code{odds}: The odds, i.e., (1 - \code{surv}) / \code{surv}\cr
 #' \code{cumhaz}: The cumulative hazard function
 #' @export
+#' @method predict cm
+
 
 predict.cm <- function(object, newdata = NULL,
                        type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
@@ -45,7 +52,7 @@ predict.cm <- function(object, newdata = NULL,
                                 "loghazarduncured", "hazard", "density", "fail",
                                 "loghazard", "odds", "cumhaz"),
                        time = NULL, var.type = c("ci", "se", "n"), pars = NULL,
-                       link = NULL, keep.attributes = F){
+                       link = NULL, keep.attributes = F, ...){
   type <- match.arg(type)
   if(!is.null(pars)){
     groups <- factor(rep(1:length(object$coefs), object$n.param.formula), 1:length(object$coefs))

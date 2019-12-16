@@ -4,11 +4,11 @@
 \alias{plot.crude}
 \title{Plot crude event probabilities}
 \usage{
-plot.crude(object, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
-  ylab = NULL, xlab = "Time", add = F, ...)
+\method{plot}{crude}(x, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
+ylab = NULL, xlab = "Time", add = F, \dots)
 }
 \arguments{
-\item{object}{Object of class \code{crude} in which crude probabilities are stored.}
+\item{x}{Object of class \code{crude} in which crude probabilities are stored.}
 
 \item{ylim}{Limits of y-axis.}
 

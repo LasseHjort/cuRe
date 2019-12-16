@@ -2,7 +2,9 @@
 #'
 #' Plot function for the computed crude event probabilties.
 #'
-#' @param object Object of class \code{crude} in which crude probabilities are stored.
+#' @usage \method{plot}{crude}(x, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
+#' ylab = NULL, xlab = "Time", add = F, \dots)
+#' @param x Object of class \code{crude} in which crude probabilities are stored.
 #' @param ylim Limits of y-axis.
 #' @param xlim Limits of x-axis.
 #' @param col Colour of each curve.
@@ -12,10 +14,12 @@
 #' @param ci Logical. If \code{TRUE} (default), confidence intervals are added to the plot.
 #' @param ... Further arguments passed to \code{plot} and \code{lines}.
 #' @export
+#' @method plot crude
 
-plot.crude <- function(object, ylim = c(0, 1), xlim = NULL, ci = T,
+
+plot.crude <- function(x, ylim = c(0, 1), xlim = NULL, ci = T,
                        col = 1, ylab = NULL, xlab = "Time", add = F, ...){
-
+  object <- x
   attr <- attributes(object)
   if(is.null(ylab)){
     ylab <- switch(attr$type, disease = "Cumulative incidence of disease-related death",

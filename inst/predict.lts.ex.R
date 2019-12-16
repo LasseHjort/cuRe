@@ -15,5 +15,3 @@ pred <- lts(fit, rmap = list(age = agedays, sex = sex, year = dx))
 
 ##Plot the survival function
 plot(pred)
-
-

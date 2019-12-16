@@ -1,8 +1,9 @@
 #' Plot the loss of lifetime function
 #'
 #' Plot function for the class \code{le}
-#'
-#' @param object Object of class \code{le}.
+#' @usage \method{plot}{le}(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
+#' ylab = NULL, xlab = "Time", add = F, \dots)
+#' @param x Object of class \code{le}.
 #' @param ylim Limit of the y-axis.
 #' @param xlim Limit of x-axis.
 #' @param ci Logical. If \code{TRUE} (default), confidence intervals are added to the plot.
@@ -12,9 +13,12 @@
 #' @param add Logical. If \code{TRUE}, the curve is added to the current plot window.
 #' @param ... Further argument passed to \code{plot} and \code{lines}.
 #' @export
+#' @method plot le
 
-plot.le <- function(object, ylim = NULL, xlim = NULL, ci = T, col = 1,
+
+plot.le <- function(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
                     ylab = NULL, xlab = "Time", add = F, ...){
+  object <- x
   att <- attributes(object)
 
   if(is.null(ylab)){

@@ -2,6 +2,12 @@
 #'
 #' Function for doing predictions for class \code{gfcm}.
 #'
+#' @usage \method{predict}{gfcm}(object, newdata = NULL,
+#' type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
+#' "cumhazuncured", "densityuncured", "failuncured", "oddsuncured", "loghazarduncured",
+#' "hazard", "density", "fail", "loghazard", "odds", "cumhaz"), indi = TRUE, time = NULL,
+#' var.type = c("ci", "se", "n"), pars = NULL,
+#' link = NULL, keep.attributes = FALSE, \dots)
 #' @param object Object of class \code{gfcm} to do predictions from.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
 #' the model was fitted on.
@@ -40,6 +46,7 @@
 #' \code{odds}: The odds, i.e., (1 - \code{surv}) / \code{surv}\cr
 #' \code{cumhaz}: The cumulative hazard function
 #' @export
+#' @method predict gfcm
 
 predict.gfcm <- function (object, newdata = NULL,
                           type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",

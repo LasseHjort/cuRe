@@ -4,11 +4,11 @@
 \alias{plot.lts}
 \title{Plot the long term survival}
 \usage{
-plot.lts(object, ylim = NULL, xlim = NULL, ci = T, col = 1,
-  ylab = NULL, xlab = "Time", add = F, ...)
+\method{plot}{lts}(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
+ylab = NULL, xlab = "Time", add = F, \dots)
 }
 \arguments{
-\item{object}{Object of class \code{lts}.}
+\item{x}{Object of class \code{lts}.}
 
 \item{ylim}{Limit of the y-axis.}
 

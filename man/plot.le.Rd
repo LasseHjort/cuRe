@@ -4,11 +4,11 @@
 \alias{plot.le}
 \title{Plot the loss of lifetime function}
 \usage{
-plot.le(object, ylim = NULL, xlim = NULL, ci = T, col = 1,
-  ylab = NULL, xlab = "Time", add = F, ...)
+\method{plot}{le}(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
+ylab = NULL, xlab = "Time", add = F, \dots)
 }
 \arguments{
-\item{object}{Object of class \code{le}.}
+\item{x}{Object of class \code{le}.}
 
 \item{ylim}{Limit of the y-axis.}
 

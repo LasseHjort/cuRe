@@ -1,8 +1,9 @@
 #' Plot the long term survival
 #'
 #' Plot function for the class \code{lts}.
-#'
-#' @param object Object of class \code{lts}.
+#' @usage \method{plot}{lts}(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
+#' ylab = NULL, xlab = "Time", add = F, \dots)
+#' @param x Object of class \code{lts}.
 #' @param ylim Limit of the y-axis.
 #' @param xlim Limit of x-axis.
 #' @param ci Logical. If \code{TRUE} (default), confidence intervals are added to the plot.
@@ -12,9 +13,12 @@
 #' @param add Logical indicating whether to add to current plot window (default is FALSE).
 #' @param ... Further argument passed to \code{plot} and \code{lines}.
 #' @export
+#' @method plot lts
 
-plot.lts <- function(object, ylim = NULL, xlim = NULL, ci = T, col = 1,
+
+plot.lts <- function(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
                     ylab = NULL, xlab = "Time", add = F, ...){
+  object <- x
   att <- attributes(object)
   if(is.null(ylab)){
     ylab <- switch(att$type,

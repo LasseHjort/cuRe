@@ -1,8 +1,12 @@
 #' Plot function for Flexible mixture cure model
 #'
 #' Plot function associated with the classes \code{gfcm} and \code{cm}
-#'
-#' @param object Object of class \code{cuRe}.
+#' @usage \method{plot}{cuRe}(x, newdata = NULL,
+#' type = c("surv", "probcure", "survuncured", "hazarduncured", "cumhazuncured",
+#' "densityuncured", "failuncured", "oddsuncured", "loghazarduncured", "hazard",
+#' "density", "fail", "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL,
+#' ylim = c(0, 1), xlab = "Time", ylab = NULL, col = 1, ci = T, add = F, \dots)
+#' @param x Object of class \code{cuRe}.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the the data which
 #' the model was fitted on.
 #' @param type Character. Defines the desired scale to plot. See ?predict.gfcm for possible values.
@@ -19,15 +23,17 @@
 #' @param ... Further arguments passed to \code{plot} and \code{lines}.
 #' @return A plot containing the predictions of each observation in \code{newdata}.
 #' @export
+#' @method plot cuRe
 
-plot.cuRe <- function(object, newdata = NULL, type = c("surv", "probcure", "survuncured", "hazarduncured",
+plot.cuRe <- function(x, newdata = NULL, type = c("surv", "probcure", "survuncured", "hazarduncured",
                                                        "cumhazuncured", "densityuncured", "failuncured",
                                                        "oddsuncured", "loghazarduncured", "hazard",
                                                        "density", "fail", "loghazard", "odds", "cumhaz"),
                       time = NULL, xlim = NULL, ylim = c(0, 1),
                       xlab = "Time", ylab = NULL, col = 1, ci = T,
                       add = F, ...){
-
+  #dots <- list(...)
+  object <- x
   type <- match.arg(type)
 
   if(is.null(ylab)){
