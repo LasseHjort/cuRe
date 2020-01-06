@@ -2,11 +2,11 @@
 #'
 #' Function for doing predictions for class \code{cm}.
 #' @usage \method{predict}{cm}(object, newdata = NULL,
-#'         type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured", "cumhazuncured",
-#'         "densityuncured", "failuncured", "oddsuncured", "loghazarduncured",
-#'         "hazard", "density", "fail", "loghazard", "odds", "cumhaz"),
-#'         time = NULL, var.type = c("ci", "se", "n"), pars = NULL,
-#'         link = NULL, keep.attributes = F, \dots)
+#'         type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
+#'         "cumhazuncured","densityuncured", "failuncured", "oddsuncured",
+#'         "loghazarduncured","hazard", "density", "fail", "loghazard",
+#'         "odds", "cumhaz"), time = NULL, var.type = c("ci", "se", "n"),
+#'         pars = NULL, link = NULL, keep.attributes = F, \dots)
 #' @param object Object of class \code{cm} to do predictions from.
 #' @param newdata Data frame from which to compute predictions. If empty, predictions are made on the data which
 #' the model was fitted on.
