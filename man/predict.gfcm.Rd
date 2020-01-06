@@ -5,11 +5,11 @@
 \title{Predict function for flexible mixture cure model}
 \usage{
 \method{predict}{gfcm}(object, newdata = NULL,
-type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
-"cumhazuncured", "densityuncured", "failuncured", "oddsuncured", "loghazarduncured",
-"hazard", "density", "fail", "loghazard", "odds", "cumhaz"), indi = TRUE, time = NULL,
-var.type = c("ci", "se", "n"), pars = NULL,
-link = NULL, keep.attributes = FALSE, \dots)
+        type = c("surv", "curerate", "probcure", "survuncured", "hazarduncured",
+        "cumhazuncured", "densityuncured", "failuncured", "oddsuncured", "loghazarduncured",
+        "hazard", "density", "fail", "loghazard", "odds", "cumhaz"), indi = TRUE, time = NULL,
+        var.type = c("ci", "se", "n"), pars = NULL,
+        link = NULL, keep.attributes = FALSE, \dots)
 }
 \arguments{
 \item{object}{Object of class \code{gfcm} to do predictions from.}

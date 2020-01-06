@@ -2,7 +2,7 @@
 #'
 #' Plot function for the class \code{lts}.
 #' @usage \method{plot}{lts}(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
-#' ylab = NULL, xlab = "Time", add = F, \dots)
+#'         ylab = NULL, xlab = "Time", add = F, \dots)
 #' @param x Object of class \code{lts}.
 #' @param ylim Limit of the y-axis.
 #' @param xlim Limit of x-axis.

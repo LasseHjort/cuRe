@@ -5,7 +5,7 @@
 \title{Plot the long term survival}
 \usage{
 \method{plot}{lts}(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
-ylab = NULL, xlab = "Time", add = F, \dots)
+        ylab = NULL, xlab = "Time", add = F, \dots)
 }
 \arguments{
 \item{x}{Object of class \code{lts}.}

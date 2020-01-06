@@ -5,7 +5,7 @@
 \title{Plot crude event probabilities}
 \usage{
 \method{plot}{crude}(x, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
-ylab = NULL, xlab = "Time", add = F, \dots)
+        ylab = NULL, xlab = "Time", add = F, \dots)
 }
 \arguments{
 \item{x}{Object of class \code{crude} in which crude probabilities are stored.}

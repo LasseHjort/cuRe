@@ -2,7 +2,7 @@
 #'
 #' Plot function for the class \code{le}
 #' @usage \method{plot}{le}(x, ylim = NULL, xlim = NULL, ci = T, col = 1,
-#' ylab = NULL, xlab = "Time", add = F, \dots)
+#'         ylab = NULL, xlab = "Time", add = F, \dots)
 #' @param x Object of class \code{le}.
 #' @param ylim Limit of the y-axis.
 #' @param xlim Limit of x-axis.

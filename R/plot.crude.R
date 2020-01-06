@@ -3,7 +3,7 @@
 #' Plot function for the computed crude event probabilties.
 #'
 #' @usage \method{plot}{crude}(x, ylim = c(0, 1), xlim = NULL, ci = T, col = 1,
-#' ylab = NULL, xlab = "Time", add = F, \dots)
+#'         ylab = NULL, xlab = "Time", add = F, \dots)
 #' @param x Object of class \code{crude} in which crude probabilities are stored.
 #' @param ylim Limits of y-axis.
 #' @param xlim Limits of x-axis.

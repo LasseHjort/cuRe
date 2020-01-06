@@ -5,10 +5,10 @@
 \title{Plot function for Flexible mixture cure model}
 \usage{
 \method{plot}{cuRe}(x, newdata = NULL,
-type = c("surv", "probcure", "survuncured", "hazarduncured", "cumhazuncured",
-"densityuncured", "failuncured", "oddsuncured", "loghazarduncured", "hazard",
-"density", "fail", "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL,
-ylim = c(0, 1), xlab = "Time", ylab = NULL, col = 1, ci = T, add = F, \dots)
+        type = c("surv", "probcure", "survuncured", "hazarduncured", "cumhazuncured",
+        "densityuncured", "failuncured", "oddsuncured", "loghazarduncured", "hazard",
+        "density", "fail", "loghazard", "odds", "cumhaz"), time = NULL, xlim = NULL,
+        ylim = c(0, 1), xlab = "Time", ylab = NULL, col = 1, ci = T, add = F, \dots)
 }
 \arguments{
 \item{x}{Object of class \code{cuRe}.}
