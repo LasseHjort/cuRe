@@ -73,7 +73,7 @@ which is modelled using the identity.
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
 data("colonDC")
 set.seed(2)
-colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
+colonDC <- colonDC[sample(1:nrow(colonDC), 500), ]
 
 ##Extract general population hazards
 colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",

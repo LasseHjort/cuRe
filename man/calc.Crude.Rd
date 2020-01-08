@@ -93,12 +93,13 @@ fit <- rstpm2::stpm2(Surv(FUyear, status) ~ 1, data = colonDC, df = 6,
 
 #Compute the probability of disease-related death
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 50),
-                  rmap = list(age = agedays, sex = sex, year = dx))
+                  rmap = list(age = agedays, sex = sex, year = dx),
+                  var.type = "n")
 plot(res)
 
 #Compute the conditional probability of dying from other causes than disease
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 50), type = "condother",
-                  rmap = list(age = agedays, sex = sex, year = dx))
+                  rmap = list(age = agedays, sex = sex, year = dx), var.type = "n")
 plot(res)
 
 
@@ -109,15 +110,15 @@ fit <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz"
 
 #Compute the probability of disease-related death
 res <- calc.Crude(fit, time = seq(0, 20, length.out = 50),
-                  rmap = list(age = agedays, sex = sex, year = dx))
+                  rmap = list(age = agedays, sex = sex, year = dx),
+                  var.type = "n")
 plot(res)
 
 #Compute the conditional probability of disease-related death
 res2 <- calc.Crude(fit, time = seq(0, 20, length.out = 50), type = "condother",
-                  rmap = list(age = agedays, sex = sex, year = dx), reverse = TRUE)
+                  rmap = list(age = agedays, sex = sex, year = dx), reverse = TRUE,
+                  var.type = "n")
 plot(res2)
-
-
 }
 \references{
 Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool

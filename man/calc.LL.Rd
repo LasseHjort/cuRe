@@ -86,12 +86,14 @@ fit <- rstpm2::stpm2(Surv(FUyear, status) ~ 1, data = colonDC,
 
 #Compute and plot the loss of lifetime function
 res <- calc.LL(fit, time = seq(0, 20, length.out = 50),
-               rmap = list(age = agedays, sex = sex, year = dx))
+               rmap = list(age = agedays, sex = sex, year = dx),
+               var.type = "n")
 plot(res)
 
 #Compute and plot the mean residual lifetime
 res <- calc.LL(fit, time = seq(0, 20, length.out = 50), type = "mrl",
-               rmap = list(age = agedays, sex = sex, year = dx))
+               rmap = list(age = agedays, sex = sex, year = dx),
+               var.type = "n")
 plot(res)
 
 
@@ -102,12 +104,14 @@ fit <- fit.cure.model(Surv(FUyear, status) ~ 1, data = colonDC, bhazard = "bhaz"
 
 #Compute and plot the loss of lifetime function
 res <- calc.LL(fit, time = seq(0, 20, length.out = 50),
-               rmap = list(age = agedays, sex = sex, year = dx))
+               rmap = list(age = agedays, sex = sex, year = dx),
+               var.type = "n")
 plot(res)
 
 #Compute and plot the mean residual lifetime
 res <- calc.LL(fit, time = seq(0, 20, length.out = 50), type = "mrl",
-               rmap = list(age = agedays, sex = sex, year = dx))
+               rmap = list(age = agedays, sex = sex, year = dx),
+               var.type = "n")
 plot(res)
 
 }

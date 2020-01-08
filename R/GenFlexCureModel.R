@@ -68,6 +68,7 @@
 #' @export
 #' @import survival
 #' @import rstpm2
+#' @import relsurv
 #' @importFrom numDeriv hessian
 #' @importFrom graphics abline
 #' @importFrom stats .checkMFClasses as.formula delete.response dnorm lm model.frame model.matrix
