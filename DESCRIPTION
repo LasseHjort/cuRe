@@ -1,6 +1,6 @@
 Package: cuRe
 Type: Package
-Title: An R-Package for Parametric Cure Model Estimation
+Title: Parametric Cure Model Estimation
 Version: 1.0.0
 Date: 2020-01-07
 Authors@R: person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "lahja@dcm.aau.dk")
