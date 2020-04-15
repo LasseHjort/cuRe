@@ -120,7 +120,3 @@ res2 <- calc.Crude(fit, time = seq(0, 20, length.out = 50), type = "condother",
                   var.type = "n")
 plot(res2)
 }
-\references{
-Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
-for improved risk communication in population-based disease patient survival. \emph{Epidemiology}, 12:86.
-}

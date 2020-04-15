@@ -45,8 +45,6 @@
 #' The probability of disease-related death, P(D = disease),
 #' can be computed by using \code{type = "disease"} and choosing a sufficiently large time point.
 #' For P(D = other| T>t), the argument \code{tau} controls this time point (default is 100).
-#' @references Eloranta, S., et al. (2014) The application of cure models in the presence of competing risks: a tool
-#' for improved risk communication in population-based disease patient survival. \emph{Epidemiology}, 12:86.
 #' @export
 #' @import date
 #' @importFrom statmod gauss.quad
