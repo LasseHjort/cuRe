@@ -112,8 +112,25 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
 
   excess <- ifelse(any(bhazard != 0), T, F)
 
+  mf <- match.call(expand.dots = FALSE)
+  m <- match(c("formula", "data", "subset", "contrasts", "weights"),
+             names(mf), 0L)
+  mf <- mf[c(1L, m)]
+
+  lm.objects <- lapply(all.formulas, function(formula){
+    lm.call <- mf
+    lm.call[[1L]] <- as.name("lm")
+    lm.formula <- formula
+    lhs(lm.formula) <- quote(arbri)
+    lm.call$formula <- lm.formula
+    data$arbri <- rnorm(nrow(data))
+    lm.call$data <- quote(data)
+    eval(lm.call)
+  })
+
   #Compute design matrices
-  X.all <- lapply(all.formulas, get_design, data = data)
+  X.all <- lapply(lm.objects, lpmatrix.lm, newdata = data)
+  #X.all <- lapply(all.formulas, get_design, data = data)
 
   #Extract link functions
   link.fun <- get.link(link)
@@ -202,7 +219,7 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
             optim = optim.out, n.param.formula = n.param.formula,
             surv.fun = surv.fun, dens.fun = dens.fun, optim.args = optim.args,
             time = time, event = event, timeVar = timeVar, link.mix = link.mix,
-            excess = excess, cure.type = cure.type, args = args)
+            excess = excess, cure.type = cure.type, args = args, lm.objects = lm.objects)
   class(L) <- c("cm", "cuRe")
   L
 }

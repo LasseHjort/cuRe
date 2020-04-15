@@ -85,7 +85,8 @@ predict.cm <- function(object, newdata = NULL,
   }
   )
 
-  X.all <- lapply(all.formulas, get_design, data = newdata)
+  X.all <- lapply(object$lm.objects, lpmatrix.lm, newdata = newdata)
+  #X.all <- lapply(all.formulas, get_design, data = newdata)
 
   if(object$ci){
     var.type <- match.arg(var.type)
