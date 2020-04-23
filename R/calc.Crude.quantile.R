@@ -81,7 +81,7 @@ calc.Crude.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, ex
                                       exp.fun = exp.fun[i], reverse = reverse, link = "identity")[[1]]$Estimate - q
     lower <- 0
     if(f(lower, q = q) > 0 & f(max.time, q = q) < 0){
-      uni <- rootSolve::uniroot.all(f, lower = lower, upper = max.time, q = q)
+      uni <- uniroot.all(f, lower = lower, upper = max.time, q = q)
     }else{
       if(f(lower, q = q) <= 0){
         uni <- 0
