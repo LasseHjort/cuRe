@@ -232,7 +232,8 @@ get_design <- function(formula, data){
     data.frame()
 }
 
-
+#' @export
+#' @method print cm
 print.cm <- function(fit){
   type <- switch(fit$type,
                  mixture = "mixture",
@@ -249,29 +250,31 @@ print.cm <- function(fit){
   print(coefs)
 }
 
-
+#' @export
+#' @method summary cm
 summary.cm <- function(fit){
   se <- sqrt(diag(fit$cov))
   coefs <- unlist(fit$coefs)
-  tval <- coefs / se
+  z <- coefs / se
   TAB1 <- cbind(Estimate = coefs,
                 StdErr = se,
-                t.value = tval,
-                p.value = ifelse(is.na(tval), rep(NA, length(coefs)),
-                                 2 * pt(-abs(tval), df = fit$df)))
+                z.value = z,
+                p.value = ifelse(is.na(z), rep(NA, length(coefs)),
+                                 2 * pnorm(-abs(z))))
 
   results <- list(coefs = TAB1)
   results$type <- fit$type
   results$link <- fit$link
   results$ML <- fit$ML
-  formulas <- fit$formulas
-  names(formulas) <- c("gamma", "k1", "k2", "k3")
+  formulas <- fit$all.formulas
+  names(formulas) <- c("gamma", paste0("k", 1:(length(formulas) - 1)))
   results$formulas <- formulas[sapply(formulas, function(x) !is.null(x))]
   class(results) <- "summary.cm"
   results
 }
 
-
+#' @export
+#' @method print summary.cm
 print.summary.cm <- function(x)
 {
   cat("Calls:\n")

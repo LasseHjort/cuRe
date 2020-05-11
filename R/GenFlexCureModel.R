@@ -445,7 +445,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
             data = data, NegMaxLik = min(MLs), covariance = cov, ci = covariance,
             type = type, NegMaxLiks = MLs, optim.pars = optim.args[c("control", "fn")],
             args = args, timeExpr = timeExpr, lm.obj = lm.obj, lm.obj.cr = lm.obj.cr,
-            link.type.cr = link.type.cr, link.surv = link.surv, excess = excess,
+            link.type.cr = link.type.cr, link.type = link.type, link.surv = link.surv, excess = excess,
             timeVar = timeVar, transX = transX, transXD = transXD,
             time = time, event = event, eventExpr = eventExpr, cure.type = cure.type)
 
@@ -550,8 +550,9 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
 }
 
 
-
-#Print function for class fcm
+#' @export
+#' @method print gfcm
+#Print function for class gfcm
 print.gfcm <- function(fit){
   cat("Call pi:\n")
   print(fit$formula)
@@ -562,37 +563,42 @@ print.gfcm <- function(fit){
              surv = fit$coefs.spline))
 }
 
-#Summary function for class fcm
+#' @export
+#' @method summary gfcm
+#Summary function for class gfcm
 summary.gfcm <- function(fit){
   se <- sqrt(diag(fit$covariance))
-  tval <- c(fit$coefs, fit$coefs.spline) / se
-  coefs <- c(fit$coefs, fit$coefs.spline)
+  zval <- c(fit$coefs, fit$coefs.spline) / se
+  #coefs <- c(fit$coefs, fit$coefs.spline)
   TAB1 <- cbind(Estimate = fit$coefs,
                 StdErr = se[1:length(fit$coefs)],
-                t.value = tval[1:length(fit$coefs)],
-                p.value = ifelse(is.na(tval[1:length(fit$coefs)]), rep(NA, length(fit$coefs)),
-                                 2*pt(-abs(tval[1:length(fit$coefs)]), df = fit$df)))
+                z.value = zval[1:length(fit$coefs)],
+                p.value = ifelse(is.na(zval[1:length(fit$coefs)]), rep(NA, length(fit$coefs)),
+                                 2 * pnorm(-abs(zval[1:length(fit$coefs)]))))
 
   TAB2 <- cbind(Estimate = fit$coefs.spline,
                 StdErr = se[1:length(fit$coefs.spline)],
-                t.value = tval[1:length(fit$coefs.spline)],
-                p.value = ifelse(is.na(tval[1:length(fit$coefs.spline)]), rep(NA, length(fit$coefs.spline)),
-                                 2*pt(-abs(tval[1:length(fit$coefs.spline)]), df = fit$df)))
+                t.value = zval[1:length(fit$coefs.spline)],
+                p.value = ifelse(is.na(zval[1:length(fit$coefs.spline)]), rep(NA, length(fit$coefs.spline)),
+                                 2 * pnorm(-abs(zval[1:length(fit$coefs.spline)]))))
 
 
   results <- list(pi = TAB1, surv = TAB2)
   results$type <- fit$type
-  results$linkpi <- fit$linkpi
-  results$linksu <- fit$linksu
+  results$linkpi <- fit$link.type.cr
+  results$linksu <- fit$link.type
   results$ML <- fit$NegMaxLik
   results$formula <- fit$formula
-  results$formula.fix <- fit$formula_main
-  results$formula.tvc <- fit$tvc.formula
-  class(results) <- "summary.fcm"
+  results$smooth.formula <- fit$smooth.formula
+  results$cr.formula <- fit$cr.formula
+  results$tvc.formula <- fit$tvc.formula
+  class(results) <- "summary.gfcm"
   results
 }
 
-#Print for class summary.fcm
+#' @export
+#' @method print summary.gfcm
+#Print for class summary.gfcm
 print.summary.gfcm <- function(x)
 {
   cat("Call - pi:\n")
