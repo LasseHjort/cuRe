@@ -25,7 +25,7 @@
 #' @param scale Numeric. Passed to the \code{survival::survexp} function and defaults to 365.24.
 #' That is, the time scale is assumed to be in years.
 #' @return The estimated cure point.
-#' @importFrom rootSolve uniroot.all
+#' @importFrom stats uniroot
 #' @example inst/calc.LL.quantile.ex.R
 #' @export
 
@@ -73,7 +73,7 @@ calc.LL.quantile <- function(fit, q = 1, newdata = NULL, max.time = 20, var.type
                                    newdata = newdata[i,,drop = F], tau = tau)[[1]]$Estimate - q
     lower <- 0
     if(f(lower, q = q) > 0 & f(max.time, q = q) < 0){
-      uni <- rootSolve::uniroot.all(f, lower = lower, upper = max.time, q = q)
+      uni <- uniroot.all(f, lower = lower, upper = max.time, q = q)
     }else{
       if(f(lower, q = q) <= 0){
         uni <- 0

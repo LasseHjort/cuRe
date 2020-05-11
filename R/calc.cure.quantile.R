@@ -79,7 +79,7 @@ calc.cure.quantile <- function(fit, q = 0.05, newdata = NULL, max.time = 20, var
     }
     lower <- 1e-05
     if(f(lower, q = q) > 0 & f(max.time, q = q) < 0){
-      uni <- rootSolve::uniroot.all(f, lower = lower, upper = max.time, q = q)
+      uni <- uniroot.all(f, lower = lower, upper = max.time, q = q)
     }else{
       if(f(lower, q = q) <= 0){
         uni <- 0

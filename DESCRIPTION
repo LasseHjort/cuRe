@@ -1,7 +1,7 @@
 Package: cuRe
 Type: Package
 Title: Parametric Cure Model Estimation
-Version: 1.0.0
+Version: 1.0.1
 Date: 2020-01-07
 Authors@R: c(person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "lahja@dcm.aau.dk"), 
              person(given = "Mark Clements", role = c("cph")))
@@ -12,6 +12,6 @@ BugReports: http://github.com/LasseHjort/cuRe/issues
 License: GPL (>=2)
 Encoding: UTF-8
 Depends: R (>= 3.5.0), survival, rstpm2, date
-Imports: numDeriv, rootSolve, statmod, relsurv
+Imports: numDeriv, statmod, relsurv
 LazyData: Yes
 RoxygenNote: 6.1.1
