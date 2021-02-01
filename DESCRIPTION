@@ -14,4 +14,4 @@ Encoding: UTF-8
 Depends: R (>= 3.5.0), survival, rstpm2, date
 Imports: numDeriv, statmod, relsurv
 LazyData: Yes
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1

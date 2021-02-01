@@ -192,9 +192,19 @@ get.surv <- function(dist, link.mix = function(x) log(x / (1 - x))){
       p * wei1 + (1 - p) * exp2
     })
 
+  }else if(dist == "gmw"){
+
+    return(function(x, lps){
+      scale  <- exp(lps[[2]])
+      shape1 <- exp(lps[[3]])
+      frag   <- exp(lps[[4]])
+      shape2 <- exp(lps[[5]])
+      1 - (1 - exp(-x ^ shape1 * scale * exp(x * frag))) ^ shape2
+    })
+
   }else{
 
-    stop("Distribution should be either 'exponential', 'weibull', 'lognormal', 'weiwei', or 'weiexp'")
+    stop("Distribution should be either 'exponential', 'weibull', 'lognormal', 'weiwei', 'weiexp', or 'gmw'")
 
   }
 }
@@ -248,10 +258,22 @@ get.dens <- function(dist, link.mix = function(x) log(x / (1 - x))){
       p * f_1 + (1 - p) * f_2
     })
 
+  }else if(dist == "gmw"){
+
+    return(function(x, lps){
+      scale  <- exp(lps[[2]])
+      shape1 <- exp(lps[[3]])
+      frag   <- exp(lps[[4]])
+      shape2 <- exp(lps[[5]])
+      num    <- scale * shape2 * x ^ (shape1 - 1) * (shape1 + frag * x) *
+                exp(frag * x - scale * x ^ shape1 * exp(frag * x))
+      denom  <- (1 - exp(-scale * x ^ shape1 * exp(frag * x))) ^ (1 - shape2)
+      num / denom
+    })
 
   }else {
 
-    stop("Distribution should be either 'exponential', 'weibull', 'lognormal', 'weiwei', or 'weiexp'")
+    stop("Distribution should be either 'exponential', 'weibull', 'lognormal', 'weiwei', 'weiexp', or 'gmw'")
 
   }
 }
@@ -264,7 +286,7 @@ calc.lps <- function(Xs, param){
   for(i in 1:length(Xs)){
     if(ncol(Xs[[i]]) != 0){
       lps[[i]] <- Xs[[i]] %*% param[1:ncol(Xs[[i]])]
-      param <- param[-c(1:ncol(Xs[[i]]))]
+      param    <- param[-c(1:ncol(Xs[[i]]))]
     }
   }
   lps
@@ -279,12 +301,13 @@ minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, ind0, link
   lps <- calc.lps(Xs, param)
 
   #Compute pi and the survival of the uncured
-  pi <- link.fun(lps[[1]])
-  surv <- surv.fun(time, lps)
-  rsurv <- cure.type$surv(pi, surv)
-  likterms <- log(rsurv)
-  surv0 <- surv.fun(time0, lps)
-  rsurv0 <- cure.type$surv(pi, surv0)
+  pi             <- link.fun(lps[[1]])
+  surv           <- surv.fun(time, lps)
+  rsurv          <- cure.type$surv(pi, surv)
+  likterms       <- log(rsurv)
+
+  surv0          <- surv.fun(time0, lps)
+  rsurv0         <- cure.type$surv(pi, surv0)
   likterms[ind0] <- likterms[ind0] - log(rsurv0[ind0])
 
   #Calculate hazard term only for uncensored patients.
@@ -292,8 +315,8 @@ minuslog_likelihoodDelayed <- function(param, time, time0, event, Xs, ind0, link
   dens <- dens.fun(time, lps)
   #pi.events <- pi[events]
   #surv.events <- surv[events]
-  ehaz <- cure.type$haz(pi[event], -dens[event], rsurv[event])
-  haz <- bhazard[event] + ehaz
+  ehaz            <- cure.type$haz(pi[event], -dens[event], rsurv[event])
+  haz             <- bhazard[event] + ehaz
   likterms[event] <- likterms[event] + log(haz)
 
   #Output the negative log likelihood
