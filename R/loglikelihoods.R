@@ -53,6 +53,27 @@ general.haz <- function(time, age, sex, year, data = NULL, ratetable = cuRe::sur
   haz
 }
 
+# attr <- attributes(ratetable)
+# attr$dim
+#
+# a <- survexp.dk[,,"male"]
+# b <- survexp.dk[,,"female"]
+# a <- melt(as.matrix(a))
+#
+#
+# b <- melt(as.matrix(b))
+# a$sex <- "male"
+# b$sex <- "female"
+#
+# attr$dimid
+# df <- rbind(a, b)
+#
+# names(df)[1:2] <- attr$dimid[1:2]
+#
+#
+# d <- merge(df, D, by = c("age", "sex", "year"), all.y = T)
+# d$value
+
 
 # general.haz2 <- function(time, rmap, data = NULL, ratetable = survexp.dk, scale = ayear){
 #   dimid <- attr(ratetable, "dimid")
