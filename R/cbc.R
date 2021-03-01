@@ -1,13 +1,13 @@
-###############KIG HER LASSSSSEEEEEE##################3
-#Fix problem med cb.cure! Det virker med orthogonalisering.
-
 #' Restricted cubic splines with cure
 #'
 #' Function for computing the basis matrix for restricted cubic splines which are constant beyond the last knot
 #'
 #' @param x Values to evaluate the basis functions in.
+#' @param df Degrees of freedom. One can supply \code{df} rather than knots; \code{cbc} then chooses \code{df + 1} knots
+#' at suitably chosen quantiles of \code{x} (which will ignore missing values) and adds an additional knot at the 95th
+#' quantile of \code{x}.
 #' @param knots Chosen knots for the spline.
-#' @param ortho Logical. If \code{TRUE} (default) orthogonalization of the basis matrix is carried out.
+#' @param ortho Logical. If \code{TRUE} orthogonalization of the basis matrix is carried out.
 #' @param R.inv Matrix or vector containing the values of the R matrix from the QR decomposition of the basis matrix.
 #' This is used for making new predictions based on the initial orthogonalization.
 #' Therefore the default is \code{NULL}.
@@ -17,7 +17,13 @@
 #' studies within the framework of flexible parametric survival models.
 #' \emph{BMC Medical Research Methodology}, 11:96.
 #' @export
-cbc <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE){
+cbc <- function(x, df = NULL, knots = NULL, ortho = FALSE, R.inv = NULL, intercept = FALSE){
+  if(is.null(knots)){
+    nIknots <- df
+    qs <- seq.int(0, 1, length.out = nIknots)
+    knots <- quantile(x, sort(c(qs, 0.95)))
+  }
+
   nk <- length(knots)
   b <- matrix(nrow = length(x), ncol = nk - 1)
   knots_rev <- rev(knots)
@@ -47,13 +53,17 @@ cbc <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE){
     R.inv <- diag(ncol(b))
   }
 
+  nx <- names(x)
+  dimnames(b) <- list(nx, 1L:ncol(b))
   a <- list(knots = knots, ortho = ortho, R.inv = R.inv, intercept = intercept)
   attributes(b) <- c(attributes(b), a)
-  class(b) <- c("cbc", "matrix")
+  class(b) <- c("cbc", "basis", "matrix")
   b
 }
 
 #Predict function associated with bsx.
+#' @export
+#' @method predict cbc
 predict.cbc <- function (object, newx, ...)
 {
   if (missing(newx))
@@ -64,6 +74,8 @@ predict.cbc <- function (object, newx, ...)
 }
 
 #Additional function needed to fix the knot location in cases where df is only specified
+#' @export
+#' @method makepredictcall cbc
 makepredictcall.cbc <- function (var, call)
 {
   if (as.character(call)[1L] != "cbc")
@@ -74,25 +86,25 @@ makepredictcall.cbc <- function (var, call)
   xxx
 }
 
-dbasis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
-  nk <- length(knots)
-  b <- matrix(nrow = length(x), ncol = nk - 1)
-  knots_rev <- rev(knots)
-  if (nk > 0) {
-    b[, 1] <- 0
-  }
-  if (nk > 2) {
-    for (j in 2:(nk - 1)) {
-      lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
-      b[, j] <- - 3 * pmax(knots_rev[nk - j + 1] - x, 0)^2 + 3 * lam * pmax(knots_rev[nk] - x, 0)^2 +
-        3 * (1 - lam) * pmax(knots_rev[1] - x, 0)^2
-    }
-  }
-
-  if(!intercept) b <- b[, -1]
-
-  if(ortho){
-    b <- b %*% R.inv
-  }
-  b
-}
+# dbasis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
+#   nk <- length(knots)
+#   b <- matrix(nrow = length(x), ncol = nk - 1)
+#   knots_rev <- rev(knots)
+#   if (nk > 0) {
+#     b[, 1] <- 0
+#   }
+#   if (nk > 2) {
+#     for (j in 2:(nk - 1)) {
+#       lam <- (knots_rev[nk - j + 1] - knots_rev[1])/(knots_rev[nk] - knots_rev[1])
+#       b[, j] <- - 3 * pmax(knots_rev[nk - j + 1] - x, 0)^2 + 3 * lam * pmax(knots_rev[nk] - x, 0)^2 +
+#         3 * (1 - lam) * pmax(knots_rev[1] - x, 0)^2
+#     }
+#   }
+#
+#   if(!intercept) b <- b[, -1]
+#
+#   if(ortho){
+#     b <- b %*% R.inv
+#   }
+#   b
+# }

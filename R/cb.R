@@ -3,8 +3,10 @@
 #' Function for computing the basis matrix for restricted cubic splines
 #'
 #' @param x Values to evaluate the basis functions in.
+#' @param df Degrees of freedom. One can supply \code{df} rather than knots; \code{cb} then chooses \code{df + 1} knots
+#' at suitably chosen quantiles of \code{x} (which will ignore missing values).
 #' @param knots Chosen knots for the spline.
-#' @param ortho Logical. If \code{TRUE} (default) orthogonalization of the basis matrix is carried out.
+#' @param ortho Logical. If \code{TRUE} orthogonalization of the basis matrix is carried out.
 #' @param R.inv Matrix or vector containing the values of the R matrix from the QR decomposition of the basis matrix.
 #' This is used for making new predictions based on the initial orthogonalization.
 #' Therefore the default is \code{NULL}.
@@ -15,7 +17,14 @@
 #' estimation of treatment effects. \emph{Statistics in Medicine}, 21:15.
 #' @export
 
-cb <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
+
+cb <- function(x, df = NULL, knots = NULL, ortho = FALSE, R.inv = NULL, intercept = FALSE) {
+  if(is.null(knots)){
+    nIknots <- df + 1L
+    qs <- seq.int(0, 1, length.out = nIknots)
+    knots <- quantile(x, qs, na.rm = T)
+  }
+
   nx <- length(x)
   if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
   nk <- ncol(knots)
@@ -47,13 +56,17 @@ cb <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
     R.inv <- diag(ncol(b))
   }
 
+  nx <- names(x)
+  dimnames(b) <- list(nx, 1L:ncol(b))
   a <- list(knots = knots[1,], ortho = ortho, R.inv = R.inv, intercept = intercept)
   attributes(b) <- c(attributes(b), a)
-  class(b) <- c("cb", "matrix")
+  class(b) <- c("cb", "basis", "matrix")
   b
 }
 
-#Predict function associated with bsx.
+#Predict function associated with cb
+#' @export
+#' @method predict cb
 predict.cb <- function (object, newx, ...)
 {
   if (missing(newx))
@@ -64,6 +77,8 @@ predict.cb <- function (object, newx, ...)
 }
 
 #Additional function needed to fix the knot location in cases where df is only specified
+#' @export
+#' @method makepredictcall cb
 makepredictcall.cb <- function (var, call)
 {
   if (as.character(call)[1L] != "cb")
@@ -74,29 +89,29 @@ makepredictcall.cb <- function (var, call)
   xxx
 }
 
-#Derivate of basis function
-dbasis <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
-  if(ortho & is.null(R.inv)) stop("Both 'ortho' and 'R.inv' has to be specified!")
-  nx <- length(x)
-  if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
-  nk <- ncol(knots)
-  b <- matrix(nrow=length(x), ncol=nk)
-  if (nk>0){
-    b[,1] <- 0
-    b[,2] <- 1
-  }
-  if (nk>2) {
-    lam <- (knots[,nk] - knots)/(knots[,nk] - knots[,1])
-    for (j in 3:nk) {
-      b[,j] <- 3*pmax(x - knots[,j-1], 0)^2 - 3*lam[,j-1]*pmax(x - knots[,1], 0)^2 -
-        3*(1 - lam[,j-1])*pmax(x - knots[,nk], 0)^2
-    }
-  }
-
-  if(!intercept) b <- b[, -1]
-  if(ortho){
-    b <- b %*% R.inv
-  }
-
-  b
-}
+# #Derivate of basis function
+# dbasis <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {
+#   if(ortho & is.null(R.inv)) stop("Both 'ortho' and 'R.inv' has to be specified!")
+#   nx <- length(x)
+#   if (!is.matrix(knots)) knots <- matrix(rep(knots, nx), byrow=TRUE, ncol=length(knots))
+#   nk <- ncol(knots)
+#   b <- matrix(nrow=length(x), ncol=nk)
+#   if (nk>0){
+#     b[,1] <- 0
+#     b[,2] <- 1
+#   }
+#   if (nk>2) {
+#     lam <- (knots[,nk] - knots)/(knots[,nk] - knots[,1])
+#     for (j in 3:nk) {
+#       b[,j] <- 3*pmax(x - knots[,j-1], 0)^2 - 3*lam[,j-1]*pmax(x - knots[,1], 0)^2 -
+#         3*(1 - lam[,j-1])*pmax(x - knots[,nk], 0)^2
+#     }
+#   }
+#
+#   if(!intercept) b <- b[, -1]
+#   if(ortho){
+#     b <- b %*% R.inv
+#   }
+#
+#   b
+# }

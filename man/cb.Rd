@@ -4,14 +4,18 @@
 \alias{cb}
 \title{Restricted cubic splines}
 \usage{
-cb(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE)
+cb(x, df = NULL, knots = NULL, ortho = FALSE, R.inv = NULL,
+  intercept = FALSE)
 }
 \arguments{
 \item{x}{Values to evaluate the basis functions in.}
 
+\item{df}{Degrees of freedom. One can supply \code{df} rather than knots; \code{cb} then chooses \code{df + 1} knots
+at suitably chosen quantiles of \code{x} (which will ignore missing values).}
+
 \item{knots}{Chosen knots for the spline.}
 
-\item{ortho}{Logical. If \code{TRUE} (default) orthogonalization of the basis matrix is carried out.}
+\item{ortho}{Logical. If \code{TRUE} orthogonalization of the basis matrix is carried out.}
 
 \item{R.inv}{Matrix or vector containing the values of the R matrix from the QR decomposition of the basis matrix.
 This is used for making new predictions based on the initial orthogonalization.
