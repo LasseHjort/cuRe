@@ -17,6 +17,7 @@
 #' @example inst/general.haz.ex.R
 
 general.haz <- function(time, age, sex, year, data = NULL, ratetable = cuRe::survexp.dk){
+  #Get variables if only characters are provided
   if(is.character(time)){
     time <- data[, time]
   }
@@ -30,27 +31,46 @@ general.haz <- function(time, age, sex, year, data = NULL, ratetable = cuRe::sur
     year <- data[, year]
   }
 
+  #Compute order of the dimnames in the ratetable - may not match with the attributes
   dimid <- attr(ratetable, "dimid")
   od <- sapply(c("age", "sex", "year"), function(x) which(dimid == x))
   n <- length(time)
 
-  haz <- rep(NA, n)
+  #Compute max age in the ratetable
+  max_age <- as.numeric(attr(ratetable, "dimnames")[[od["age"]]])
+
+  #Format sex
   sex_new <- as.character(sex)
-  age_new <- pmin(round((age + time) / ayear), 99)
+
+  #Compute age and year after "time" days
+  age_new <- pmin(round((age + time) / ayear), max_age)
   year_eval <- format(year + time, "%Y")
+
+  #If years expand that available in the ratetable take the closest available data points
   ryear <- range(as.numeric(dimnames(ratetable)[[od["year"]]]))
   year_eval <- ifelse(year_eval < ryear[1], ryear[1], year_eval)
   year_eval <- ifelse(year_eval > ryear[2], ryear[2], year_eval)
 
 
-  D <- data.frame(age = age_new, sex = sex_new, year = year_eval, stringsAsFactors = F)
-  D <- D[, od]
+  #Create useful data frame from "ratetable" input and use dimnames from the ratetable
+  df <- melt(as.matrix(ratetable), as.is = T)
+  names(df)[1:length(dimid)] <- dimid
 
-  for(i in 1:n){
-    haz[i] <- ratetable[D[i, 1], D[i, 2], D[i, 3]]
-  }
-  haz <- haz * ayear
-  haz
+  #Create dataframe with all individuals and their characteristics
+  D <- data.frame(age = age_new, sex = sex_new, year = year_eval, stringsAsFactors = F)
+  #Order the dataframe to match the dimensions from the ratetable
+  D <- D[, od]
+  #Define order of individuals to go back after merging
+  D$ord <- 1:nrow(D)
+
+  #Merge the individual data frame with melted ratetable - only keep rows in individual data frame
+  haz_df <- merge(D, df, by = c("age", "year", "sex"), all.x = T)
+
+  #Extract ratetable values and use same order as input
+  haz <- haz_df$value[order(haz_df$ord)]
+
+  #Multiple by 365.24 and output
+  haz * ayear
 }
 
 # attr <- attributes(ratetable)
