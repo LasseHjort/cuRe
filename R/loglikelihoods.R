@@ -15,6 +15,8 @@
 #' @return An object of class \code{numeric} containing the yearly expected hazards.
 #' @export
 #' @example inst/general.haz.ex.R
+#' @importFrom reshape2 melt
+
 
 general.haz <- function(time, age, sex, year, data = NULL, ratetable = cuRe::survexp.dk){
   #Get variables if only characters are provided
