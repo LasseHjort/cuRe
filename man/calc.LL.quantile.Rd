@@ -4,10 +4,19 @@
 \alias{calc.LL.quantile}
 \title{Compute the time to statistical cure using the loss of lifetime function}
 \usage{
-calc.LL.quantile(fit, q = 1, newdata = NULL, max.time = 20,
-  var.type = c("ci", "n"), exp.fun = NULL, rmap = NULL,
-  ratetable = cuRe::survexp.dk, tau = 100, type = "ll",
-  scale = ayear)
+calc.LL.quantile(
+  fit,
+  q = 1,
+  newdata = NULL,
+  max.time = 20,
+  var.type = c("ci", "n"),
+  exp.fun = NULL,
+  rmap = NULL,
+  ratetable = cuRe::survexp.dk,
+  tau = 100,
+  type = "ll",
+  scale = ayear
+)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
@@ -57,7 +66,7 @@ set.seed(2)
 colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
 
 ##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),
                             data = colonDC, ratetable = survexp.dk)
 
 #Fit cure model and estimate cure point

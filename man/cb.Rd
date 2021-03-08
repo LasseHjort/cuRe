@@ -4,8 +4,7 @@
 \alias{cb}
 \title{Restricted cubic splines}
 \usage{
-cb(x, df = NULL, knots = NULL, ortho = FALSE, R.inv = NULL,
-  intercept = FALSE)
+cb(x, df = NULL, knots = NULL, ortho = FALSE, R.inv = NULL, intercept = FALSE)
 }
 \arguments{
 \item{x}{Values to evaluate the basis functions in.}

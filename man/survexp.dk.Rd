@@ -4,7 +4,9 @@
 \name{survexp.dk}
 \alias{survexp.dk}
 \title{Ratetable of the Danish general population}
-\format{An object of class \code{ratetable} of dimension 111 x 180 x 2.}
+\format{
+An object of class \code{ratetable} of dimension 111 x 180 x 2.
+}
 \usage{
 survexp.dk
 }

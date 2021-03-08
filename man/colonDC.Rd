@@ -4,7 +4,9 @@
 \name{colonDC}
 \alias{colonDC}
 \title{Colon cancer data}
-\format{A data frame with 15564 rows and 11 variables}
+\format{
+A data frame with 15564 rows and 11 variables
+}
 \usage{
 data(colonDC)
 }

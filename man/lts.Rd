@@ -4,10 +4,19 @@
 \alias{lts}
 \title{Long term survival predictions}
 \usage{
-lts(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
-  newdata = NULL, time = NULL, var.type = c("ci", "se", "n"),
-  exp.fun = NULL, ratetable = cuRe::survexp.dk, rmap, scale = 365.24,
-  smooth.exp = FALSE, link = NULL)
+lts(
+  fit,
+  type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
+  newdata = NULL,
+  time = NULL,
+  var.type = c("ci", "se", "n"),
+  exp.fun = NULL,
+  ratetable = cuRe::survexp.dk,
+  rmap,
+  scale = 365.24,
+  smooth.exp = FALSE,
+  link = NULL
+)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are \code{gfcm}, \code{stpm2},
@@ -67,7 +76,7 @@ set.seed(2)
 colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
 
 ##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),
                             data = colonDC, ratetable = survexp.dk)
 
 ##Fit flexible parametric relative survival model

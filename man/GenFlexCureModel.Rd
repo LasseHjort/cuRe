@@ -4,14 +4,30 @@
 \alias{GenFlexCureModel}
 \title{Fit generalized mixture cure model}
 \usage{
-GenFlexCureModel(formula, data, smooth.formula = NULL,
-  smooth.args = NULL, df = 3, tvc = NULL, tvc.formula = NULL,
-  bhazard = NULL, cr.formula = ~1, type = "mixture",
+GenFlexCureModel(
+  formula,
+  data,
+  smooth.formula = NULL,
+  smooth.args = NULL,
+  df = 3,
+  tvc = NULL,
+  tvc.formula = NULL,
+  bhazard = NULL,
+  cr.formula = ~1,
+  type = "mixture",
   link.type.cr = c("logit", "loglog", "identity", "probit"),
-  link.type = c("PH", "PO", "probit"), init = NULL, baseoff = FALSE,
-  timeVar = "", time0Var = "", covariance = T, verbose = T,
-  control = list(maxit = 10000), method = "Nelder-Mead",
-  constraint = TRUE, ini.types = c("cure", "flexpara"))
+  link.type = c("PH", "PO", "probit"),
+  init = NULL,
+  baseoff = FALSE,
+  timeVar = "",
+  time0Var = "",
+  covariance = T,
+  verbose = T,
+  control = list(maxit = 10000),
+  method = "Nelder-Mead",
+  constraint = TRUE,
+  ini.types = c("cure", "flexpara")
+)
 }
 \arguments{
 \item{formula}{Formula for modelling the survival of the uncured. Reponse has to be of the form \code{Surv(time, status)}.}
@@ -109,7 +125,7 @@ set.seed(2)
 colonDC <- colonDC[sample(1:nrow(colonDC), 500), ]
 
 ##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),
                             data = colonDC, ratetable = survexp.dk)
 
 ###Without covariates

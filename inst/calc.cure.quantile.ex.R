@@ -4,7 +4,7 @@ set.seed(2)
 colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
 
 ##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),
                             data = colonDC, ratetable = survexp.dk)
 
 #Fit cure model and estimate cure point

@@ -4,8 +4,15 @@
 \alias{calc.cure.quantile}
 \title{Compute the time to statistical cure using the conditional probability of cure}
 \usage{
-calc.cure.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
-  var.type = c("ci", "n"), reverse = TRUE, bdr.knot = NULL)
+calc.cure.quantile(
+  fit,
+  q = 0.05,
+  newdata = NULL,
+  max.time = 20,
+  var.type = c("ci", "n"),
+  reverse = TRUE,
+  bdr.knot = NULL
+)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
@@ -45,7 +52,7 @@ set.seed(2)
 colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
 
 ##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),
                             data = colonDC, ratetable = survexp.dk)
 
 #Fit cure model and estimate cure point

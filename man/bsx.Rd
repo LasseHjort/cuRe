@@ -4,8 +4,15 @@
 \alias{bsx}
 \title{Polynomial B-splines with eXtensions}
 \usage{
-bsx(x, df = NULL, knots = NULL, degree = 3, intercept = FALSE,
-  Boundary.knots = range(x), deriv = NULL)
+bsx(
+  x,
+  df = NULL,
+  knots = NULL,
+  degree = 3,
+  intercept = FALSE,
+  Boundary.knots = range(x),
+  deriv = NULL
+)
 }
 \arguments{
 \item{x}{the predictor variable. Missing values are allowed.}

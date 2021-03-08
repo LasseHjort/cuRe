@@ -4,8 +4,7 @@
 \alias{cbc}
 \title{Restricted cubic splines with cure}
 \usage{
-cbc(x, df = NULL, knots = NULL, ortho = FALSE, R.inv = NULL,
-  intercept = FALSE)
+cbc(x, df = NULL, knots = NULL, ortho = FALSE, R.inv = NULL, intercept = FALSE)
 }
 \arguments{
 \item{x}{Values to evaluate the basis functions in.}

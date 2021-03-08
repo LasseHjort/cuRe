@@ -4,10 +4,19 @@
 \alias{calc.Crude.quantile}
 \title{Compute the time to statistical cure using the conditional probability of disease-related death}
 \usage{
-calc.Crude.quantile(fit, q = 0.05, newdata = NULL, max.time = 20,
-  exp.fun = NULL, var.type = c("ci", "se", "n"), rmap,
-  ratetable = cuRe::survexp.dk, tau = 100, reverse = TRUE,
-  scale = ayear)
+calc.Crude.quantile(
+  fit,
+  q = 0.05,
+  newdata = NULL,
+  max.time = 20,
+  exp.fun = NULL,
+  var.type = c("ci", "se", "n"),
+  rmap,
+  ratetable = cuRe::survexp.dk,
+  tau = 100,
+  reverse = TRUE,
+  scale = ayear
+)
 }
 \arguments{
 \item{fit}{Fitted model to do predictions from. Possible classes are
@@ -61,7 +70,7 @@ set.seed(2)
 colonDC <- colonDC[sample(1:nrow(colonDC), 500), ]
 
 ##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),
                             data = colonDC, ratetable = survexp.dk)
 
 #Fit cure model and estimate cure point

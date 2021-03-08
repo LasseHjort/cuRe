@@ -4,11 +4,23 @@
 \alias{calc.Crude}
 \title{Crude event probabilities}
 \usage{
-calc.Crude(object, newdata = NULL, type = c("disease", "other",
-  "condother"), time = NULL, tau = 100, reverse = FALSE,
-  var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = cuRe::survexp.dk, rmap, scale = ayear,
-  smooth.exp = FALSE, pars = NULL, link = "loglog", n = 100)
+calc.Crude(
+  object,
+  newdata = NULL,
+  type = c("disease", "other", "condother"),
+  time = NULL,
+  tau = 100,
+  reverse = FALSE,
+  var.type = c("ci", "se", "n"),
+  exp.fun = NULL,
+  ratetable = cuRe::survexp.dk,
+  rmap,
+  scale = ayear,
+  smooth.exp = FALSE,
+  pars = NULL,
+  link = "loglog",
+  n = 100
+)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are
@@ -83,7 +95,7 @@ set.seed(2)
 colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
 
 ##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),
                             data = colonDC, ratetable = survexp.dk)
 
 ##Spline-base cure model

@@ -4,10 +4,21 @@
 \alias{calc.LL}
 \title{Loss of lifetime estimation}
 \usage{
-calc.LL(object, newdata = NULL, type = c("ll", "mrl"), time = NULL,
-  tau = 100, var.type = c("ci", "se", "n"), exp.fun = NULL,
-  ratetable = cuRe::survexp.dk, rmap, smooth.exp = FALSE,
-  scale = ayear, pars = NULL, n = 100)
+calc.LL(
+  object,
+  newdata = NULL,
+  type = c("ll", "mrl"),
+  time = NULL,
+  tau = 100,
+  var.type = c("ci", "se", "n"),
+  exp.fun = NULL,
+  ratetable = cuRe::survexp.dk,
+  rmap,
+  smooth.exp = FALSE,
+  scale = ayear,
+  pars = NULL,
+  n = 100
+)
 }
 \arguments{
 \item{object}{Fitted model to do predictions from. Possible classes are
@@ -76,7 +87,7 @@ set.seed(2)
 colonDC <- colonDC[sample(1:nrow(colonDC), 1000), ]
 
 ##Extract general population hazards
-colonDC$bhaz <- general.haz(time = "FU", age = "agedays", sex = "sex", year = "dx",
+colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),
                             data = colonDC, ratetable = survexp.dk)
 
 ##Spline-base cure model
