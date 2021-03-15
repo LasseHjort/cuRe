@@ -253,17 +253,29 @@ print.cm <- function(fit){
   print(coefs)
 }
 
+replace_names <- function(coef_list){
+  label_names <- c("1" = "pi", "2" = "theta1",
+                   "3" = "theta2", "4" = "theta3",
+                   "5" = "theta4", "6" = "theta5")
+
+  names(coef_list) <- label_names[names(coef_list)]
+  coef_list
+}
+
 #' @export
 #' @method summary cm
 summary.cm <- function(fit){
   se <- sqrt(diag(fit$cov))
-  coefs <- unlist(fit$coefs)
+  coef_list <- fit$coefs
+  coef_list <- replace_names(coef_list)
+  coefs <- unlist(coef_list)
   z <- coefs / se
   TAB1 <- cbind(Estimate = coefs,
                 StdErr = se,
                 z.value = z,
                 p.value = ifelse(is.na(z), rep(NA, length(coefs)),
                                  2 * pnorm(-abs(z))))
+
 
   results <- list(coefs = TAB1)
   results$type <- fit$type
