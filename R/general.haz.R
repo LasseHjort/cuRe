@@ -17,13 +17,15 @@
 #' @param data The data from which to extract variables from.
 #' If \code{time}, \code{age}, \code{sex}, or \code{year} are not characters, this will not be used.
 #' @param ratetable Object of class \code{ratetable} to extract background hazards from. Defaults to \code{survexp.dk}.
+#' @param scale Numeric to adjust the scale of the outputted hazard values.
+#' If the ratetable provides daily hazards and \code{scale = 365.24} (default), the outputted hazard values are yearly.
 #' @return An object of class \code{numeric} containing the yearly expected hazards.
 #' @export
 #' @example inst/general.haz.ex.R
 #' @importFrom reshape2 melt
 
 
-general.haz <- function(time, rmap, data = NULL, ratetable = cuRe::survexp.dk){
+general.haz <- function(time, rmap, data = NULL, ratetable = cuRe::survexp.dk, scale = 365.24){
 
   #Compute order of the dimnames in the ratetable - may not match with the attributes
   dimid <- attr(ratetable, "dimid")
@@ -94,8 +96,8 @@ general.haz <- function(time, rmap, data = NULL, ratetable = cuRe::survexp.dk){
   #Extract ratetable values and use same order as input
   haz <- haz_df$value[order(haz_df$ord)]
 
-  #Multiple by 365.24 and output
-  haz * ayear
+  #Multiple by scale and output
+  haz * scale
 }
 
 # attr <- attributes(ratetable)
