@@ -4,7 +4,13 @@
 \alias{general.haz}
 \title{Extract general population hazard}
 \usage{
-general.haz(time, rmap, data = NULL, ratetable = cuRe::survexp.dk)
+general.haz(
+  time,
+  rmap,
+  data = NULL,
+  ratetable = cuRe::survexp.dk,
+  scale = 365.24
+)
 }
 \arguments{
 \item{time}{Either a numeric vector of follow-up times (in days) or a character indicating the variable
@@ -25,6 +31,9 @@ Other variables should be coded as characters in the data.}
 If \code{time}, \code{age}, \code{sex}, or \code{year} are not characters, this will not be used.}
 
 \item{ratetable}{Object of class \code{ratetable} to extract background hazards from. Defaults to \code{survexp.dk}.}
+
+\item{scale}{Numeric to adjust the scale of the outputted hazard values.
+If the ratetable provides daily hazards and \code{scale = 365.24} (default), the outputted hazard values are yearly.}
 }
 \value{
 An object of class \code{numeric} containing the yearly expected hazards.

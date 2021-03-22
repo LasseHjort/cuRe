@@ -49,7 +49,8 @@ weibull-weibull mixture model and weibull-exponential model.\cr Only used when \
 If not provided, the optimization will start in 0.}
 }
 \value{
-An object of class \code{cm} containing the parameters of the cure model.
+An object of class \code{cm} containing the estimated parameters of the cure model.
+The appropriate link functions taken on \eqn{\pi} and the \eqn{\theta_i}'s are linear in the covariates corresponding to their respective parameter estimates.
 }
 \description{
 This function fits parametric cure models using simple parametric distributions.
