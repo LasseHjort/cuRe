@@ -219,7 +219,7 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
   L <- list(data = data, all.formulas = all.formulas,
             coefs = coefs, dist = dist, link = link,
             type = type, ci = covariance,
-            ML = optim.out$value, covariance = cov,
+            ML = -optim.out$value, covariance = cov,
             df = nrow(data) - length(optim.out$par),
             optim = optim.out, n.param.formula = n.param.formula,
             surv.fun = surv.fun, dens.fun = dens.fun, optim.args = optim.args,
