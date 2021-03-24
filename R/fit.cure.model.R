@@ -18,7 +18,8 @@
 #' @param method Optimization method passed to \code{optim}.
 #' @param init Initial values for the maximum likelihood optimization.
 #' If not provided, the optimization will start in 0.
-#' @return An object of class \code{cm} containing the parameters of the cure model.
+#' @return An object of class \code{cm} containing the estimated parameters of the cure model.
+#' The appropriate link functions taken on \eqn{\pi} and the \eqn{\theta_i}'s are linear in the covariates corresponding to their respective parameter estimates.
 #' @details If \code{type = "mixture"}, the function fits the model,
 #' \deqn{S(t|z) = \pi(z) + [1 - \pi(z)] S_u(t|z),}
 #' and if \code{type = "nmixture"}, the function fits the model,
@@ -301,4 +302,3 @@ print.summary.cm <- function(x)
   cat("Link =", x$link, "\n")
   cat("LogLik(model) =", x$ML, "\n")
 }
-
