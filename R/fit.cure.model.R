@@ -42,7 +42,8 @@
 #' \deqn{S_u(t) = 1-\left(1 - \exp\left(-\theta_1 t ^ \theta_2 \exp(\theta_3 t)\right)\right) ^ \theta_4.}
 #' In the Weibull-exponential and Weibull-Weibull mixture models, the link function for the mixture component is controlled by \code{link.mix}.
 #' The remaining parameters are modelled using an exponential link function except \eqn{\theta_1} in the log-normal model,
-#' which is modelled using the identity.
+#' which is modelled using the identity. Parameters are not transformed back to the original scale in
+#' the outputted object and related \code{print.cm} and \code{summary.cm} functions
 #' @export
 #' @example inst/fit.cure.model.ex.R
 
