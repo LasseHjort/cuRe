@@ -62,19 +62,23 @@ BIC.gfcm <- function(object, ...)
   return(bic)
 }
 
-
-
-
-
-#' @method nobs cm
-nobs.cm <- function(object, ...){
+nobs <- function(object, ...){
   val <- nrow(object$data)
   return(val)
 }
 
-#' @method nobs gfcm
-nobs.gfcm <- function(object, ...){
-  val <- nrow(object$data)
-  return(val)
-}
 
+
+
+# @method nobs cm
+# nobs.cm <- function(object, ...){
+#   val <- nrow(object$data)
+#   return(val)
+# }
+#
+# # @method nobs gfcm
+# nobs.gfcm <- function(object, ...){
+#   val <- nrow(object$data)
+#   return(val)
+# }
+#
