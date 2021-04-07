@@ -439,7 +439,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
 
   #Output the results
   L <- list(formula = formula, smooth.formula = smooth.formula, tvc.formula = tvc.formula,
-            logH.formula = logH.formula, cr.formula = cr.formula,
+            logH.formula = logH.formula, cr.formula = cr.formula, full.formula = full.formula,
             coefs = res$par[1:ncol(X.cr)],
             coefs.spline = res$par[(ncol(X.cr) + 1):length(res$par)],
             data = data, NegMaxLik = min(MLs), covariance = cov, ci = covariance,
@@ -592,6 +592,7 @@ summary.gfcm <- function(fit){
   results$smooth.formula <- fit$smooth.formula
   results$cr.formula <- fit$cr.formula
   results$tvc.formula <- fit$tvc.formula
+  results$full.formula <- fit$full.formula
   class(results) <- "summary.gfcm"
   results
 }
@@ -606,11 +607,11 @@ print.summary.gfcm <- function(x)
   #    cat("\n")
   printCoefmat(x$pi, P.values = TRUE, has.Pvalue = T)
   cat("\nCall - surv - baseline: ")
-  print(as.formula(deparse(x$formula.fix)))
-  if(length(all.vars(x$formula.tvc))){
-    cat("Call - surv - tvc: ")
-    print(deparse(x$formula.tvc))
-  }
+  print(as.formula(deparse(x$full.formula)))
+  # if(length(all.vars(x$formula.tvc))){
+  #   cat("Call - surv - tvc: ")
+  #   print(deparse(x$formula.tvc))
+  # }
   printCoefmat(x$surv, P.values = TRUE, has.Pvalue = T)
   cat("\n")
   cat("Type =", x$type, "\n")
