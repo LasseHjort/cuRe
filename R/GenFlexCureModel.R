@@ -576,7 +576,7 @@ summary.gfcm <- function(fit){
                                 2 * pnorm(-abs(zval))))
 
   TAB1 <- TAB[1:length(fit$coefs),]
-  TAB2 <- TAB[(length(fit$coefs) + 1):length(fit$coefs.spline),]
+  TAB2 <- TAB[(length(fit$coefs) + 1):(length(fit$coefs.spline) + length(fit$coefs)),]
 
   results <- list(pi = TAB1, surv = TAB2)
   results$type <- fit$type
