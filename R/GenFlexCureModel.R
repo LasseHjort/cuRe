@@ -569,19 +569,14 @@ print.gfcm <- function(fit){
 summary.gfcm <- function(fit){
   se <- sqrt(diag(fit$covariance))
   zval <- c(fit$coefs, fit$coefs.spline) / se
-  #coefs <- c(fit$coefs, fit$coefs.spline)
-  TAB1 <- cbind(Estimate = fit$coefs,
-                StdErr = se[1:length(fit$coefs)],
-                z.value = zval[1:length(fit$coefs)],
-                p.value = ifelse(is.na(zval[1:length(fit$coefs)]), rep(NA, length(fit$coefs)),
-                                 2 * pnorm(-abs(zval[1:length(fit$coefs)]))))
+  TAB <- cbind(Estimate = c(fit$coefs, fit$coefs.spline),
+               StdErr = se,
+               z.value = zval,
+               p.value = ifelse(is.na(zval), rep(NA, length(se)),
+                                2 * pnorm(-abs(zval))))
 
-  TAB2 <- cbind(Estimate = fit$coefs.spline,
-                StdErr = se[1:length(fit$coefs.spline)],
-                t.value = zval[1:length(fit$coefs.spline)],
-                p.value = ifelse(is.na(zval[1:length(fit$coefs.spline)]), rep(NA, length(fit$coefs.spline)),
-                                 2 * pnorm(-abs(zval[1:length(fit$coefs.spline)]))))
-
+  TAB1 <- TAB[1:length(fit$coefs),]
+  TAB2 <- TAB[(length(fit$coefs) + 1):length(fit$coefs.spline),]
 
   results <- list(pi = TAB1, surv = TAB2)
   results$type <- fit$type
