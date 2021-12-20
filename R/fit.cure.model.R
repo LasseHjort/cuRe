@@ -284,7 +284,7 @@ summary.cm <- function(fit){
   results$link <- fit$link
   results$ML <- fit$ML
   formulas <- fit$all.formulas
-  names(formulas) <- c("gamma", paste0("k", 1:(length(formulas) - 1)))
+  names(formulas) <- names(coef_list)
   results$formulas <- formulas[sapply(formulas, function(x) !is.null(x))]
   class(results) <- "summary.cm"
   results

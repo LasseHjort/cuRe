@@ -600,7 +600,7 @@ print.summary.gfcm <- function(x)
   cat("Call - pi:\n")
   print(x$formula)
   #    cat("\n")
-  printCoefmat(x$pi, P.values = TRUE, has.Pvalue = T)
+  printCoefmat(x$pi, P.values = TRUE, has.Pvalue = T, signif.legend = F)
   cat("\nCall - surv - baseline: ")
   print(x$full.formula)
   # if(length(all.vars(x$formula.tvc))){
