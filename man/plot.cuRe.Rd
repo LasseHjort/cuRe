@@ -21,7 +21,7 @@ the model was fitted on.}
 \item{time}{Optional time points at which to compute predictions.
 This argument is not used if type is \code{curerate}.}
 
-\item{xlim}{Limits of the x-axis}
+\item{xlim}{Limits of the x-axis.}
 
 \item{ylim}{Limits of the y-axis.}
 
