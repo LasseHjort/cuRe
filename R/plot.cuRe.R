@@ -12,7 +12,7 @@
 #' @param type Character. Defines the desired scale to plot. See ?predict.gfcm for possible values.
 #' @param time Optional time points at which to compute predictions.
 #' This argument is not used if type is \code{curerate}.
-#' @param xlim Limits of the x-axis
+#' @param xlim Limits of the x-axis.
 #' @param ylim Limits of the y-axis.
 #' @param xlab Label of the x-axis. Default is "Time".
 #' @param ylab Label of the y-axis. If \code{NULL}, the function uses its default y-labels
