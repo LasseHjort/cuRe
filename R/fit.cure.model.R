@@ -79,8 +79,10 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
   #Delete missing observations and extract response data
   all.formulas <- c(formula, formula.surv)
   all_vars <- unique(unlist(lapply(all.formulas, all.vars)))
-  # data.c <- data[complete.cases(data[, all_vars]),]
-  data.c <- data
+  data.c <- na.omit(data[, all_vars])
+  cc <- complete.cases(data[, all_vars])
+  data <- data[cc,]
+  #data.c <- data
 
   #Extract survival time and event variable
   eventExpr <- lhs(formula)[[length(lhs(formula))]]
@@ -224,7 +226,8 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
             optim = optim.out, n.param.formula = n.param.formula,
             surv.fun = surv.fun, dens.fun = dens.fun, optim.args = optim.args,
             time = time, event = event, timeVar = timeVar, link.mix = link.mix,
-            excess = excess, cure.type = cure.type, args = args, lm.objects = lm.objects)
+            excess = excess, cure.type = cure.type, args = args, lm.objects = lm.objects,
+            na.action = attr(data.c, "na.action"))
   class(L) <- c("cm", "cuRe")
   L
 }
@@ -286,6 +289,8 @@ summary.cm <- function(fit){
   formulas <- fit$all.formulas
   names(formulas) <- names(coef_list)
   results$formulas <- formulas[sapply(formulas, function(x) !is.null(x))]
+  if (!is.null(fit$na.action))
+    results$na.action <- fit$na.action
   class(results) <- "summary.cm"
   results
 }
@@ -298,6 +303,8 @@ print.summary.cm <- function(x)
   print(x$formulas)
   #    cat("\n")
   printCoefmat(x$coefs, P.values = TRUE, has.Pvalue = T)
+  if (nzchar(mess <- naprint(x$na.action)))
+    cat("  (", mess, ")\n", sep = "")
   cat("\n")
   cat("Type =", x$type, "\n")
   cat("Link =", x$link, "\n")
