@@ -27,6 +27,8 @@
 #' @param link Character, indicating the link function for the variance calculations.
 #' Possible values are "\code{log}", "\code{cloglog}" for \eqn{log(-log(x))} , "\code{mlog}" for -log(x),
 #' and "\code{I}" for the indentity.
+#' @param mean Logical. If \code{TRUE}, the function outputs the average estimate across the
+#' rows in \code{newdata}. If \code{newdata = NULL}, the argument is not used. The default is \code{FALSE}.
 #' @return An object of class \code{lts} containing the predictions of each individual in \code{newdata}.
 #' @details
 #' Possible values for argument \code{type} are:\cr
@@ -42,7 +44,7 @@
 lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
                 newdata = NULL, time = NULL, var.type = c("ci", "se", "n"),
                 exp.fun = NULL, ratetable = cuRe::survexp.dk, rmap, scale = 365.24,
-                smooth.exp = FALSE, link = NULL){
+                smooth.exp = FALSE, link = NULL, mean = FALSE){
 
   var.type <- match.arg(var.type)
   type <- match.arg(type)
@@ -65,6 +67,8 @@ lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
     }
   }
 
+  if(is_null_newdata) mean <- FALSE
+  if(mean) var.type <- "n"
 
   if(is.null(exp.fun)){
     #The time points for the expected survival
@@ -157,10 +161,12 @@ lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
     function(t, pars) numDeriv::grad(func = cum_haz_smooth, t)
   })
 
+  #Set default link functions based on the type of predictions
   if(is.null(link)){
     link <- switch(type, surv = "cloglog", hazard = "log", cumhaz = "log", loghazard = "I", fail = "mlog")
   }
 
+  #Define link functions and their inverse based on the link argument
   var.link <- switch(link, I = function(x) x, log = function(x) log(x),
                      cloglog = function(x) log(-log(x)), mlog = function(x) -log(x))
   var.link.inv <- switch(link, I = function(x) x, log = function(x) exp(x),
@@ -188,6 +194,13 @@ lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
     D$Estimate <- var.link.inv(D$Estimate)
     res[[i]] <- D
   }
+
+  #Compute mean estimates
+  if(mean){
+   res <- rowMeans(do.call(cbind, res))
+  }
+
+  #Add attributes to the results
   attributes(res) <- list(time = time, type = type, var.type = var.type)
   class(res) <- "lts"
   res
