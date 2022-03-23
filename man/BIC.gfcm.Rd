@@ -4,7 +4,7 @@
 \alias{BIC.gfcm}
 \title{Bayesian information criterion}
 \usage{
-\method{BIC}{gfcm}(object, ...)
+\method{BIC}{gfcm}(object)
 }
 \arguments{
 \item{object}{Object of class cm or gfcm.}

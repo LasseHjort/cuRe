@@ -41,7 +41,7 @@ AIC.gfcm <- function(object, k = 2){
 #' @param object Object of class cm or gfcm.
 #' @export
 #' @method BIC cm
-BIC.cm <- function(object, ...)
+BIC.cm <- function(object)
 {
   bic <- AIC(object, k = log(nobs(object)))
 
@@ -55,7 +55,7 @@ BIC.cm <- function(object, ...)
 #' @param object Object of class cm or gfcm.
 #' @export
 #' @method BIC gfcm
-BIC.gfcm <- function(object, ...)
+BIC.gfcm <- function(object)
 {
   bic <- AIC(object, k = log(nobs(object)))
 

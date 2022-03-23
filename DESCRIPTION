@@ -1,16 +1,16 @@
 Package: cuRe
 Type: Package
 Title: Parametric Cure Model Estimation
-Version: 1.0.1
-Date: 2020-01-07
-Authors@R: c(person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "lahja@dcm.aau.dk"), 
+Version: 1.0.2
+Date: 2022-03-23
+Authors@R: c(person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "lahja@math.aau.dk"), 
              person(given = "Mark Clements", role = c("cph")),
              person(given = "Rasmus Kuhr Jensen", role = c("ctb")),
              person(given = "Lars Klingen Gjærde", role = c("ctb")))
 Maintainer: Lasse Hjort Jakobsen <lahja@dcm.aau.dk>
 Description: Contains functions for estimating generalized parametric mixture and non-mixture cure models, loss of lifetime, mean residual lifetime, and crude event probabilities.
-URL: http://github.com/LasseHjort/cuRe
-BugReports: http://github.com/LasseHjort/cuRe/issues
+URL: https://github.com/LasseHjort/cuRe
+BugReports: https://github.com/LasseHjort/cuRe/issues
 License: GPL (>=2)
 Encoding: UTF-8
 Depends: R (>= 3.5.0), survival, rstpm2, date
