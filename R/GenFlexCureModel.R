@@ -447,7 +447,7 @@ GenFlexCureModel <- function(formula, data, smooth.formula = NULL, smooth.args =
             args = args, timeExpr = timeExpr, lm.obj = lm.obj, lm.obj.cr = lm.obj.cr,
             link.type.cr = link.type.cr, link.type = link.type, link.surv = link.surv, excess = excess,
             timeVar = timeVar, transX = transX, transXD = transXD,
-            time = time, event = event, eventExpr = eventExpr, cure.type = cure.type)
+            time = time, event = event, eventExpr = eventExpr, cure.type = cure.type, ML = -min(MLs))
 
   class(L) <- c("gfcm", "cuRe")
   L
