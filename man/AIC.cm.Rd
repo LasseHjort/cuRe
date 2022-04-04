@@ -4,10 +4,12 @@
 \alias{AIC.cm}
 \title{Akaike information criterion}
 \usage{
-\method{AIC}{cm}(object, k = 2)
+\method{AIC}{cm}(object, ..., k = 2)
 }
 \arguments{
 \item{object}{Object of class cm or gfcm.}
+
+\item{...}{Additionally arguments. Not currently used}
 
 \item{k}{Number to control if either AIC or BIC is to be computed (default is 2 equal to AIC).}
 }

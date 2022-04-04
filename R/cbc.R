@@ -74,17 +74,20 @@ predict.cbc <- function (object, newx, ...)
 }
 
 #Additional function needed to fix the knot location in cases where df is only specified
-#' @export
-#' @method makepredictcall cbc
-makepredictcall.cbc <- function (var, call)
-{
-  if (as.character(call)[1L] != "cbc")
-    return(call)
-  at <- attributes(var)[c("knots", "ortho", "R.inv", "intercept")]
-  xxx <- call[1L:2]
-  xxx[names(at)] <- at
-  xxx
-}
+# #' @export
+# makepredictcall.cbc <- function (var, call)
+# {
+#   if (as.character(call)[1L] != "cbc")
+#     return(call)
+#   at <- attributes(var)[c("knots", "ortho", "R.inv", "intercept")]
+#   xxx <- call[1L:2]
+#   xxx[names(at)] <- at
+#   xxx
+# }
+
+# #' @export
+# makepredictcall <- function(var, call) UseMethod("makepredictcall")
+
 
 # dbasis.cure <- function(knots, x, ortho = TRUE, R.inv = NULL, intercept = TRUE){
 #   nk <- length(knots)

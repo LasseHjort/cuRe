@@ -37,7 +37,7 @@ lrtest.cuRe <- function(model1, model2) {
   lrt[, 2] <- c(model1$ML, model2$ML)
   lrt[, 3] <- c(NA, abs(lrt[2, 1] - lrt[1, 1]))
   lrt[, 4] <- c(NA, 2 * abs(lrt[2, 2] - lrt[1, 2]))
-  lrt[, 5] <- c(NA, 1 - pchisq(lrt[2, 4], df = lrt[2, 3]))
+  lrt[, 5] <- c(NA, 1 - stats::pchisq(lrt[2, 4], df = lrt[2, 3]))
   title <- "Likelihood ratio test\n"
   structure(
     as.data.frame(lrt),

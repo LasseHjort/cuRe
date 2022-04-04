@@ -1,7 +1,7 @@
 ##Use data cleaned version of the colon cancer data from the rstpm2 package
 data("colonDC")
 set.seed(2)
-colonDC <- colonDC[sample(1:nrow(colonDC), 500), ]
+colonDC <- colonDC[sample(1:nrow(colonDC), 400), ]
 
 ##Extract general population hazards
 colonDC$bhaz <- general.haz(time = "FU", rmap = list(age = "agedays", sex = "sex", year= "dx"),

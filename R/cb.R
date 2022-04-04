@@ -77,17 +77,16 @@ predict.cb <- function (object, newx, ...)
 }
 
 #Additional function needed to fix the knot location in cases where df is only specified
-#' @export
-#' @method makepredictcall cb
-makepredictcall.cb <- function (var, call)
-{
-  if (as.character(call)[1L] != "cb")
-    return(call)
-  at <- attributes(var)[c("knots", "ortho", "R.inv", "intercept")]
-  xxx <- call[1L:2]
-  xxx[names(at)] <- at
-  xxx
-}
+# #' @export
+# makepredictcall.cb <- function (var, call)
+# {
+#   if (as.character(call)[1L] != "cb")
+#     return(call)
+#   at <- attributes(var)[c("knots", "ortho", "R.inv", "intercept")]
+#   xxx <- call[1L:2]
+#   xxx[names(at)] <- at
+#   xxx
+# }
 
 # #Derivate of basis function
 # dbasis <- function(x, knots, ortho = TRUE, R.inv = NULL, intercept = TRUE) {

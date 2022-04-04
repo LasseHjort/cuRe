@@ -79,8 +79,8 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
   #Delete missing observations and extract response data
   all.formulas <- c(formula, formula.surv)
   all_vars <- unique(unlist(lapply(all.formulas, all.vars)))
-  data.c <- na.omit(data[, all_vars])
-  cc <- complete.cases(data[, all_vars])
+  data.c <- stats::na.omit(data[, all_vars])
+  cc <- stats::complete.cases(data[, all_vars])
   data <- data[cc,]
   #data.c <- data
 
@@ -242,18 +242,18 @@ get_design <- function(formula, data){
 
 #' @export
 #' @method print cm
-print.cm <- function(fit){
-  type <- switch(fit$type,
+print.cm <- function(x, ...){
+  type <- switch(x$type,
                  mixture = "mixture",
                  nmixture = "non-mixture")
   cat("Model:\n")
   print(paste0("Parametric ", type, " cure model"))
   cat("Family survival / curerate: \n")
-  print(paste0(fit$dist, " / ", fit$link))
-  is.not.null <- sapply(fit$formulas, function(f) !is.null(f))
-  coef.names <- unlist(lapply(fit$formulas[is.not.null], function(x) Reduce(paste, deparse(x))))
+  print(paste0(x$dist, " / ", x$link))
+  is.not.null <- sapply(x$formulas, function(f) !is.null(f))
+  coef.names <- unlist(lapply(x$formulas[is.not.null], function(x) Reduce(paste, deparse(x))))
   cat("\nCoefficients:\n")
-  coefs <- fit$coefs[sapply(fit$coefs, function(coef) length(coef) != 0)]
+  coefs <- x$coefs[sapply(x$coefs, function(coef) length(coef) != 0)]
   names(coefs) <- coef.names
   print(coefs)
 }
@@ -269,9 +269,9 @@ replace_names <- function(coef_list){
 
 #' @export
 #' @method summary cm
-summary.cm <- function(fit){
-  se <- sqrt(diag(fit$cov))
-  coef_list <- fit$coefs
+summary.cm <- function(object, ...){
+  se <- sqrt(diag(object$cov))
+  coef_list <- object$coefs
   coef_list <- replace_names(coef_list)
   coefs <- unlist(coef_list)
   z <- coefs / se
@@ -283,27 +283,27 @@ summary.cm <- function(fit){
 
 
   results <- list(coefs = TAB1)
-  results$type <- fit$type
-  results$link <- fit$link
-  results$ML <- fit$ML
-  formulas <- fit$all.formulas
+  results$type <- object$type
+  results$link <- object$link
+  results$ML <- object$ML
+  formulas <- object$all.formulas
   names(formulas) <- names(coef_list)
   results$formulas <- formulas[sapply(formulas, function(x) !is.null(x))]
-  if (!is.null(fit$na.action))
-    results$na.action <- fit$na.action
+  if (!is.null(object$na.action))
+    results$na.action <- object$na.action
   class(results) <- "summary.cm"
   results
 }
 
 #' @export
 #' @method print summary.cm
-print.summary.cm <- function(x)
+print.summary.cm <- function(x, ...)
 {
   cat("Calls:\n")
   print(x$formulas)
   #    cat("\n")
-  printCoefmat(x$coefs, P.values = TRUE, has.Pvalue = T)
-  if (nzchar(mess <- naprint(x$na.action)))
+  stats::printCoefmat(x$coefs, P.values = TRUE, has.Pvalue = T)
+  if (nzchar(mess <- stats::naprint(x$na.action)))
     cat("  (", mess, ")\n", sep = "")
   cat("\n")
   cat("Type =", x$type, "\n")

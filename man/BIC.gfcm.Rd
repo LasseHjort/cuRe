@@ -4,10 +4,12 @@
 \alias{BIC.gfcm}
 \title{Bayesian information criterion}
 \usage{
-\method{BIC}{gfcm}(object)
+\method{BIC}{gfcm}(object, ...)
 }
 \arguments{
 \item{object}{Object of class cm or gfcm.}
+
+\item{...}{Some methods for this generic function may take additional, optional arguments. At present none do.}
 }
 \description{
 This function computes the BIC for a fitted parametric cure model.

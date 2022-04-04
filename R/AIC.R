@@ -3,10 +3,11 @@
 #' This function computes the AIC for a fitted parametric cure model.
 #'
 #' @param object Object of class cm or gfcm.
+#' @param ... Additionally arguments. Not currently used
 #' @param k Number to control if either AIC or BIC is to be computed (default is 2 equal to AIC).
 #' @export
 #' @method AIC cm
-AIC.cm <- function(object, k = 2){
+AIC.cm <- function(object, ..., k = 2){
   npar <- length(object$optim$par)
   lnL <- object$ML
   aic <- as.vector(-2*lnL + k * npar)
@@ -19,10 +20,11 @@ AIC.cm <- function(object, k = 2){
 #' This function computes the AIC for a fitted parametric cure model.
 #'
 #' @param object Object of class cm or gfcm.
+#' @param ... Additionally arguments. Not currently used
 #' @param k Number to control if either AIC or BIC is to be computed (default is 2 equal to AIC).
 #' @export
 #' @method AIC gfcm
-AIC.gfcm <- function(object, k = 2){
+AIC.gfcm <- function(object, ..., k = 2){
   npar <- length(object$coefs) + length(object$coefs.spline)
   lnL <- -object$NegMaxLik
   aic <- as.vector(-2*lnL + k * npar)
@@ -39,9 +41,10 @@ AIC.gfcm <- function(object, k = 2){
 #' This function computes the BIC for a fitted parametric cure model.
 #'
 #' @param object Object of class cm or gfcm.
+#' @param ... Some methods for this generic function may take additional, optional arguments. At present none do.
 #' @export
 #' @method BIC cm
-BIC.cm <- function(object)
+BIC.cm <- function(object, ...)
 {
   bic <- AIC(object, k = log(nobs(object)))
 
@@ -53,9 +56,10 @@ BIC.cm <- function(object)
 #' This function computes the BIC for a fitted parametric cure model.
 #'
 #' @param object Object of class cm or gfcm.
+#' @param ... Some methods for this generic function may take additional, optional arguments. At present none do.
 #' @export
 #' @method BIC gfcm
-BIC.gfcm <- function(object)
+BIC.gfcm <- function(object, ...)
 {
   bic <- AIC(object, k = log(nobs(object)))
 
