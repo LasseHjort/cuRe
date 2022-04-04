@@ -553,41 +553,41 @@ get.init <- function(formula, data, smooth.formula, logH.formula, tvc.formula, c
 #' @export
 #' @method print gfcm
 #Print function for class gfcm
-print.gfcm <- function(fit){
+print.gfcm <- function(x, ...){
   cat("Call pi:\n")
-  print(fit$formula)
+  print(x$formula)
   cat("Call S_u(t):\n")
-  print(fit$formula_main)
+  print(x$formula_main)
   cat("\nCoefficients:\n")
-  print(list(pi = fit$coefs,
-             surv = fit$coefs.spline))
+  print(list(pi = x$coefs,
+             surv = x$coefs.spline))
 }
 
 #' @export
 #' @method summary gfcm
 #Summary function for class gfcm
-summary.gfcm <- function(fit){
-  se <- sqrt(diag(fit$covariance))
-  zval <- c(fit$coefs, fit$coefs.spline) / se
-  TAB <- cbind(Estimate = c(fit$coefs, fit$coefs.spline),
+summary.gfcm <- function(object, ...){
+  se <- sqrt(diag(object$covariance))
+  zval <- c(object$coefs, object$coefs.spline) / se
+  TAB <- cbind(Estimate = c(object$coefs, object$coefs.spline),
                StdErr = se,
                z.value = zval,
                p.value = ifelse(is.na(zval), rep(NA, length(se)),
                                 2 * pnorm(-abs(zval))))
 
-  TAB1 <- TAB[1:length(fit$coefs),]
-  TAB2 <- TAB[(length(fit$coefs) + 1):(length(fit$coefs.spline) + length(fit$coefs)),]
+  TAB1 <- TAB[1:length(object$coefs), ,drop = F]
+  TAB2 <- TAB[(length(object$coefs) + 1):(length(object$coefs.spline) + length(object$coefs)),, drop = F]
 
   results <- list(pi = TAB1, surv = TAB2)
-  results$type <- fit$type
-  results$linkpi <- fit$link.type.cr
-  results$linksu <- fit$link.type
-  results$ML <- fit$NegMaxLik
-  results$formula <- fit$formula
-  results$smooth.formula <- fit$smooth.formula
-  results$cr.formula <- fit$cr.formula
-  results$tvc.formula <- fit$tvc.formula
-  results$full.formula <- fit$full.formula
+  results$type <- object$type
+  results$linkpi <- object$link.type.cr
+  results$linksu <- object$link.type
+  results$ML <- object$NegMaxLik
+  results$formula <- object$formula
+  results$smooth.formula <- object$smooth.formula
+  results$cr.formula <- object$cr.formula
+  results$tvc.formula <- object$tvc.formula
+  results$full.formula <- object$full.formula
   class(results) <- "summary.gfcm"
   results
 }
@@ -595,19 +595,19 @@ summary.gfcm <- function(fit){
 #' @export
 #' @method print summary.gfcm
 #Print for class summary.gfcm
-print.summary.gfcm <- function(x)
+print.summary.gfcm <- function(x, ...)
 {
   cat("Call - pi:\n")
   print(x$formula)
   #    cat("\n")
-  printCoefmat(x$pi, P.values = TRUE, has.Pvalue = T, signif.legend = F)
-  cat("\nCall - surv - baseline: ")
+  stats::printCoefmat(x$pi, P.values = TRUE, has.Pvalue = T, signif.legend = F)
+  cat("\nCall - surv:\n")
   print(x$full.formula)
   # if(length(all.vars(x$formula.tvc))){
   #   cat("Call - surv - tvc: ")
   #   print(deparse(x$formula.tvc))
   # }
-  printCoefmat(x$surv, P.values = TRUE, has.Pvalue = T)
+  stats::printCoefmat(x$surv, P.values = TRUE, has.Pvalue = T)
   cat("\n")
   cat("Type =", x$type, "\n")
   cat("Link - pi =", x$linkpi, "\n")
