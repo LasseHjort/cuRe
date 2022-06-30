@@ -79,6 +79,7 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
   #Delete missing observations and extract response data
   all.formulas <- c(formula, formula.surv)
   all_vars <- unique(unlist(lapply(all.formulas, all.vars)))
+  all_vars <- all_vars[all_vars %in% names(data)]
   data.c <- stats::na.omit(data[, all_vars])
   cc <- stats::complete.cases(data[, all_vars])
   data <- data[cc,]
@@ -89,6 +90,7 @@ fit.cure.model <- function(formula, data, formula.surv = NULL, type = c("mixture
   delayed <- length(lhs(formula)) >= 4
   timeExpr <- lhs(formula)[[ifelse(delayed, 3, 2)]]
   timeVar <- all.vars(timeExpr)
+  timeVar <- timeVar[timeVar %in% names(data)]
   time <- eval(timeExpr, data, parent.frame())
 
   time0Expr <- NULL # initialise
