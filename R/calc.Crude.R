@@ -122,7 +122,7 @@ calc.Crude <- function(object, newdata = NULL, type = c("disease", "other", "con
 
   #Extract relative survival function
   if(any(class(object) %in% c("stpm2", "pstpm2"))){
-    if(class(object) == "stpm2"){
+    if(inherits(object, "stpm2")){
       response_name <- all.vars(object@call.formula)[1]
     }else{
       response_name <- all.vars(object@fullformula)[1]

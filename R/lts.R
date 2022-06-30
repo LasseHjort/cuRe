@@ -108,7 +108,7 @@ lts <- function(fit, type = c("surv", "hazard", "cumhaz", "loghaz", "fail"),
   }
 
   if(any(class(fit) %in% c("stpm2", "pstpm2"))){
-    if(class(fit) == "stpm2"){
+    if(inherits(fit, "stpm2")){
       response_name <- all.vars(fit@call.formula)[1]
     }else{
       response_name <- all.vars(fit@fullformula)[1]
