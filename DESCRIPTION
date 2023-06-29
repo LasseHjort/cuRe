@@ -7,7 +7,7 @@ Authors@R: c(person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), emai
              person(given = "Mark Clements", role = c("cph")),
              person(given = "Rasmus Kuhr Jensen", role = c("ctb")),
              person(given = "Lars Klingen Gjærde", role = c("ctb")))
-Maintainer: Lasse Hjort Jakobsen <lahja@math.aau.dk>
+Maintainer: Lasse Hjort Jakobsen <hjort9230@hotmail.com>
 Description: Contains functions for estimating generalized parametric mixture and non-mixture cure models, loss of lifetime, mean residual lifetime, and crude event probabilities.
 URL: https://github.com/LasseHjort/cuRe
 BugReports: https://github.com/LasseHjort/cuRe/issues
