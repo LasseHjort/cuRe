@@ -1,7 +1,7 @@
 Package: cuRe
 Type: Package
 Title: Parametric Cure Model Estimation
-Version: 1.1.0
+Version: 1.1.1
 Date: 2022-05-16
 Authors@R: c(person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "hjort9230@hotmail.com"), 
              person(given = "Mark Clements", role = c("cph")),
