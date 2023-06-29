@@ -3,7 +3,7 @@ Type: Package
 Title: Parametric Cure Model Estimation
 Version: 1.1.0
 Date: 2022-05-16
-Authors@R: c(person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "lahja@math.aau.dk"), 
+Authors@R: c(person(given = "Lasse Hjort Jakobsen", role = c("aut", "cre"), email = "hjort9230@hotmail.com"), 
              person(given = "Mark Clements", role = c("cph")),
              person(given = "Rasmus Kuhr Jensen", role = c("ctb")),
              person(given = "Lars Klingen Gjærde", role = c("ctb")))
@@ -16,4 +16,4 @@ Encoding: UTF-8
 Depends: R (>= 3.5.0), survival, rstpm2, date
 Imports: numDeriv, statmod, relsurv, reshape2
 LazyData: Yes
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
